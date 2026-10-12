@@ -55,9 +55,9 @@ describe('simulateTick', () => {
 describe('computeMetrics', () => {
   it('agrège les indicateurs du jeu initial', () => {
     const m = computeMetrics(createInitialState(0));
-    // 32 agents sur les trois sites, dont un hors ligne.
-    expect(m.agentsConnected).toBe(31);
-    expect(m.waitingTotal).toBe(14);
+    // Aucun agent N1 à Paris (pas de pôle client affecté).
+    expect(m.agentsConnected).toBe(25); // 26 agents (La Ciotat et Montpellier), dont un hors ligne
+    expect(m.waitingTotal).toBe(10);
     expect(m.onBreak).toBe(4);
     expect(m.openTickets).toBe(7);
     expect(m.slaGlobal).toBeGreaterThan(90);

@@ -3,7 +3,7 @@
 
 export type ExternalClientId = 'invivo' | 'primagaz' | 'monext';
 
-export type ItsmTool = 'GLPI' | 'EasyVista' | 'ISILOG' | 'Service Manager' | 'Jira' | 'Autre';
+export type ItsmTool = 'GLPI' | 'EasyVista' | 'ISILOG' | 'Service Manager' | 'Jira' | 'Zendesk' | 'Autre';
 
 export type Service = 'Helpdesk N1' | 'MCO N2' | 'Exploitation' | 'CSM' | 'Équipe externe';
 
@@ -89,6 +89,8 @@ export interface ExternalClient {
   sla: Record<Priority, SlaTarget>;
   /** Statuts suspendant le décompte du SLA de résolution (en plus de Résolu / Clôturé). */
   slaPauseStatuses: TicketStatus[];
+  /** Niveau traité : N1 sur les plateaux internes, N2 chez le client (défaut). Un même client peut avoir les deux (INVIVO). */
+  level?: 'N1' | 'N2';
   /** Volume fictif de tickets par jour ouvré (démonstration). */
   ratePerDay?: number;
 }

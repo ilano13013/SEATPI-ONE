@@ -45,7 +45,7 @@ describe('App (mode démo)', () => {
 
   it('filtre les files du plateau Helpdesk par pôle client', () => {
     render(<App />);
-    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi dédié|Sodiaal) ·/ })).toHaveLength(7);
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(7);
     fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'ortec' } });
     const rows = panel().getAllByRole('button', { name: /^Ortec ·/ });
     expect(rows).toHaveLength(2);
@@ -63,7 +63,7 @@ describe('App (mode démo)', () => {
     expect(panel().getByText('Agents connectés')).toBeTruthy();
     // Revenir au plateau entier
     fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'all' } });
-    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi dédié|Sodiaal) ·/ })).toHaveLength(7);
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(7);
   });
 
   it('adapte les vues au rôle simulé', () => {
@@ -139,8 +139,12 @@ describe('App (mode démo)', () => {
     render(<App />);
     openRoom('Plateau Helpdesk', 'Montpellier');
     expect(panel().getByText('Montpellier')).toBeTruthy();
-    expect(panel().getAllByRole('button', { name: /^(LBR FR|Eurapharma) ·/ })).toHaveLength(2);
+    // Montpellier : seconde équipe du Pôle Multi.
+    expect(panel().getAllByRole('button', { name: /^Multi \(Montpellier\) ·/ })).toHaveLength(1);
     expect(panel().queryByText(/^Thelem ·/)).toBeNull();
+    // Paris : plateau sans pôle client affecté.
+    openRoom('Plateau Helpdesk', 'Paris');
+    expect(panel().getByText(/Aucun pôle client affecté/)).toBeTruthy();
     openRoom('Commercial', 'Paris');
     expect(panel().getByRole('heading', { name: 'Commercial' })).toBeTruthy();
     expect(panel().getByText('Paris')).toBeTruthy();
@@ -153,9 +157,11 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
     fireEvent.click(screen.getByRole('button', { name: 'Connecteurs ITSM' }));
     const reg = within(screen.getByRole('region', { name: 'Connecteurs ITSM' }));
-    expect(reg.getByText('INVIVO, DMB')).toBeTruthy();
+    expect(reg.getByText('INVIVO, DMB, TERACT')).toBeTruthy();
+    expect(reg.getAllByText('SNR').length).toBeGreaterThan(0);
+    expect(reg.getAllByText('Zendesk').length).toBeGreaterThan(0);
     expect(reg.getByText('THELEM, TRANSGOURMET, MONEXT')).toBeTruthy();
-    expect(reg.getAllByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE').length).toBe(4); // PRIMAGAZ, IRD, ORTEC, SODIAAL
+    expect(reg.getAllByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE').length).toBe(5); // PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S
     // Cockpit PRIMAGAZ : aucun ticket inventé.
     fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
     const cockpit = within(screen.getByRole('region', { name: 'Supervision des clients externes' }));
@@ -181,7 +187,7 @@ describe('App (mode démo)', () => {
     // Création simulée sur un client sans ITSM : refusée.
     fireEvent.click(hd.getByRole('button', { name: /Nouveau ticket/ }));
     const dlg = within(screen.getByRole('dialog'));
-    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'primagaz' } });
+    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'N2:primagaz' } });
     expect(dlg.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
     expect((dlg.getByRole('button', { name: /Créer dans/ }) as HTMLButtonElement).disabled).toBe(true);
   });

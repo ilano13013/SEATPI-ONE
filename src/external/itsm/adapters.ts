@@ -556,6 +556,14 @@ export const serviceManagerAdapter = flatAdapter(
   { mode: 'lecture seule', canAssign: false, transitions: 'aucune', note: 'Connecteur prévu en lecture seule.' },
 );
 
+export const zendeskAdapter = flatAdapter(
+  'Zendesk',
+  'API Zendesk Support (format générique)',
+  { Nouveau: 'new', Affecté: 'open:assigned', 'En cours': 'open', 'En attente': 'pending', Bloqué: 'hold', Escaladé: 'open:escalated', Résolu: 'solved', Clôturé: 'closed', Réouvert: 'open:reopened' },
+  { P1: 'urgent', P2: 'high', P3: 'normal', P4: 'low' },
+  { mode: 'lecture-écriture', canAssign: true, transitions: 'libre', note: 'Hypothèse de démonstration (droits non accordés ; statuts personnalisés Zendesk à confirmer).' },
+);
+
 export const genericAdapter = flatAdapter(
   'Autre',
   'Connecteur générique (export CSV / API à valider)',
@@ -570,6 +578,7 @@ export const adapters: Record<ItsmTool, ItsmAdapter<any>> = {
   ISILOG: isilogAdapter,
   'Service Manager': serviceManagerAdapter,
   Jira: jiraAdapter,
+  Zendesk: zendeskAdapter,
   Autre: genericAdapter,
 };
 

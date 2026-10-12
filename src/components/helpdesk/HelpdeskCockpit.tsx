@@ -9,7 +9,8 @@ import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
 import { applyFilters, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
 import { ticketTeams } from '../../helpdesk/teams';
 import { dateKey } from '../../external/calendar';
-import { clientRecord, ITSM_NOT_SET, itsmOf } from '../../config/itsm';
+import { clientRecord, ITSM_NOT_SET, itsmOf, n1Clients } from '../../config/itsm';
+import { externalClients } from '../../external/config';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
@@ -31,12 +32,18 @@ interface Props {
   role: Role;
   onMove: (t: HdTicket, to: TicketStatus, escalateTo?: Service) => ActionResult;
   onAssign: (t: HdTicket, techId: string) => ActionResult;
-  onCreate: (clientId: string, input: NewTicketInput) => ActionResult;
+  onCreate: (level: 'N1' | 'N2', clientId: string, input: NewTicketInput) => ActionResult;
   onBack: () => void;
 }
 
-const SCOPE_CLIENTS = ['thelem', 'dmb', 'transgourmet', 'lbrfr', 'eurapharma', 'ange', 'hstv', 'invivo', 'primagaz', 'monext'];
-const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG'] as const;
+/** Clients du périmètre : clients traités en N1 sur les plateaux + sites clients N2. */
+const SCOPE_CLIENTS = [...new Set([...n1Clients.map((c) => c.clientId), ...externalClients.map((c) => c.id)])];
+/** Cibles de création : un même client peut être traité en N1 (Pôle Multi) et en N2 (INVIVO). */
+const CREATE_TARGETS: { value: string; label: string }[] = [
+  ...n1Clients.map((c) => ({ value: `N1:${c.clientId}`, label: `${clientRecord(c.clientId)?.name ?? c.clientId} — N1 ${c.poleIds.includes('multi') ? 'Pôle Multi' : 'pôle dédié'} — ${itsmOf(c.clientId) ?? 'ITSM non renseigné'}` })),
+  ...externalClients.map((c) => ({ value: `N2:${c.id}`, label: `${c.name} — N2 chez le client — ${c.tool ?? 'ITSM non renseigné'}` })),
+];
+const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk'] as const;
 const KANBAN: TicketStatus[] = ['Nouveau', 'Affecté', 'En cours', 'En attente', 'Bloqué', 'Escaladé', 'Réouvert', 'Résolu'];
 const PAGE = 40;
 
@@ -443,8 +450,8 @@ export function HelpdeskCockpit(props: Props) {
           onAssign={(id) => run(props.onAssign(opened, id))}
         />
       )}
-      {creating && <NewTicket onClose={() => setCreating(false)} onCreate={(c, i) => {
-        const r = run(props.onCreate(c, i));
+      {creating && <NewTicket onClose={() => setCreating(false)} onCreate={(l, c, i) => {
+        const r = run(props.onCreate(l, c, i));
         if (r.ok) setCreating(false);
         return r;
       }} />}
@@ -453,8 +460,9 @@ export function HelpdeskCockpit(props: Props) {
   );
 }
 
-function NewTicket({ onClose, onCreate }: { onClose: () => void; onCreate: (clientId: string, input: NewTicketInput) => ActionResult }) {
-  const [clientId, setClientId] = useState('thelem');
+function NewTicket({ onClose, onCreate }: { onClose: () => void; onCreate: (level: 'N1' | 'N2', clientId: string, input: NewTicketInput) => ActionResult }) {
+  const [target, setTarget] = useState('N1:thelem');
+  const [level, clientId] = target.split(':') as ['N1' | 'N2', string];
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<Priority>('P3');
   const [error, setError] = useState<string | null>(null);
@@ -465,10 +473,10 @@ function NewTicket({ onClose, onCreate }: { onClose: () => void; onCreate: (clie
       <div className="form-grid">
         <label>
           Client
-          <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            {SCOPE_CLIENTS.map((c) => (
-              <option key={c} value={c}>
-                {clientRecord(c)?.name ?? c} — {itsmOf(c) ?? 'ITSM non renseigné'}
+          <select value={target} onChange={(e) => setTarget(e.target.value)}>
+            {CREATE_TARGETS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
               </option>
             ))}
           </select>
@@ -492,7 +500,7 @@ function NewTicket({ onClose, onCreate }: { onClose: () => void; onCreate: (clie
         className="action"
         disabled={!tool}
         onClick={() => {
-          const r = onCreate(clientId, { title, description: '', category: '', priority, site: '' });
+          const r = onCreate(level, clientId, { title, description: '', category: '', priority, site: '' });
           if (!r.ok) setError(r.message);
         }}
       >

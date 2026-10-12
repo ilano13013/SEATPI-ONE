@@ -159,7 +159,7 @@ export function initialManagement(agents: Agent[], techs: Technician[], now: num
     collaborators,
     leaves,
     cra: seedCra(collaborators, leaves, now, rng),
-    delegations: [{ id: 'DLG-1', fromManagerId: 'mgr-hd-par', toManagerId: 'mgr-hd-mtp', start: dateKey(now), end: dateKey(addDays(now, 6)) }],
+    delegations: [{ id: 'DLG-1', fromManagerId: 'mgr-hd-mtp', toManagerId: 'mgr-hd-lc', start: dateKey(now), end: dateKey(addDays(now, 6)) }],
     rules: DEMO_LEAVE_RULES,
     internalObjectives: {},
   };

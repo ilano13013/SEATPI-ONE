@@ -99,7 +99,10 @@ export function SidePanel(p: Props) {
             </button>
           ))}
           {generic && site && <DepartmentPanel room={room} site={site} onOpenModule={onOpenModule} available={availableModules} />}
-          {room.kind === 'helpdesk' && <HelpdeskPanel {...props} selectedPole={selectedPole} onSelectPole={onSelectPole} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
+          {room.kind === 'helpdesk' && site && polesOf(site).length === 0 && (
+            <p className="itsm-missing">Aucun pôle client affecté à ce plateau — affectation à configurer. Le Pôle Multi est réparti entre La Ciotat et Montpellier.</p>
+          )}
+          {room.kind === 'helpdesk' && (!site || polesOf(site).length > 0) && <HelpdeskPanel {...props} selectedPole={selectedPole} onSelectPole={onSelectPole} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
           {room.kind === 'pause' && <PausePanel {...props} />}
           {room.kind === 'rh' && <RhPanel {...props} />}
           {room.kind === 'stock' && <StockPanel {...props} />}

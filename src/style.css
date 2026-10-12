@@ -525,3 +525,4 @@ main > .notice { margin-top: 0; }
 .prod-detail dd { margin: 0; }
 .prod-evidence { width: 100%; border: 1px solid #dce3ee; border-radius: 8px; padding: 8px; font: inherit; font-size: 12px; }
 .prod-report { white-space: pre-wrap; font-size: 11px; background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px; padding: 12px; max-height: 60vh; overflow: auto; }
+.panel .itsm-missing { font-size: 12px; padding: 10px 12px; }

@@ -5,7 +5,7 @@
 // l'Exploitation et le CSM sont des services internes SEATPI (voir services.ts).
 import type { BusinessCalendar, Contract, ExternalClient, ExternalClientId, ExternalTeam, Technician } from './types';
 import { addDays, dateKey, nextBusinessDays } from './calendar';
-import { itsmOf } from '../config/itsm';
+import { itsmOf, n1Clients } from '../config/itsm';
 
 const HOLIDAYS_FR = [
   '2026-01-01', '2026-04-06', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25', '2026-07-14', '2026-08-15',
@@ -58,7 +58,7 @@ export const contracts: Contract[] = [
 ];
 
 /** Contrats des clients des plateaux internes : références à renseigner (aucune donnée réelle). */
-export const internalContracts: Contract[] = ['thelem', 'dmb', 'transgourmet', 'lbrfr', 'eurapharma', 'ange', 'hstv'].map((id) => ({
+export const internalContracts: Contract[] = n1Clients.map(({ clientId: id }) => ({
   id: `CTR-INT-${id.toUpperCase()}`,
   clientId: id as Contract['clientId'],
   label: 'Contrat de service Helpdesk N1 — référence à renseigner',

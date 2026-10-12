@@ -6,13 +6,10 @@ const clients = [
   { id: 'thelem', name: 'Thelem' },
   { id: 'ird', name: 'IRD' },
   { id: 'ortec', name: 'Ortec' },
-  { id: 'multi', name: 'Multi dédié' },
+  { id: 'multi', name: 'Multi' },
   { id: 'sodiaal', name: 'Sodiaal' },
   // Pôles des plateaux de Montpellier et Paris (répartition de démonstration, à confirmer).
-  { id: 'lbrfr', name: 'LBR FR' },
-  { id: 'eurapharma', name: 'Eurapharma' },
-  { id: 'ange', name: 'ANGE' },
-  { id: 'hstv', name: 'HSTV' },
+  { id: 'multi-mtp', name: 'Multi (Montpellier)' },
 ];
 
 const queues: Queue[] = [
@@ -23,10 +20,7 @@ const queues: Queue[] = [
   { id: 'q-ortec-n2', clientId: 'ortec', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },
   { id: 'q-multi-hl', clientId: 'multi', name: 'Hotline multi-clients', waiting: 1, longestWaitSec: 67, handledToday: 54, abandonedToday: 2, sla: 94, slaTarget: 95 },
   { id: 'q-sodiaal-n1', clientId: 'sodiaal', name: 'Support utilisateurs', waiting: 0, longestWaitSec: 0, handledToday: 77, abandonedToday: 1, sla: 98, slaTarget: 90 },
-  { id: 'q-lbrfr-n1', clientId: 'lbrfr', name: 'Support N1', waiting: 2, longestWaitSec: 95, handledToday: 88, abandonedToday: 3, sla: 93, slaTarget: 95 },
-  { id: 'q-eurapharma-n1', clientId: 'eurapharma', name: 'Support N1', waiting: 1, longestWaitSec: 40, handledToday: 71, abandonedToday: 1, sla: 96, slaTarget: 95 },
-  { id: 'q-ange-n1', clientId: 'ange', name: 'Assistance', waiting: 0, longestWaitSec: 0, handledToday: 64, abandonedToday: 1, sla: 97, slaTarget: 92 },
-  { id: 'q-hstv-n1', clientId: 'hstv', name: 'Support N1', waiting: 3, longestWaitSec: 180, handledToday: 102, abandonedToday: 5, sla: 90, slaTarget: 95 },
+  { id: 'q-multi-mtp-hl', clientId: 'multi-mtp', name: 'Hotline multi-clients', waiting: 2, longestWaitSec: 95, handledToday: 88, abandonedToday: 3, sla: 93, slaTarget: 95 },
 ];
 
 const agentSeed: [string, string, AgentStatus, number][] = [
@@ -50,21 +44,15 @@ const agentSeed: [string, string, AgentStatus, number][] = [
   ['Agent E02', 'sodiaal', 'Disponible', 230],
   ['Agent E03', 'sodiaal', 'Post-appel', 20],
   ['Agent E04', 'sodiaal', 'En appel', 140],
-  ['Agent F01', 'lbrfr', 'En appel', 210],
-  ['Agent F02', 'lbrfr', 'Disponible', 35],
-  ['Agent F03', 'lbrfr', 'Pause', 260],
-  ['Agent F04', 'eurapharma', 'En appel', 95],
-  ['Agent F05', 'eurapharma', 'Post-appel', 25],
-  ['Agent F06', 'eurapharma', 'Disponible', 140],
-  ['Agent G01', 'ange', 'En appel', 330],
-  ['Agent G02', 'ange', 'Disponible', 80],
-  ['Agent G03', 'hstv', 'En appel', 45],
-  ['Agent G04', 'hstv', 'En appel', 510],
-  ['Agent G05', 'hstv', 'Formation', 1800],
-  ['Agent G06', 'hstv', 'Disponible', 15],
+  ['Agent F01', 'multi-mtp', 'En appel', 210],
+  ['Agent F02', 'multi-mtp', 'Disponible', 35],
+  ['Agent F03', 'multi-mtp', 'Pause', 260],
+  ['Agent F04', 'multi-mtp', 'En appel', 95],
+  ['Agent F05', 'multi-mtp', 'Post-appel', 25],
+  ['Agent F06', 'multi-mtp', 'Disponible', 140],
 ];
 
-const POLE_SITE: Record<string, SiteId> = { lbrfr: 'montpellier', eurapharma: 'montpellier', ange: 'paris', hstv: 'paris' };
+const POLE_SITE: Record<string, SiteId> = { 'multi-mtp': 'montpellier' };
 
 const desksUsed = new Map<string, number>();
 const agents: Agent[] = agentSeed.map(([name, clientId, status, statusSinceSec], i) => {
@@ -112,7 +100,7 @@ export function createInitialState(now = Date.now()): DemoState {
       { id: 'b-mg', costCenter: 'Moyens généraux', allocated: 60000, spent: 57200 },
       { id: 'b-flotte', costCenter: 'Flotte automobile', allocated: 38000, spent: 21400 },
     ],
-    hr: { pendingLeaves: 7, upcomingTrainings: 3, certificationsToRenew: 2, plannedHeadcount: 32 },
+    hr: { pendingLeaves: 7, upcomingTrainings: 3, certificationsToRenew: 2, plannedHeadcount: 26 },
     reception: [
       { id: 'rc-1', time: '09:30', label: 'Visite fournisseur (fictif)', kind: 'Visite' },
       { id: 'rc-2', time: '11:00', label: 'Livraison matériel IT', kind: 'Livraison' },

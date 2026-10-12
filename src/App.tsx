@@ -69,7 +69,6 @@ const PERSON_VIEW: Record<string, AppView> = {
   'resp-helpdesk': 'helpdesk',
   'mgr-hd-lc': 'management',
   'mgr-hd-mtp': 'management',
-  'mgr-hd-par': 'management',
   'mgr-mco': 'mco',
   'mgr-exp': 'exploitation',
   pdg: 'pdg',
@@ -480,7 +479,7 @@ export function App() {
             role={role}
             onMove={(t, to, esc) => (t.scope === 'interne' ? internal.moveTicket(t.id, to, role, esc) : ext.moveTicket(t.id, to, role, esc))}
             onAssign={(t, id) => (t.scope === 'interne' ? internal.assignTicket(t.id, id, role) : ext.assignTicket(t.id, id, role))}
-            onCreate={(clientId, input) => (internalClientById(clientId) ? internal.createTicket(clientId, input, role) : ext.createTicket(clientId as ExternalClientId, input, role))}
+            onCreate={(level, clientId, input) => (level === 'N1' ? internal.createTicket(clientId, input, role) : ext.createTicket(clientId as ExternalClientId, input, role))}
             onBack={backToMap}
           />
         )}

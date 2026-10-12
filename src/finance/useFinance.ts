@@ -6,7 +6,7 @@ import type { Agent } from '../types';
 import type { Collaborator } from '../org/collaborators';
 import type { Trip } from '../external/trips';
 import { contracts } from '../external/config';
-import { POLE_CLIENTS, clientRecord } from '../config/itsm';
+import { POLE_CLIENTS, clientRecord, n1Clients } from '../config/itsm';
 import { helpdeskPoles } from '../data/layout';
 import { can, roleLabels, type Role } from '../auth/roles';
 import {
@@ -63,7 +63,7 @@ export const tripCost = (t: Trip) => TRIP_COST[t.transport] ?? 120;
 const N1_REFERENCE = 3300;
 
 /** Mode de facturation de démonstration des clients internes (à remplacer par les contrats réels). */
-const INTERNAL_BILLING: Record<string, PrestationType> = { thelem: 'ETP', ird: 'Forfait', ortec: 'Forfait', dmb: 'Acte', transgourmet: 'Acte', sodiaal: 'Forfait', lbrfr: 'Horaire', eurapharma: 'Forfait', ange: 'ETP', hstv: 'Acte' };
+const INTERNAL_BILLING: Record<string, PrestationType> = { thelem: 'ETP', ird: 'Forfait', ortec: 'Forfait', sodiaal: 'Forfait', invivo: 'Acte', dmb: 'Acte', transgourmet: 'Acte', lbrfr: 'Horaire', eurapharma: 'Forfait', ange: 'ETP', hstv: 'Acte', snr: 'Acte', nocibe: 'Horaire', teract: 'Acte', g2s: 'Forfait' };
 
 function seedPrestations(agents: Agent[], year: number, current: string): Prestation[] {
   const list: Prestation[] = [];
@@ -75,16 +75,14 @@ function seedPrestations(agents: Agent[], year: number, current: string): Presta
       const name = clientRecord(c.clientId)?.name ?? c.clientId;
       push({ clientId: c.clientId, clientName: name, contractId: c.id, type: 'Forfait', month: m, quantity: 1, unitPrice: c.monthlyBudget, status: status(m), label: `Forfait mensuel ${c.label}` });
     }
-    for (const [poleId, clients] of Object.entries(POLE_CLIENTS)) {
-      const poleAgents = agents.filter((a) => a.clientId === poleId).length;
-      if (!helpdeskPoles.some((p) => p.clientId === poleId)) continue;
-      for (const clientId of clients) {
-        const share = poleAgents / clients.length;
-        const value = share * N1_REFERENCE;
-        const type = INTERNAL_BILLING[clientId] ?? 'Forfait';
-        const [quantity, unitPrice] = type === 'ETP' ? [share, N1_REFERENCE] : type === 'Acte' ? [Math.round(value / 14), 14] : type === 'Horaire' ? [Math.round(share * 140), 26] : [1, Math.round(value)];
-        push({ clientId, clientName: clientRecord(clientId)?.name ?? clientId.toUpperCase(), contractId: `CTR-INT-${clientId.toUpperCase()}`, type, month: m, quantity, unitPrice, status: status(m), label: `Prestation Helpdesk N1 (${type.toLowerCase()})` });
-      }
+    // Une prestation N1 par client, même s'il est traité par plusieurs pôles (Pôle Multi La Ciotat + Montpellier).
+    for (const { clientId, poleIds } of n1Clients) {
+      const share = poleIds.filter((id) => helpdeskPoles.some((p) => p.clientId === id)).reduce((n, id) => n + agents.filter((a) => a.clientId === id).length / POLE_CLIENTS[id].length, 0);
+      if (!share) continue;
+      const value = share * N1_REFERENCE;
+      const type = INTERNAL_BILLING[clientId] ?? 'Forfait';
+      const [quantity, unitPrice] = type === 'ETP' ? [Math.round(share * 100) / 100, N1_REFERENCE] : type === 'Acte' ? [Math.round(value / 14), 14] : type === 'Horaire' ? [Math.round(share * 140), 26] : [1, Math.round(value)];
+      push({ clientId, clientName: clientRecord(clientId)?.name ?? clientId.toUpperCase(), contractId: `CTR-INT-${clientId.toUpperCase()}`, type, month: m, quantity, unitPrice, status: status(m), label: `Prestation Helpdesk N1 (${type.toLowerCase()})` });
     }
   }
   // Prestations supplémentaires (hors forfait).
@@ -141,7 +139,7 @@ export function applyDemoMovements(costs: CostEntry[], year: number): CostEntry[
       ? { ...c, entryDate: `${year}-04-01`, note: 'Entrée en cours d’année (avril)' }
       : c.personId === 'ag-11'
         ? { ...c, exitDate: `${year}-11-30`, note: 'Sortie prévue fin novembre' }
-        : c.personId === 'ag-32'
+        : c.personId === 'ag-25'
           ? { ...c, allocation: 0.5, note: 'Affectation partielle : 50 % Formation' }
           : c,
   );

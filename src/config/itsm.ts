@@ -1,21 +1,23 @@
 // Cartographie ITSM de référence — SOURCE UNIQUE pour toute l'application.
 //
-// Reprise à l'identique de la configuration initiale fournie :
-//   EasyVista : INVIVO, DMB
+// Configuration fournie (mise à jour : clients du Pôle Multi) :
+//   EasyVista : INVIVO, DMB, TERACT
 //   Jira      : LBR FR, EURAPHARMA
-//   GLPI      : ANGE, HSTV
+//   GLPI      : ANGE, HSTV, NOCIBE
 //   ISILOG    : THELEM, TRANSGOURMET, MONEXT
-// Tout client absent de ce tableau est « ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE ».
-// Aucun outil n'est attribué par défaut.
+//   Zendesk   : SNR
+// Tout client absent de ce tableau (PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S) est
+// « ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE ». Aucun outil n'est attribué par défaut.
 import type { ItsmTool } from '../external/types';
 
-export type MappedTool = Extract<ItsmTool, 'EasyVista' | 'Jira' | 'GLPI' | 'ISILOG'>;
+export type MappedTool = Extract<ItsmTool, 'EasyVista' | 'Jira' | 'GLPI' | 'ISILOG' | 'Zendesk'>;
 
 export const ITSM_MAPPING: Record<MappedTool, string[]> = {
-  EasyVista: ['INVIVO', 'DMB'],
+  EasyVista: ['INVIVO', 'DMB', 'TERACT'],
   Jira: ['LBR FR', 'EURAPHARMA'],
-  GLPI: ['ANGE', 'HSTV'],
+  GLPI: ['ANGE', 'HSTV', 'NOCIBE'],
   ISILOG: ['THELEM', 'TRANSGOURMET', 'MONEXT'],
+  Zendesk: ['SNR'],
 };
 
 export const ITSM_NOT_SET = 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE';
@@ -27,27 +29,40 @@ export interface ClientRecord {
   id: string;
   /** Nom de référence (utilisé pour la correspondance ITSM). */
   name: string;
+  /** externe = équipe MCO N2 SEATPI chez le client ; interne = traité uniquement sur les plateaux. */
   kind: ClientKind;
-  /** Équipe qui traite les demandes : pôle d'un plateau interne ou équipe N2 chez le client. */
+  /** Équipe(s) qui traitent les demandes. */
   teamLabel: string;
+  /** Groupe de pôles N1 qui traite le client sur les plateaux internes (null = aucun N1 interne). */
+  n1Pole: string | null;
   /** Rattachement de démonstration à confirmer (pôle, site). */
   allocationToConfirm: boolean;
 }
 
+const MULTI = 'Pôle Multi — La Ciotat et Montpellier';
+
 export const clientRegistry: ClientRecord[] = [
-  { id: 'invivo', name: 'INVIVO', kind: 'externe', teamLabel: 'MCO N2 INVIVO (chez le client)', allocationToConfirm: false },
-  { id: 'primagaz', name: 'PRIMAGAZ', kind: 'externe', teamLabel: 'MCO N2 PRIMAGAZ (chez le client)', allocationToConfirm: false },
-  { id: 'monext', name: 'MONEXT', kind: 'externe', teamLabel: 'MCO N2 MONEXT (chez le client)', allocationToConfirm: false },
-  { id: 'thelem', name: 'THELEM', kind: 'interne', teamLabel: 'Pôle Thelem — La Ciotat', allocationToConfirm: true },
-  { id: 'ird', name: 'IRD', kind: 'interne', teamLabel: 'Pôle IRD — La Ciotat', allocationToConfirm: true },
-  { id: 'ortec', name: 'ORTEC', kind: 'interne', teamLabel: 'Pôle Ortec — La Ciotat', allocationToConfirm: true },
-  { id: 'sodiaal', name: 'SODIAAL', kind: 'interne', teamLabel: 'Pôle Sodiaal — La Ciotat', allocationToConfirm: true },
-  { id: 'dmb', name: 'DMB', kind: 'interne', teamLabel: 'Pôle Multi dédié — La Ciotat', allocationToConfirm: true },
-  { id: 'transgourmet', name: 'TRANSGOURMET', kind: 'interne', teamLabel: 'Pôle Multi dédié — La Ciotat', allocationToConfirm: true },
-  { id: 'lbrfr', name: 'LBR FR', kind: 'interne', teamLabel: 'Pôle LBR FR — Montpellier', allocationToConfirm: true },
-  { id: 'eurapharma', name: 'EURAPHARMA', kind: 'interne', teamLabel: 'Pôle Eurapharma — Montpellier', allocationToConfirm: true },
-  { id: 'ange', name: 'ANGE', kind: 'interne', teamLabel: 'Pôle ANGE — Paris', allocationToConfirm: true },
-  { id: 'hstv', name: 'HSTV', kind: 'interne', teamLabel: 'Pôle HSTV — Paris', allocationToConfirm: true },
+  { id: 'invivo', name: 'INVIVO', kind: 'externe', teamLabel: `${MULTI} (N1) · MCO N2 INVIVO chez le client`, n1Pole: 'multi', allocationToConfirm: false },
+  { id: 'primagaz', name: 'PRIMAGAZ', kind: 'externe', teamLabel: 'MCO N2 PRIMAGAZ (chez le client)', n1Pole: null, allocationToConfirm: false },
+  { id: 'monext', name: 'MONEXT', kind: 'externe', teamLabel: 'MCO N2 MONEXT (chez le client)', n1Pole: null, allocationToConfirm: false },
+  { id: 'thelem', name: 'THELEM', kind: 'interne', teamLabel: 'Pôle Thelem — La Ciotat', n1Pole: 'thelem', allocationToConfirm: true },
+  { id: 'ird', name: 'IRD', kind: 'interne', teamLabel: 'Pôle IRD — La Ciotat', n1Pole: 'ird', allocationToConfirm: true },
+  { id: 'ortec', name: 'ORTEC', kind: 'interne', teamLabel: 'Pôle Ortec — La Ciotat', n1Pole: 'ortec', allocationToConfirm: true },
+  { id: 'sodiaal', name: 'SODIAAL', kind: 'interne', teamLabel: 'Pôle Sodiaal — La Ciotat', n1Pole: 'sodiaal', allocationToConfirm: true },
+  ...(
+    [
+      ['ange', 'ANGE'],
+      ['hstv', 'HSTV'],
+      ['lbrfr', 'LBR FR'],
+      ['transgourmet', 'TRANSGOURMET'],
+      ['snr', 'SNR'],
+      ['dmb', 'DMB'],
+      ['nocibe', 'NOCIBE'],
+      ['teract', 'TERACT'],
+      ['g2s', 'G2S'],
+      ['eurapharma', 'EURAPHARMA'],
+    ] as const
+  ).map(([id, name]) => ({ id, name, kind: 'interne' as const, teamLabel: MULTI, n1Pole: 'multi', allocationToConfirm: true })),
 ];
 
 const norm = (s: string) => s.trim().toUpperCase();
@@ -64,18 +79,29 @@ export function itsmOf(idOrName: string): MappedTool | null {
 
 export const clientRecord = (id: string) => clientRegistry.find((c) => c.id === id);
 
-/** Clients rattachés à un pôle du plateau interne (le pôle « Multi dédié » en regroupe plusieurs). */
+/** Clients d'un groupe de pôles N1 (ordre de la liste fournie pour le Pôle Multi). */
+const MULTI_CLIENTS = ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr', 'dmb', 'nocibe', 'teract', 'g2s', 'eurapharma'];
+
+/**
+ * Clients traités par chaque pôle du plateau (clé = identifiant du pôle).
+ * Le Pôle Multi existe à La Ciotat (`multi`) et à Montpellier (`multi-mtp`) avec les mêmes clients.
+ */
 export const POLE_CLIENTS: Record<string, string[]> = {
   thelem: ['thelem'],
   ird: ['ird'],
   ortec: ['ortec'],
   sodiaal: ['sodiaal'],
-  multi: ['dmb', 'transgourmet'],
-  lbrfr: ['lbrfr'],
-  eurapharma: ['eurapharma'],
-  ange: ['ange'],
-  hstv: ['hstv'],
+  multi: MULTI_CLIENTS,
+  'multi-mtp': MULTI_CLIENTS,
 };
+
+/** Clients distincts traités en N1 sur les plateaux, avec les pôles qui les prennent en charge. */
+export const n1Clients: { clientId: string; poleIds: string[] }[] = [...new Set(Object.values(POLE_CLIENTS).flat())].map((clientId) => ({
+  clientId,
+  poleIds: Object.entries(POLE_CLIENTS)
+    .filter(([, list]) => list.includes(clientId))
+    .map(([pole]) => pole),
+}));
 
 // --- Registre des connecteurs ------------------------------------------------
 

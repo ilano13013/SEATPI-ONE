@@ -3,7 +3,7 @@
 import type { ExternalClient, ExternalClientId, ItsmTool, NormalizedRecord, Technician, Ticket } from './types';
 import type { Rng } from '../services/random';
 import { adapters, MappingError, type ItsmAdapter } from './itsm/adapters';
-import { ticketTeams as externalTeams } from '../helpdesk/teams';
+import { ticketTeams as externalTeams, teamsForClient } from '../helpdesk/teams';
 import { computeSla, firstTakenAt } from './sla';
 
 export interface SyncStats {
@@ -98,9 +98,9 @@ export function toTicket(
   original?: { status: string; priority: string },
 ): Ticket {
   const tool = client.tool!;
-  const team = externalTeams.find((t) => t.clientId === client.id && t.sourceGroup === rec.group);
+  const team = teamsForClient(client).find((t) => t.sourceGroup === rec.group);
   if (!team) warn(`${rec.sourceId} : groupe source « ${rec.group} » non mappé, rattaché à l'équipe par défaut`);
-  const teamId = team?.id ?? externalTeams.find((t) => t.clientId === client.id)!.id;
+  const teamId = team?.id ?? teamsForClient(client)[0].id;
   const tech = rec.assigneeLogin ? techs.find((t) => t.clientId === client.id && t.sourceLogin === rec.assigneeLogin) : undefined;
   if (rec.assigneeLogin && !tech) warn(`${rec.sourceId} : utilisateur source « ${rec.assigneeLogin} » inconnu`);
   const statusEvents = rec.history.filter((e) => e.kind === 'statut');

@@ -121,27 +121,11 @@ export const helpdeskPoles: HelpdeskPole[] = [
   { clientId: 'thelem', site: 'laciotat', label: 'Pôle Thelem', x: -BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.55, 0.55] },
   { clientId: 'ird', site: 'laciotat', label: 'Pôle IRD', x: 0, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.55, 0.55] },
   { clientId: 'ortec', site: 'laciotat', label: 'Pôle Ortec', x: BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#f8d5b8', columns: [-0.55, 0.55] },
-  { clientId: 'multi', site: 'laciotat', label: 'Pôle Multi dédié', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
+  { clientId: 'multi', site: 'laciotat', label: 'Pôle Multi', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
   { clientId: 'sodiaal', site: 'laciotat', label: 'Pôle Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
-  // Plateaux de Montpellier et Paris : deux pôles chacun (répartition de démonstration).
-  ...sidePoles('montpellier', [['lbrfr', 'Pôle LBR FR', '#c7f0ea'], ['eurapharma', 'Pôle Eurapharma', '#d6e4fb']]),
-  ...sidePoles('paris', [['ange', 'Pôle ANGE', '#e5d9fb'], ['hstv', 'Pôle HSTV', '#fde0cf']]),
+  // Montpellier : seconde équipe du Pôle Multi (mêmes clients). Paris : aucun pôle client affecté.
+  { clientId: 'multi-mtp', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
 ];
-
-function sidePoles(site: SiteId, defs: [string, string, string][]): HelpdeskPole[] {
-  return defs.map(([clientId, label, color], i) => ({
-    clientId,
-    site,
-    label,
-    x: i === 0 ? -FRONT_W / 2 : FRONT_W / 2,
-    z: 0,
-    width: FRONT_W,
-    depth: 7.2,
-    color,
-    columns: [-1.1, 0, 1.1],
-    rows: [-2.5, -0.7, 1.1],
-  }));
-}
 
 export const polesOf = (site: SiteId) => helpdeskPoles.filter((p) => p.site === site);
 

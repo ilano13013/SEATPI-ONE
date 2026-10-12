@@ -17,7 +17,7 @@ import { Modal, Toast, fmtDateTime } from '../external/common';
 
 type Tab = 'equipe' | 'conges' | 'calendrier' | 'cra' | 'objectifs' | 'delegations' | 'historique';
 
-export const MANAGER_IDS = ['resp-helpdesk', 'mgr-hd-lc', 'mgr-hd-mtp', 'mgr-hd-par', 'mgr-mco', 'mgr-exp'];
+export const MANAGER_IDS = ['resp-helpdesk', 'mgr-hd-lc', 'mgr-hd-mtp', 'mgr-mco', 'mgr-exp'];
 
 export interface ObjectiveScope {
   client: ExternalClient;
@@ -525,7 +525,7 @@ function Objectives({ scopes, editable, now, onChange }: { scopes: ObjectiveScop
       {scopes.map((o) => {
         const rows = rowsOf(o);
         return (
-          <div key={o.client.id} className="mg-obj">
+          <div key={`${o.internal ? 'n1' : 'n2'}-${o.client.id}`} className="mg-obj">
             <h4>
               {o.client.name} — {o.internal ? 'Équipe interne N1' : 'Site client N2'} {o.client.tool ? `· ${o.client.tool}` : ''}
             </h4>

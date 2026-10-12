@@ -4,7 +4,7 @@
 import type { Escalation, ExternalClient, ExternalTeam, NormalizedRecord, Priority, Service, Technician, TicketEvent, TicketStatus } from './types';
 import type { Rng } from '../services/random';
 import { addBusinessMinutes, businessMinutesBetween, dateKey, isBusinessDay, nextBusinessDays, startOfDay, addDays } from './calendar';
-import { ticketTeams as externalTeams } from '../helpdesk/teams';
+import { ticketTeams as externalTeams, teamsForClient } from '../helpdesk/teams';
 import { statusIntervals } from './sla';
 
 const MIN = 60_000;
@@ -59,6 +59,7 @@ function sourceIdFor(client: ExternalClient, seq: number): string {
   if (client.tool === 'EasyVista') return `I26_${String(10400 + seq).padStart(6, '0')}`;
   if (client.tool === 'ISILOG') return `ISL-${40000 + seq}`;
   if (client.tool === 'Jira') return `${client.name.slice(0, 3).toUpperCase()}-${3100 + seq}`;
+  if (client.tool === 'Zendesk') return String(70000 + seq);
   return `DEMO-${seq}`;
 }
 
@@ -188,7 +189,7 @@ function workedMinutes(r: NormalizedRecord, now: number, cal: ExternalClient['ca
 }
 
 function newTicketBase(client: ExternalClient, seq: number, createdAt: number, rng: Rng) {
-  const teams = externalTeams.filter((t) => t.clientId === client.id);
+  const teams = teamsForClient(client);
   const team = teams[Math.floor(rng() * teams.length)];
   const categories = client.categories;
   const category = client.id === 'monext' && rng() < 0.4 ? 'Monétique' : pick(categories, rng);

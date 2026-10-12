@@ -42,7 +42,7 @@ export function consolidate(internal: Ticket[], external: Ticket[], collaborator
 }
 
 /** Pôle du plateau d'une équipe N1 interne. */
-const poleOfTeam = (teamId: string) => internalTicketClients.find((c) => `int-${c.clientId}` === teamId)?.poleId ?? '';
+const poleOfTeam = (teamId: string) => internalTicketClients.find((c) => `int-${c.clientId}` === teamId)?.poleIds[0] ?? '';
 
 // --- Filtres ----------------------------------------------------------------------
 

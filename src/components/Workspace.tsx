@@ -112,7 +112,7 @@ export function Workspace(props: Props) {
                       </button>
                     ))}
                   </div>
-                  {roomsOnFloor(f.id).some((r) => r.kind === 'helpdesk') && l.id !== 'externes' && l.id !== 'carte' && (
+                  {roomsOnFloor(f.id).some((r) => r.kind === 'helpdesk') && l.id !== 'externes' && l.id !== 'carte' && polesOf(l.id).length > 0 && (
                     <>
                       <h4>Plateau Helpdesk — pôles clients</h4>
                       <div className="twod-grid poles">

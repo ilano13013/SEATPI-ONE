@@ -243,7 +243,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
                   <td className="clientcell">
                     {v && <HealthDot health={v.health} />} <b>{c.name}</b>
                   </td>
-                  <td>{c.kind === 'externe' ? 'Site client (N2)' : 'Plateau interne (N1)'}</td>
+                  <td>{[c.n1Pole ? (c.n1Pole === 'multi' ? 'Pôle Multi (N1)' : 'Pôle dédié (N1)') : null, c.kind === 'externe' ? 'Site client (N2)' : null].filter(Boolean).join(' + ')}</td>
                   <td>{itsmOf(c.id) ?? <em className="nr">Non renseigné</em>}</td>
                   <td>{contractIds.join(', ') || '—'}</td>
                   <td>{itsmOf(c.id) ? tickets.filter((t) => t.clientId === c.id && isOpen(t)).length : '—'}</td>

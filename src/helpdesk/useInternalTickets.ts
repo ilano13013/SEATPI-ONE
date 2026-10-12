@@ -110,7 +110,7 @@ export function useInternalTickets(running: boolean, syncSeconds = 45, seed = 42
     const records = stateRef.current.sources[clientId];
     const at = Math.floor(Date.now() / 60_000) * 60_000;
     const seq = records.length + 7001;
-    const sourceId = client.tool === 'GLPI' ? String(60000 + seq) : client.tool === 'Jira' ? `${client.name.replace(/\W/g, '').slice(0, 3)}-${seq}` : client.tool === 'EasyVista' ? `I26_${String(20000 + seq).padStart(6, '0')}` : `ISL-${50000 + seq}`;
+    const sourceId = client.tool === 'GLPI' ? String(60000 + seq) : client.tool === 'Jira' ? `${client.name.replace(/\W/g, '').slice(0, 3)}-${seq}` : client.tool === 'EasyVista' ? `I26_${String(20000 + seq).padStart(6, '0')}` : client.tool === 'Zendesk' ? String(90000 + seq) : `ISL-${50000 + seq}`;
     const record: NormalizedRecord = {
       sourceId,
       site: client.sites[0],

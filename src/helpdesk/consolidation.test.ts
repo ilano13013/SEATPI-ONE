@@ -19,8 +19,8 @@ describe('consolidation Helpdesk', () => {
     expect(all.some((t) => t.scope === 'externe')).toBe(true);
     expect(new Set(all.map((t) => t.id)).size).toBe(all.length);
   });
-  it('couvre les quatre outils ITSM et conserve identifiants et statuts source', () => {
-    expect(new Set(all.map((t) => t.source.tool))).toEqual(new Set(['EasyVista', 'Jira', 'GLPI', 'ISILOG']));
+  it('couvre les cinq outils ITSM et conserve identifiants et statuts source', () => {
+    expect(new Set(all.map((t) => t.source.tool))).toEqual(new Set(['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk']));
     for (const t of all) {
       expect(t.source.id).toBeTruthy();
       expect(t.sourceStatus).toBeTruthy();
@@ -29,7 +29,7 @@ describe('consolidation Helpdesk', () => {
   });
   it('attribue un manager à chaque ticket', () => {
     for (const t of all.filter((x) => x.scope === 'externe')) expect(t.managerId).toBe('mgr-mco');
-    for (const t of all.filter((x) => x.scope === 'interne')) expect(['mgr-hd-lc', 'mgr-hd-mtp', 'mgr-hd-par']).toContain(t.managerId);
+    for (const t of all.filter((x) => x.scope === 'interne')) expect(['mgr-hd-lc', 'mgr-hd-mtp']).toContain(t.managerId);
   });
   it('les compteurs sont des sous-ensembles cohérents des tickets ouverts', () => {
     const k = counters(all, NOW);

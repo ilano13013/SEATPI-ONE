@@ -7,17 +7,17 @@ Généré le 12/10/2026 depuis ADMINISTRATION → PRÉPARATION À LA PRODUCTION.
 
 ## Décision : NO-GO
 
-Motifs : 4 élément(s) bloquant(s) ; 14 élément(s) critique(s) non validé(s).
+Motifs : 4 élément(s) bloquant(s) ; 15 élément(s) critique(s) non validé(s).
 
 ## Synthèse
 
 | Indicateur | Valeur |
 |---|---|
-| Éléments | 36 |
+| Éléments | 37 |
 | Validés | 1 |
 | Bloquants | 4 |
 | En cours / à tester | 7 |
-| Taux de préparation (avancement, pas une certification) | 2,8 % |
+| Taux de préparation (avancement, pas une certification) | 2,7 % |
 
 ## Éléments critiques manquants
 
@@ -26,11 +26,12 @@ Motifs : 4 élément(s) bloquant(s) ; 14 élément(s) critique(s) non validé(s)
 - **SEC-02 — Contrôle des droits côté serveur** (Bloquant) : La matrice des rôles est appliquée dans le navigateur (illustration uniquement). → Implémenter la matrice de droits dans l’API, avec tests. (RSSI)
 - **SEC-03 — Coffre de secrets côté serveur** (À configurer) : Aucun coffre : aucun secret n’existe encore (et aucun ne doit être dans le frontend). → Mettre en place un coffre de secrets accessible au seul backend. (RSSI)
 - **SEC-05 — Analyse RGPD des données RH et individuelles** (Non renseigné) : Aucune analyse d’impact réalisée. → Conduire l’analyse d’impact, définir durées de conservation et accès. (DPO)
-- **ITSM-01 — EasyVista — INVIVO, DMB** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture auprès des clients. (Responsable Helpdesk)
+- **ITSM-01 — EasyVista — INVIVO, DMB, TERACT** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture auprès des clients. (Responsable Helpdesk)
 - **ITSM-02 — Jira — LBR FR, EURAPHARMA** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
-- **ITSM-03 — GLPI — ANGE, HSTV** (Non renseigné) : Instance, URL d’API, jetons applicatifs non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
+- **ITSM-03 — GLPI — ANGE, HSTV, NOCIBE** (Non renseigné) : Instance, URL d’API, jetons applicatifs non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
 - **ITSM-04 — ISILOG — THELEM, TRANSGOURMET, MONEXT** (Non renseigné) : Instance, URL d’API, mode d’authentification non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
-- **ITSM-05 — Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL** (Bloquant) : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. → Identifier l’outil de chaque client et l’ajouter au registre. (Responsable Helpdesk)
+- **ITSM-09 — Zendesk — SNR** (Non renseigné) : Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. → Obtenir les accès en lecture et la liste des statuts utilisés. (Responsable Helpdesk)
+- **ITSM-05 — Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S** (Bloquant) : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. → Identifier l’outil de chaque client et l’ajouter au registre. (Responsable Helpdesk)
 - **RH-01 — Source des effectifs et organigramme** (Non renseigné) : Collaborateurs et managers fictifs (pseudonymes). → Raccorder le SIRH au backend (lecture). (DRH)
 - **RH-05 — Information des représentants du personnel** (Non renseigné) : Non réalisée. → Présenter l’outil et ses indicateurs. (DRH)
 - **FIN-01 — Coûts employeur réels** (Non renseigné) : Barème fictif par population. → Fournir un export mensuel des coûts chargés par collaborateur. (DAF)
@@ -63,12 +64,13 @@ Motifs : 4 élément(s) bloquant(s) ; 14 élément(s) critique(s) non validé(s)
 
 | Réf. | Élément | Statut | Priorité | Ce qui manque | Pourquoi | Responsable | Action | Dépendances | Dernière vérification |
 |---|---|---|---|---|---|---|---|---|---|
-| ITSM-01 | EasyVista — INVIVO, DMB | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture auprès des clients. | SEC-03 | — |
+| ITSM-01 | EasyVista — INVIVO, DMB, TERACT | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture auprès des clients. | SEC-03 | — |
 | ITSM-02 | Jira — LBR FR, EURAPHARMA | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
-| ITSM-03 | GLPI — ANGE, HSTV | Non renseigné | Critique | Instance, URL d’API, jetons applicatifs non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
+| ITSM-03 | GLPI — ANGE, HSTV, NOCIBE | Non renseigné | Critique | Instance, URL d’API, jetons applicatifs non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
 | ITSM-04 | ISILOG — THELEM, TRANSGOURMET, MONEXT | Non renseigné | Critique | Instance, URL d’API, mode d’authentification non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
-| ITSM-05 | Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL | Bloquant | Critique | ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. | Sans outil identifié, aucun ticket ni SLA ne peut être mesuré pour ces clients. | Responsable Helpdesk | Identifier l’outil de chaque client et l’ajouter au registre. | — | — |
-| ITSM-06 | Correspondance des statuts et priorités | À tester | Haute | Tables de correspondance établies sur des hypothèses de démonstration. | Des statuts mal traduits faussent SLA, backlog et Kanban. | Responsable Helpdesk | Faire valider chaque table par le référent de l’outil. | ITSM-01, ITSM-02, ITSM-03, ITSM-04 | — |
+| ITSM-09 | Zendesk — SNR | Non renseigné | Critique | Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. | Lire les tickets réels de SNR (Pôle Multi). | Responsable Helpdesk | Obtenir les accès en lecture et la liste des statuts utilisés. | SEC-03 | — |
+| ITSM-05 | Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S | Bloquant | Critique | ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. | Sans outil identifié, aucun ticket ni SLA ne peut être mesuré pour ces clients. | Responsable Helpdesk | Identifier l’outil de chaque client et l’ajouter au registre. | — | — |
+| ITSM-06 | Correspondance des statuts et priorités | À tester | Haute | Tables de correspondance établies sur des hypothèses de démonstration. | Des statuts mal traduits faussent SLA, backlog et Kanban. | Responsable Helpdesk | Faire valider chaque table par le référent de l’outil. | ITSM-01, ITSM-02, ITSM-03, ITSM-04, ITSM-09 | — |
 | ITSM-07 | Cartographie client → outil ITSM | Validé | Haute | Rien : la cartographie fournie est appliquée depuis une source unique. | Chaque ticket doit provenir du bon outil. | Responsable Helpdesk | Maintenir le registre à jour lors de l’arrivée d’un client. | — | 2026-10-12 (preuve : Test automatisé src/config/itsm.test.ts (correspondance exacte avec la cartographie fournie), exécuté à chaque publication.) |
 | ITSM-08 | Droits d’écriture (transitions, affectations) | À configurer | Moyenne | Écritures simulées uniquement ; droits d’écriture non demandés. | Agir depuis SEATPI ONE suppose des droits explicites dans chaque outil. | Responsable Helpdesk | Décider client par client : lecture seule ou écriture. | ITSM-06 | — |
 
@@ -97,7 +99,7 @@ Motifs : 4 élément(s) bloquant(s) ; 14 élément(s) critique(s) non validé(s)
 | Réf. | Élément | Statut | Priorité | Ce qui manque | Pourquoi | Responsable | Action | Dépendances | Dernière vérification |
 |---|---|---|---|---|---|---|---|---|---|
 | ORG-01 | Implantation des départements par site | À tester | Moyenne | Configuration de démonstration (RH et Stock à La Ciotat uniquement). | La carte des sites doit refléter l’organisation réelle. | Direction | Valider l’implantation des départements par site. | — | — |
-| ORG-02 | Affectation des pôles et clients aux sites | À tester | Moyenne | Répartition des pôles LBR FR, EURAPHARMA, ANGE, HSTV à confirmer. | Les managers de site valident les demandes de leur périmètre. | Responsable Helpdesk | Confirmer la répartition. | — | — |
+| ORG-02 | Affectation des pôles et clients aux sites | À tester | Moyenne | Pôle Multi (11 clients) à La Ciotat et Montpellier ; répartition des agents entre les deux sites et absence de pôle client à Paris à confirmer. | Les managers de site valident les demandes de leur périmètre. | Responsable Helpdesk | Confirmer la répartition. | — | — |
 | ORG-03 | Référents par domaine | En cours | Haute | Fonctions identifiées, personnes non désignées. | Chaque élément de cette liste doit avoir un responsable. | Direction | Désigner un référent par domaine. | — | — |
 | ORG-04 | Recette utilisateurs | Non renseigné | Haute | Non planifiée. | Valider les parcours avec managers, finance et direction. | Responsable Helpdesk | Planifier la recette sur l’environnement de recette. | INF-02 | — |
 | ORG-05 | Formation des utilisateurs | Non renseigné | Moyenne | Non planifiée. | Adoption et bon usage des indicateurs. | Formation | Préparer des sessions par profil. | ORG-04 | — |

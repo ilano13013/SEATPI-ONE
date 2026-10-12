@@ -37,12 +37,15 @@ describe('plan du bâtiment', () => {
 describe('pôles des plateaux Helpdesk', () => {
   it('associe un pôle à chaque client du plateau', () => {
     const { clients } = createInitialState(0);
-    for (const c of clients) expect(poleByClient(c.id)?.label).toBe(`Pôle ${c.name}`);
-    expect(polesOf('laciotat').map((p) => p.label)).toEqual(['Pôle Thelem', 'Pôle IRD', 'Pôle Ortec', 'Pôle Multi dédié', 'Pôle Sodiaal']);
+    for (const c of clients) expect(poleByClient(c.id)?.label).toBe(`Pôle ${c.name.replace(' (Montpellier)', '')}`);
+    expect(polesOf('laciotat').map((p) => p.label)).toEqual(['Pôle Thelem', 'Pôle IRD', 'Pôle Ortec', 'Pôle Multi', 'Pôle Sodiaal']);
+    // Le Pôle Multi est présent à La Ciotat et à Montpellier ; aucun pôle client à Paris.
+    expect(polesOf('montpellier').map((p) => p.clientId)).toEqual(['multi-mtp']);
+    expect(polesOf('paris')).toEqual([]);
   });
 
   it('chaque plateau est entièrement couvert par ses pôles, sans chevauchement', () => {
-    for (const site of internalSites) {
+    for (const site of internalSites.filter((s) => s.id !== 'paris')) {
       const room = plateauOf(site.id);
       const poles = polesOf(site.id);
       expect(poles.length, site.name).toBeGreaterThan(0);

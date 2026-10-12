@@ -25,8 +25,9 @@ export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign
   const [result, setResult] = useState<ActionResult | null>(null);
   const [escalateTo, setEscalateTo] = useState<Service>('Exploitation');
   const adapter = adapters[t.source.tool];
-  const client = internalClientById(t.clientId) ?? clientById(t.clientId);
-  const team = ticketTeams.find((x) => x.id === t.teamId);
+    const team = ticketTeams.find((x) => x.id === t.teamId);
+  // Un même client peut être traité en N1 (plateau) et en N2 (chez le client) : le contexte vient de l'équipe.
+  const client = team?.service === 'Helpdesk N1' ? internalClientById(t.clientId)! : clientById(t.clientId);
   const individual = can(role, 'externes', 'individual');
   const editable = can(role, 'externes', 'edit');
   const techName = (login: string | null | undefined) => {

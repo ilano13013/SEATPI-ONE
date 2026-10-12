@@ -12,7 +12,7 @@ const collabs = buildCollaborators(agents, techs);
 
 describe('référentiel des collaborateurs', () => {
   it('rattache chaque agent N1 au manager Helpdesk de son site et les N2 au manager MCO', () => {
-    for (const a of agents) expect(collabs.find((c) => c.id === a.id)!.managerId).toBe({ laciotat: 'mgr-hd-lc', montpellier: 'mgr-hd-mtp', paris: 'mgr-hd-par' }[a.site]);
+    for (const a of agents) expect(collabs.find((c) => c.id === a.id)!.managerId).toBe({ laciotat: 'mgr-hd-lc', montpellier: 'mgr-hd-mtp', paris: 'resp-helpdesk' }[a.site]);
     for (const t of techs) expect(collabs.find((c) => c.id === t.id)!.managerId).toBe('mgr-mco');
   });
   it('la responsable Helpdesk couvre tout le Helpdesk (directs et indirects)', () => {
@@ -51,13 +51,13 @@ describe('congés', () => {
   });
   it('seul un manager de la chaîne ou un délégué actif peut décider', () => {
     const lc = collabs.find((c) => c.managerId === 'mgr-hd-lc')!;
-    const par = collabs.find((c) => c.managerId === 'mgr-hd-par')!;
+    const mtp = collabs.find((c) => c.managerId === 'mgr-hd-mtp')!;
     expect(canDecide('mgr-hd-lc', lc.id, collabs, [], NOW).ok).toBe(true);
     expect(canDecide('resp-helpdesk', lc.id, collabs, [], NOW).ok).toBe(true);
-    expect(canDecide('mgr-hd-mtp', par.id, collabs, [], NOW).ok).toBe(false);
-    const deleg = [{ id: 'D', fromManagerId: 'mgr-hd-par', toManagerId: 'mgr-hd-mtp', start: '2026-10-12', end: '2026-10-18' }];
-    expect(canDecide('mgr-hd-mtp', par.id, collabs, deleg, NOW)).toEqual({ ok: true, via: 'mgr-hd-par' });
-    expect(canDecide('mgr-hd-mtp', par.id, collabs, deleg, NOW + 10 * 86_400_000).ok).toBe(false);
+    expect(canDecide('mgr-hd-lc', mtp.id, collabs, [], NOW).ok).toBe(false);
+    const deleg = [{ id: 'D', fromManagerId: 'mgr-hd-mtp', toManagerId: 'mgr-hd-lc', start: '2026-10-12', end: '2026-10-18' }];
+    expect(canDecide('mgr-hd-lc', mtp.id, collabs, deleg, NOW)).toEqual({ ok: true, via: 'mgr-hd-mtp' });
+    expect(canDecide('mgr-hd-lc', mtp.id, collabs, deleg, NOW + 10 * 86_400_000).ok).toBe(false);
     expect(canDecide('mgr-hd-lc', 'mgr-hd-lc', collabs, [], NOW).ok).toBe(false);
   });
 });

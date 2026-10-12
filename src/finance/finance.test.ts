@@ -52,7 +52,7 @@ describe('rentabilité Helpdesk', () => {
     expect(oct.revenue.pending).toBeGreaterThan(0);
   });
   it('les coûts suivent ETP, affectation partielle, entrée et sortie', () => {
-    const p32 = f.costs.find((c) => c.personId === 'ag-32')!;
+    const p32 = f.costs.find((c) => c.personId === 'ag-25')!;
     expect(entryCost(p32, '2026-05')).toBeCloseTo(p32.monthlyCost * 0.5, 5);
     const p26 = f.costs.find((c) => c.personId === 'ag-26')!;
     expect(entryCost(p26, '2026-03')).toBe(0);

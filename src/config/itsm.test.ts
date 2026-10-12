@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { clientRegistry, connectorRegistry, ITSM_MAPPING, itsmOf } from './itsm';
+import { clientRegistry, connectorRegistry, ITSM_MAPPING, itsmOf, n1Clients, POLE_CLIENTS } from './itsm';
 import { externalClients } from '../external/config';
 import { adapters } from '../external/itsm/adapters';
 
 describe('cartographie ITSM de référence', () => {
   it('reprend exactement la configuration fournie', () => {
     expect(ITSM_MAPPING).toEqual({
-      EasyVista: ['INVIVO', 'DMB'],
+      EasyVista: ['INVIVO', 'DMB', 'TERACT'],
       Jira: ['LBR FR', 'EURAPHARMA'],
-      GLPI: ['ANGE', 'HSTV'],
+      GLPI: ['ANGE', 'HSTV', 'NOCIBE'],
       ISILOG: ['THELEM', 'TRANSGOURMET', 'MONEXT'],
+      Zendesk: ['SNR'],
     });
   });
 
@@ -23,7 +24,17 @@ describe('cartographie ITSM de référence', () => {
     expect(itsmOf('thelem')).toBe('ISILOG');
     expect(itsmOf('transgourmet')).toBe('ISILOG');
     expect(itsmOf('monext')).toBe('ISILOG');
-    for (const id of ['primagaz', 'ird', 'ortec', 'sodiaal']) expect(itsmOf(id)).toBeNull();
+    expect(itsmOf('teract')).toBe('EasyVista');
+    expect(itsmOf('nocibe')).toBe('GLPI');
+    expect(itsmOf('snr')).toBe('Zendesk');
+    for (const id of ['primagaz', 'ird', 'ortec', 'sodiaal', 'g2s']) expect(itsmOf(id)).toBeNull();
+  });
+
+  it('le Pôle Multi (La Ciotat et Montpellier) traite les 11 clients fournis', () => {
+    const expected = ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr', 'dmb', 'nocibe', 'teract', 'g2s', 'eurapharma'];
+    expect(POLE_CLIENTS.multi).toEqual(expected);
+    expect(POLE_CLIENTS['multi-mtp']).toEqual(expected);
+    expect(n1Clients.find((c) => c.clientId === 'invivo')!.poleIds).toEqual(['multi', 'multi-mtp']);
   });
 
   it('un client n’apparaît qu’une fois dans la cartographie', () => {

@@ -42,7 +42,8 @@ export const DEMO_MONTHLY_COST: Record<Population, number> = {
   Encadrement: 5600,
 };
 
-const MANAGER_OF_SITE: Record<SiteId, string> = { laciotat: 'mgr-hd-lc', montpellier: 'mgr-hd-mtp', paris: 'mgr-hd-par' };
+/** Manager Helpdesk N1 de chaque site doté d'un pôle (aucun pôle client à Paris : rattachement à la responsable). */
+const MANAGER_OF_SITE: Record<SiteId, string> = { laciotat: 'mgr-hd-lc', montpellier: 'mgr-hd-mtp', paris: 'resp-helpdesk' };
 
 /** Petite variation déterministe pour éviter des coûts strictement identiques. */
 const vary = (id: string, base: number) => base + ((id.split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 7) - 3) * 50;
