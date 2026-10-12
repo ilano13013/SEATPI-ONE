@@ -258,7 +258,12 @@ describe('App (mode démo)', () => {
     fireEvent.change(mg.getByLabelText('Montant estimé'), { target: { value: '999999' } });
     fireEvent.click(mg.getByRole('button', { name: 'Enregistrer la demande' }));
     expect(mg.getAllByText(/Bloquée/).length).toBeGreaterThan(0);
-    for (const tab of ['Déplacements prévus', 'Réalisés', 'Dépenses', 'Historique']) fireEvent.click(mg.getByRole('tab', { name: new RegExp(tab) }));
+    for (const tab of ['Déplacements prévus', 'Réalisés et dépenses', 'Historique']) fireEvent.click(mg.getByRole('tab', { name: new RegExp(tab) }));
+    // Réservations : badge = indicateur = lignes de la liste filtrée.
+    const badge = Number(mg.getByRole('tab', { name: /Réservations/ }).textContent?.match(/\((\d+)\)/)?.[1]);
+    expect(Number(within(mg.getByRole('button', { name: /Déplacements à réserver/ })).getByText(/^\d+$/).textContent)).toBe(badge);
+    fireEvent.click(mg.getByRole('tab', { name: /Réservations/ }));
+    expect(mg.getAllByRole('row').length - 1).toBe(badge);
     fireEvent.click(mg.getByRole('tab', { name: /Justificatifs/ }));
     const before = mg.getAllByRole('row').length;
     fireEvent.change(mg.getAllByRole('combobox', { name: /Justificatif/ })[0], { target: { value: 'Reçu' } });

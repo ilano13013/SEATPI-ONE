@@ -11,7 +11,7 @@ import { Tabs } from '../ui';
 import { Toast, fmtDateTime } from '../external/common';
 import { Gauge } from '../finance/Charts';
 
-type Tab = 'demandes' | 'prevus' | 'realises' | 'reservations' | 'depenses' | 'justificatifs' | 'historique';
+type Tab = 'demandes' | 'prevus' | 'realises' | 'reservations' | 'justificatifs' | 'historique';
 
 interface Props {
   moyens: MoyensStore;
@@ -33,7 +33,14 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
   const editable = can(role, 'moyens', 'edit');
   const ms = moyens.state;
   const missing = travel.expenses.filter((e) => (ms.receipts[e.id] ?? 'Manquant') === 'Manquant');
-  const toBook = travel.commitments.filter((c) => c.status === 'Engagé' && (ms.bookings[c.id] ?? DEFAULT_BOOKING).transport === 'À réserver');
+  // Une seule source pour le badge, l'indicateur et la liste : déplacements engagés ayant
+  // au moins une réservation (transport ou hôtel) encore « À réserver ».
+  const engaged = travel.commitments.filter((c) => c.status === 'Engagé');
+  const bookingOf = (id: string) => ms.bookings[id] ?? DEFAULT_BOOKING;
+  const toBook = engaged.filter((c) => bookingOf(c.id).transport === 'À réserver' || bookingOf(c.id).hotel === 'À réserver');
+  const bookingsToDo = toBook.reduce((n, c) => n + (bookingOf(c.id).transport === 'À réserver' ? 1 : 0) + (bookingOf(c.id).hotel === 'À réserver' ? 1 : 0), 0);
+  const spentTotal = travel.expenses.reduce((n, e) => n + e.amount, 0);
+  const readOnly = !editable ? 'Lecture seule : droit « Modification » sur « Moyens généraux (déplacements) » manquant pour votre profil.' : null;
 
   const submit = () => {
     if (form.department === 'Helpdesk') {
@@ -65,10 +72,11 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
         </button>
       </div>
       <div className="xc-kpis">
-        <div className={`xc-kpi ${toBook.length ? 'warn' : 'ok'}`}>
-          <small>Réservations à faire</small>
+        <button className={`xc-kpi ${toBook.length ? 'warn' : 'ok'}`} onClick={() => setTab('reservations')}>
+          <small>Déplacements à réserver</small>
           <strong>{toBook.length}</strong>
-        </div>
+          <em>{bookingsToDo} réservation(s) transport / hôtel</em>
+        </button>
         <div className={`xc-kpi ${missing.length ? 'warn' : 'ok'}`}>
           <small>Justificatifs manquants</small>
           <strong>{missing.length}</strong>
@@ -85,9 +93,8 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
           tabs={[
             { id: 'demandes', label: 'Demandes' },
             { id: 'prevus', label: 'Déplacements prévus' },
-            { id: 'realises', label: 'Réalisés' },
             { id: 'reservations', label: `Réservations (${toBook.length})` },
-            { id: 'depenses', label: 'Dépenses' },
+            { id: 'realises', label: 'Réalisés et dépenses' },
             { id: 'justificatifs', label: `Justificatifs (${missing.length})` },
             { id: 'historique', label: 'Historique' },
           ]}
@@ -153,6 +160,13 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
         </>
       )}
 
+      {readOnly && <p className="hint">{readOnly}</p>}
+      {tab === 'prevus' && <p className="hint">Tous les déplacements engagés sur l’enveloppe Helpdesk. Les réservations se modifient dans l’onglet « Réservations ».</p>}
+      {tab === 'reservations' && (
+        <p className="hint">
+          {toBook.length} déplacement(s) dont au moins une réservation reste à faire · {bookingsToDo} réservation(s) individuelle(s) (transport ou hôtel). Un déplacement sort de cette liste dès que toutes ses réservations sont faites, annulées ou sans objet.
+        </p>
+      )}
       {(tab === 'prevus' || tab === 'reservations') && (
         <table className="xc-table compact">
           <thead>
@@ -166,12 +180,10 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
             </tr>
           </thead>
           <tbody>
-            {travel.commitments
-              .filter((c) => c.status === 'Engagé')
-              .map((c) => {
+            {(tab === 'reservations' ? toBook : engaged).map((c) => {
                 const bk = ms.bookings[c.id] ?? DEFAULT_BOOKING;
                 const sel = (field: 'transport' | 'hotel') => (
-                  <select aria-label={`${field} ${c.id}`} disabled={!editable || tab === 'prevus'} value={bk[field]} onChange={(e) => moyens.setBooking(c.id, { [field]: e.target.value }, by)}>
+                  <select aria-label={`${field === 'transport' ? 'Transport' : 'Hôtel'} ${c.id}`} disabled={!editable || tab === 'prevus'} title={!editable ? (readOnly ?? undefined) : tab === 'prevus' ? 'Modifiable dans l’onglet Réservations' : undefined} value={bk[field]} onChange={(e) => moyens.setBooking(c.id, { [field]: e.target.value }, by)}>
                     {(['À réserver', 'Réservé', 'Annulé', 'Sans objet'] as const).map((s) => (
                       <option key={s}>{s}</option>
                     ))}
@@ -195,7 +207,9 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
         </table>
       )}
 
-      {(tab === 'realises' || tab === 'depenses' || tab === 'justificatifs') && (
+      {tab === 'realises' && <p className="hint">Déplacements réalisés et leurs dépenses réelles imputées à l’enveloppe Helpdesk · total {eur(spentTotal)} · {travel.expenses.length} dépense(s).</p>}
+      {tab === 'justificatifs' && <p className="hint">Dépenses réalisées dont le justificatif n’a pas encore été reçu.</p>}
+      {(tab === 'realises' || tab === 'justificatifs') && (
         <table className="xc-table compact">
           <thead>
             <tr>
