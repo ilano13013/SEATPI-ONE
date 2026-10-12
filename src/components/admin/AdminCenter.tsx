@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Plug, Plus, ShieldCheck } from 'lucide-react';
 import type { AdminStore, ClientStatus } from '../../admin/useAdmin';
-import { AUTH_TYPES, CONFIG_STATUSES, configStatus, DEMO_TEST_MESSAGE, missingFields, READINESS_LINKS, type ConnectorKind } from '../../admin/connections';
+import { AUTH_TYPES, CONFIG_STATUSES, configStatus, DEMO_TEST_MESSAGE, ITSM_TOOLS, missingFields, readinessLinksOf, toolOfConnector, type ConnectorKind } from '../../admin/connections';
 import { clientRecord, clientRegistry, itsmOf, POLE_GROUP_LABEL, type MappedTool, type PoleGroup } from '../../config/itsm';
 import { ACTIONS, actionLabels, can, permissionModules, roleLabels, type Action, type PermissionRule, type Role } from '../../auth/roles';
 import type { AuditEntry } from '../../audit/audit';
@@ -87,8 +87,25 @@ function Connections({ admin, role, onOpenProduction }: Props) {
   const [toast, setToast] = useState<SaveResult | null>(null);
   const [newName, setNewName] = useState('');
   const [newKind, setNewKind] = useState<ConnectorKind>('ITSM');
+  const [newClient, setNewClient] = useState('');
   const editable = can(role, 'integrations', 'configure');
   const c = admin.state.connectors.find((x) => x.id === open);
+  const card = (x: (typeof admin.state.connectors)[number]) => {
+    const st = configStatus(x);
+    const tool = toolOfConnector(x);
+    return (
+      <button key={x.id} className={`connector-card adm-card${open === x.id ? ' active' : ''}`} onClick={() => setOpen(open === x.id ? null : x.id)} aria-label={`Fiche ${x.scope === 'client' ? clientRecord(x.clientId!)?.name ?? x.name : x.name}`}>
+        <span className="adm-logo" aria-hidden>
+          {(x.scope === 'client' ? (tool ?? '?') : x.name).slice(0, 2).toUpperCase()}
+        </span>
+        <span>
+          <b>{x.scope === 'client' ? (clientRecord(x.clientId!)?.name ?? x.name) : x.name}</b>
+          <small>{x.scope === 'client' ? `${tool ?? 'ITSM à confirmer'} · domaine propre au client` : `${x.kind} · tous les clients`}</small>
+        </span>
+        <span className={`badge ${STATUS_TONE[st]}`}>{st}</span>
+      </button>
+    );
+  };
   return (
     <>
       <p className="fin-warning">
@@ -102,26 +119,21 @@ function Connections({ admin, role, onOpenProduction }: Props) {
           </span>
         ))}
       </div>
-      <div className="connector-grid">
-        {admin.state.connectors.map((x) => {
-          const st = configStatus(x);
-          const clients = [...new Set(x.instances.flatMap((i) => i.clients))];
-          return (
-            <button key={x.id} className={`connector-card adm-card${open === x.id ? ' active' : ''}`} onClick={() => setOpen(open === x.id ? null : x.id)} aria-label={`Fiche ${x.name}`}>
-              <span className="adm-logo" aria-hidden>
-                {x.name.slice(0, 2).toUpperCase()}
-              </span>
-              <span>
-                <b>{x.name}</b>
-                <small>
-                  {x.kind} · {clients.length ? clients.map((id) => clientRecord(id)?.name ?? id).join(', ') : 'clients : —'}
-                </small>
-              </span>
-              <span className={`badge ${STATUS_TONE[st]}`}>{st}</span>
-            </button>
-          );
-        })}
-      </div>
+      <h3>Connecteurs ITSM — un par client (chaque client a son propre domaine)</h3>
+      {[...ITSM_TOOLS, null].map((tool) => {
+        const list = admin.state.connectors.filter((x) => x.scope === 'client' && toolOfConnector(x) === tool);
+        if (!list.length) return null;
+        return (
+          <div key={tool ?? 'none'} className="adm-group">
+            <h4>
+              {tool ?? 'Outil à confirmer'} <small className="hint">· {list.length} client(s)</small>
+            </h4>
+            <div className="connector-grid">{list.map(card)}</div>
+          </div>
+        );
+      })}
+      <h3>Connecteurs généraux — communs à tous les clients</h3>
+      <div className="connector-grid">{admin.state.connectors.filter((x) => x.scope === 'général').map(card)}</div>
       {editable && (
         <div className="mg-form">
           <input aria-label="Nom du nouveau connecteur" placeholder="Nouveau connecteur (nom du service)" value={newName} onChange={(e) => setNewName(e.target.value)} />
@@ -130,21 +142,31 @@ function Connections({ admin, role, onOpenProduction }: Props) {
               <option key={k}>{k}</option>
             ))}
           </select>
-          <button className="action" onClick={() => setToast(admin.addConnector(newName, newKind))}>
+          <select aria-label="Portée du connecteur" value={newClient} onChange={(e) => setNewClient(e.target.value)}>
+            <option value="">Commun à tous les clients</option>
+            {clientRegistry.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                Propre au client {clientRecord(cl.id)?.name}
+              </option>
+            ))}
+          </select>
+          <button className="action" onClick={() => setToast(admin.addConnector(newName, newKind, newClient || null))}>
             <Plus size={14} /> Ajouter un connecteur
           </button>
         </div>
       )}
 
       {c && (
-        <article className="adm-sheet" aria-label={`Configuration ${c.name}`}>
+        <article className="adm-sheet" aria-label={`Configuration ${c.scope === 'client' ? (clientRecord(c.clientId!)?.name ?? c.name) : c.name}`}>
           <header>
             <span className="adm-logo" aria-hidden>
               {c.name.slice(0, 2).toUpperCase()}
             </span>
             <div>
-              <h3>{c.name}</h3>
-              <small>Logo officiel non intégré (marque de l’éditeur) · {c.kind}</small>
+              <h3>{c.scope === 'client' ? `${clientRecord(c.clientId!)?.name ?? c.name} — ${toolOfConnector(c) ?? 'ITSM à confirmer'}` : c.name}</h3>
+              <small>
+                Logo officiel non intégré (marque de l’éditeur) · {c.kind} · {c.scope === 'client' ? 'connecteur propre au client (domaine dédié)' : 'connecteur commun à tous les clients'}
+              </small>
             </div>
             <span className={`badge ${STATUS_TONE[configStatus(c)]}`}>{configStatus(c)}</span>
           </header>
@@ -194,6 +216,11 @@ function Connections({ admin, role, onOpenProduction }: Props) {
                   <InlineEdit value={i.apiUrl} field={`${c.name} / ${i.label} — URL de l’API`} module="Connexions & API" canEdit={editable} format={(v) => v || NR} onSave={(v) => admin.setInstanceField(c.id, i.id, 'apiUrl', v)} />
                 </dd>
                 <dt>Clients associés</dt>
+                {c.scope === 'client' ? (
+                  <dd>{clientRecord(c.clientId!)?.name} (connecteur dédié)</dd>
+                ) : c.instances.length === 1 && i.clients.length === clientRegistry.length ? (
+                  <dd>Tous les clients ({clientRegistry.length})</dd>
+                ) : (
                 <dd className="adm-clients">
                   {clientRegistry.map((cl) => (
                     <label key={cl.id} className={i.clients.includes(cl.id) ? 'on' : ''}>
@@ -207,6 +234,7 @@ function Connections({ admin, role, onOpenProduction }: Props) {
                     </label>
                   ))}
                 </dd>
+                )}
                 <dt>Endpoints spécifiques</dt>
                 <dd>
                   {i.endpoints.length ? i.endpoints.map((e) => <code key={e.name}>{`${e.name} : ${e.path}`}</code>) : NR}
@@ -237,7 +265,7 @@ function Connections({ admin, role, onOpenProduction }: Props) {
           {editable && <ParamForm onAdd={(k, v) => setToast(admin.setParam(c.id, k, v))} />}
           <h4>Préparation à la production</h4>
           <p>
-            Éléments liés : {(READINESS_LINKS[c.id] ?? []).join(', ') || '—'}{' '}
+            Éléments liés : {readinessLinksOf(c).join(', ') || '—'}{' '}
             <button className="link" onClick={onOpenProduction}>
               Ouvrir la liste de contrôle
             </button>

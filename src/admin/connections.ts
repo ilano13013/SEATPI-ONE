@@ -8,7 +8,7 @@
 //   démonstration » — jamais de faux succès ;
 // - la configuration n'est pas persistée (mémoire de la page) et sera, en production,
 //   enregistrée et appliquée par le backend.
-import { ITSM_MAPPING, clientRegistry, type MappedTool } from '../config/itsm';
+import { clientRegistry, itsmOf, type MappedTool } from '../config/itsm';
 
 export type ConnectorKind = 'ITSM' | 'Statistiques' | 'Téléphonie' | 'Autre';
 export type AuthType = 'OAuth 2.0' | 'Jeton API' | 'Authentification basique' | 'Compte de service' | 'SAML / SSO' | 'Autre';
@@ -38,6 +38,13 @@ export interface Connector {
   id: string;
   name: string;
   kind: ConnectorKind;
+  /**
+   * « client » : connecteur propre à un client (chaque client a son propre domaine / instance ITSM) ;
+   * « général » : connecteur commun à tous les clients (QlikView, Genesys Cloud).
+   */
+  scope: 'client' | 'général';
+  /** Client du connecteur (portée « client »). */
+  clientId: string | null;
   docUrl: string;
   authType: AuthType | null;
   /** Nom du secret dans le coffre côté serveur (jamais la valeur du secret). */
@@ -50,12 +57,12 @@ export interface Connector {
 
 const blankInstance = (id: string, clients: string[] = []): Instance => ({ id, label: 'Instance principale', clients, instanceUrl: '', apiUrl: '', endpoints: [] });
 
-const clientsOf = (tool: MappedTool) => ITSM_MAPPING[tool].map((n) => clientRegistry.find((c) => c.name === n)?.id ?? n.toLowerCase());
-
-const connector = (id: string, name: string, kind: ConnectorKind, clients: string[]): Connector => ({
+const connector = (id: string, name: string, kind: ConnectorKind, clients: string[], clientId: string | null = null): Connector => ({
   id,
   name,
   kind,
+  scope: clientId ? 'client' : 'général',
+  clientId,
   docUrl: '',
   authType: null,
   secretRef: '',
@@ -65,13 +72,27 @@ const connector = (id: string, name: string, kind: ConnectorKind, clients: strin
   lastSync: null,
 });
 
+/** Ordre d'affichage des outils ITSM. */
+export const ITSM_TOOLS: MappedTool[] = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow'];
+
+/**
+ * Un connecteur ITSM par client (domaine / instance propre à chaque client), y compris pour un
+ * client dont l'outil reste à confirmer (G2S) ; QlikView et Genesys Cloud sont communs à tous les clients.
+ */
 export function initialConnectors(): Connector[] {
+  const all = clientRegistry.map((c) => c.id);
   return [
-    ...(['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow'] as MappedTool[]).map((t) => connector(t.toLowerCase(), t, 'ITSM', clientsOf(t))),
-    connector('qlikview', 'QlikView', 'Statistiques', []),
-    connector('genesys', 'Genesys Cloud', 'Téléphonie', []),
+    ...clientRegistry.map((c) => {
+      const conn = connector(`itsm-${c.id}`, c.name, 'ITSM', [c.id], c.id);
+      return { ...conn, instances: [{ ...conn.instances[0], label: `Domaine ${c.name}` }] };
+    }),
+    connector('qlikview', 'QlikView', 'Statistiques', all),
+    connector('genesys', 'Genesys Cloud', 'Téléphonie', all),
   ];
 }
+
+/** Outil ITSM d'un connecteur client (référentiel courant, modifiable dans le CRM). */
+export const toolOfConnector = (c: Connector): MappedTool | null => (c.scope === 'client' && c.clientId ? itsmOf(c.clientId) : null);
 
 // --- Validation ----------------------------------------------------------------------
 
@@ -126,13 +147,11 @@ export const missingFields = (c: Connector): string[] => [
 ];
 
 /** Éléments de « Préparation à la production » liés à chaque connecteur. */
-export const READINESS_LINKS: Record<string, string[]> = {
-  easyvista: ['ITSM-01'],
-  jira: ['ITSM-02'],
-  glpi: ['ITSM-03'],
-  isilog: ['ITSM-04'],
-  zendesk: ['ITSM-09'],
-  servicenow: ['ITSM-10'],
-  qlikview: ['TEL-01', 'TEL-02'],
-  genesys: ['TEL-05'],
-};
+const READINESS_BY_TOOL: Record<MappedTool, string> = { EasyVista: 'ITSM-01', Jira: 'ITSM-02', GLPI: 'ITSM-03', ISILOG: 'ITSM-04', Zendesk: 'ITSM-09', ServiceNow: 'ITSM-10' };
+const READINESS_GENERAL: Record<string, string[]> = { qlikview: ['TEL-01', 'TEL-02'], genesys: ['TEL-05'] };
+
+export function readinessLinksOf(c: Connector): string[] {
+  if (c.scope === 'général') return READINESS_GENERAL[c.id] ?? [];
+  const tool = toolOfConnector(c);
+  return tool ? [READINESS_BY_TOOL[tool]] : ['ITSM-05'];
+}

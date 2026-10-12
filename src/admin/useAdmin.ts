@@ -137,12 +137,13 @@ export function useAdmin() {
     return { ok: false, message: DEMO_TEST_MESSAGE };
   }, []);
 
-  const addConnector = useCallback((name: string, kind: ConnectorKind): AdminResult => {
+  const addConnector = useCallback((name: string, kind: ConnectorKind, clientId: string | null = null): AdminResult => {
     const s = ref.current;
-    const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const id = (clientId ? `${clientId}-` : '') + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
     if (!id) return { ok: false, message: 'Nom du service obligatoire.' };
     if (s.connectors.some((c) => c.id === id)) return { ok: false, message: 'Ce connecteur existe déjà.' };
-    apply({ ...s, connectors: [...s.connectors, { id, name: name.trim(), kind, docUrl: '', authType: null, secretRef: '', params: [], instances: [{ id: `${id}-1`, label: 'Instance principale', clients: [], instanceUrl: '', apiUrl: '', endpoints: [] }], lastTest: null, lastSync: null }] });
+    const clients = clientId ? [clientId] : clientRegistry.map((c) => c.id);
+    apply({ ...s, connectors: [...s.connectors, { id, name: name.trim(), kind, scope: clientId ? 'client' : 'général', clientId, docUrl: '', authType: null, secretRef: '', params: [], instances: [{ id: `${id}-1`, label: clientId ? 'Domaine du client' : 'Instance principale', clients, instanceUrl: '', apiUrl: '', endpoints: [] }], lastTest: null, lastSync: null }] });
     return { ok: true, message: `Connecteur ${name.trim()} ajouté.` };
   }, []);
 

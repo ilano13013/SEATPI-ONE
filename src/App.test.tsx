@@ -287,14 +287,17 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
     fireEvent.click(screen.getByRole('button', { name: 'Administration' }));
     const adm = within(screen.getByRole('region', { name: 'Administration' }));
-    for (const n of ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow', 'QlikView', 'Genesys Cloud']) expect(adm.getByRole('button', { name: `Fiche ${n}` })).toBeTruthy();
-    fireEvent.click(adm.getByRole('button', { name: 'Fiche ServiceNow' }));
-    const sheet = within(adm.getByRole('article', { name: 'Configuration ServiceNow' }));
+    // Un connecteur par client (domaine propre), un QlikView commun.
+    for (const n of ['PRIMAGAZ', 'SODIAAL', 'IRD', 'THELEM', 'ORTEC', 'INVIVO', 'SNR', 'G2S', 'MONEXT', 'QlikView', 'Genesys Cloud']) expect(adm.getByRole('button', { name: `Fiche ${n}` })).toBeTruthy();
+    expect(adm.getAllByRole('button', { name: 'Fiche QlikView' })).toHaveLength(1);
+    fireEvent.click(adm.getByRole('button', { name: 'Fiche PRIMAGAZ' }));
+    const sheet = within(adm.getByRole('article', { name: 'Configuration PRIMAGAZ' }));
+    expect(sheet.getByRole('heading', { name: 'PRIMAGAZ — ServiceNow' })).toBeTruthy();
     expect(sheet.getAllByText('Non configuré').length).toBeGreaterThan(0);
     fireEvent.click(sheet.getByRole('button', { name: /Tester la connexion/ }));
     expect(screen.getAllByText('Test réel indisponible en démonstration').length).toBeGreaterThan(0);
     // URL de l'API renseignée → configuration incomplète ; URL non https refusée.
-    fireEvent.click(sheet.getByRole('button', { name: /Modifier ServiceNow \/ Instance principale — URL de l’API/ }));
+    fireEvent.click(sheet.getByRole('button', { name: /Modifier PRIMAGAZ \/ Domaine PRIMAGAZ — URL de l’API/ }));
     fireEvent.change(sheet.getByRole('textbox', { name: /URL de l’API/ }), { target: { value: 'http://exemple.invalid' } });
     fireEvent.click(sheet.getByRole('button', { name: 'Enregistrer' }));
     expect(sheet.getByRole('alert').textContent).toMatch(/https/);

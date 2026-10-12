@@ -1,16 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { configStatus, DEMO_TEST_MESSAGE, initialConnectors, looksLikeSecret, validateSecretRef, validateUrl } from './connections';
+import { configStatus, DEMO_TEST_MESSAGE, initialConnectors, looksLikeSecret, readinessLinksOf, toolOfConnector, validateSecretRef, validateUrl } from './connections';
+import { clientRegistry } from '../config/itsm';
 
 describe('Connexions & API', () => {
-  it('connecteurs attendus, aucune URL pré-remplie', () => {
+  it('un connecteur ITSM par client (domaine propre) et un QlikView commun à tous les clients', () => {
     const list = initialConnectors();
-    expect(list.map((c) => c.name)).toEqual(['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow', 'QlikView', 'Genesys Cloud']);
+    const perClient = list.filter((c) => c.scope === 'client');
+    expect(perClient.map((c) => c.clientId).sort()).toEqual(clientRegistry.map((c) => c.id).sort());
+    for (const c of perClient) expect(c.instances[0].clients).toEqual([c.clientId]);
+    expect(toolOfConnector(perClient.find((c) => c.clientId === 'primagaz')!)).toBe('ServiceNow');
+    expect(toolOfConnector(perClient.find((c) => c.clientId === 'sodiaal')!)).toBe('ServiceNow');
+    expect(toolOfConnector(perClient.find((c) => c.clientId === 'g2s')!)).toBeNull();
+    expect(readinessLinksOf(perClient.find((c) => c.clientId === 'g2s')!)).toEqual(['ITSM-05']);
+    const qlik = list.filter((c) => c.name === 'QlikView');
+    expect(qlik).toHaveLength(1);
+    expect(qlik[0].scope).toBe('général');
+    expect(qlik[0].instances[0].clients).toHaveLength(clientRegistry.length);
+  });
+
+  it('aucune URL pré-remplie', () => {
+    const list = initialConnectors();
     for (const c of list) {
       expect(c.docUrl).toBe('');
       expect(c.instances.every((i) => !i.instanceUrl && !i.apiUrl)).toBe(true);
       expect(configStatus(c)).toBe('Non configuré');
     }
-    expect(list.find((c) => c.id === 'servicenow')!.instances[0].clients).toEqual(['primagaz', 'sodiaal', 'ird']);
   });
   it('statuts : incomplet puis prêt à tester ; jamais « Connecté » sans backend', () => {
     const c = initialConnectors()[0];
