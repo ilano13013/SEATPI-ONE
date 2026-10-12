@@ -529,7 +529,7 @@ function Travel({ store, role, run, editable }: { store: FinanceStore; role: Rol
   const b = travelBalance(state.travel);
   const [req, setReq] = useState({ label: '', amount: 0 });
   const [exp, setExp] = useState({ label: '', amount: 0 });
-  const [ceil, setCeil] = useState({ to: state.travel.ceiling, reason: '' });
+  const [ceil, setCeil] = useState({ to: state.travel.ceiling, reason: '', confirm: false });
   const [actual, setActual] = useState<Record<string, number>>({});
   const today = new Date().toISOString().slice(0, 10);
   return (
@@ -610,17 +610,20 @@ function Travel({ store, role, run, editable }: { store: FinanceStore; role: Rol
           </li>
         ))}
       </ul>
-      <h3>Plafond de l’enveloppe</h3>
-      {role === 'direction' ? (
+      <h3>Révision budgétaire du plafond</h3>
+      {can(role, 'budget-revision', 'edit') ? (
         <div className="mg-form">
-          <input aria-label="Nouveau plafond" type="number" min={0} value={ceil.to} onChange={(e) => setCeil({ ...ceil, to: Number(e.target.value) })} />
-          <input aria-label="Motif du changement de plafond" placeholder="Motif (obligatoire)" value={ceil.reason} onChange={(e) => setCeil({ ...ceil, reason: e.target.value })} />
-          <button className="action" onClick={() => run(store.setCeiling(ceil.to, ceil.reason, role))}>
-            Modifier le plafond
+          <input aria-label="Nouveau plafond" type="number" min={0} value={ceil.to} onChange={(e) => setCeil({ ...ceil, to: Number(e.target.value), confirm: false })} />
+          <input aria-label="Motif du changement de plafond" placeholder="Justification (obligatoire)" value={ceil.reason} onChange={(e) => setCeil({ ...ceil, reason: e.target.value })} />
+          <label className="xc-inline">
+            <input type="checkbox" checked={ceil.confirm} onChange={(e) => setCeil({ ...ceil, confirm: e.target.checked })} /> Je confirme cette révision budgétaire
+          </label>
+          <button className="action" disabled={!ceil.confirm} onClick={() => run(store.setCeiling(ceil.to, ceil.reason, role)).ok && setCeil({ ...ceil, reason: '', confirm: false })}>
+            Réviser le plafond
           </button>
         </div>
       ) : (
-        <p className="restricted">Modification du plafond réservée à une personne habilitée par la direction (rôle Direction dans la démonstration).</p>
+        <p className="restricted">Procédure de révision budgétaire réservée aux profils disposant de la permission spécifique « Révision budgétaire » (Direction et Administrateur dans la démonstration). Aucune modification en ligne du plafond n’est possible, même pour un administrateur.</p>
       )}
       <ul className="xc-mini">
         {state.travel.ceilingHistory.map((h, i) => (
@@ -649,7 +652,7 @@ function Recruitment({ store, role, run, editable }: { store: FinanceStore; role
       </div>
       <label className="xc-inline">
         Règle d’imputation
-        <select value={state.recruitment.rule} disabled={!(editable || role === 'direction')} onChange={(e) => run(store.setRule(e.target.value as ImputationRule, role))}>
+        <select value={state.recruitment.rule} disabled={!(editable || can(role, 'budget-revision', 'edit'))} onChange={(e) => run(store.setRule(e.target.value as ImputationRule, role))}>
           {RULES.map((r) => (
             <option key={r}>{r}</option>
           ))}

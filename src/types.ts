@@ -52,7 +52,17 @@ export type ModuleId =
   | 'recrutement'
   | 'moyens'
   | 'reunion'
-  | 'carte';
+  | 'carte'
+  | 'management'
+  | 'objectifs'
+  | 'clients'
+  | 'collaborateurs'
+  | 'budget-revision'
+  | 'sla'
+  | 'telephonie'
+  | 'dashboard'
+  | 'pdg'
+  | 'permissions';
 
 export interface Floor {
   id: FloorId;

@@ -33,7 +33,8 @@ import { consolidate, type HdTicket } from './helpdesk/consolidation';
 import { useManagement, DEFAULT_N1_OBJECTIVES } from './management/useManagement';
 import { declaredHours } from './management/rules';
 import { HelpdeskCockpit } from './components/helpdesk/HelpdeskCockpit';
-import { ManagementCockpit, type ObjectiveScope } from './components/management/ManagementCockpit';
+import { MANAGER_IDS, ManagementCockpit, managerScope, type MgmtTab, type ObjectiveScope } from './components/management/ManagementCockpit';
+import { ChecklistSummary } from './components/management/Checklists';
 import { ExploitationCockpit, McoCockpit } from './components/management/ServiceCockpits';
 import type { ModuleLink } from './components/panels/DepartmentPanel';
 import type { ExternalState } from './external/useExternal';
@@ -101,6 +102,7 @@ export function App() {
   const internal = useInternalTickets(sim.running);
   const mgmt = useManagement(state.agents, ext.state.techs);
   const [persona, setPersona] = useState('resp-helpdesk');
+  const [mgmtTab, setMgmtTab] = useState<MgmtTab>('cra');
   const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
   const [finTab, setFinTab] = useState<FinanceTab>('global');
   const moyens = useMoyens(fin.state.travel);
@@ -290,7 +292,7 @@ export function App() {
       accueil: `${state.reception.length} évènements aujourd'hui`,
       stock: `${lowStock} alerte${lowStock > 1 ? 's' : ''} de stock`,
       parking: `${available} véhicule${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}`,
-      rh: `${mgmt.state.leaves.filter((l) => l.status === 'Soumise').length} congés à valider`,
+      rh: `${mgmt.state.leaves.filter((l) => l.status === "Soumise").length} demandes de congé en attente (suivi)`,
       direction: `${Math.round((spent / allocated) * 100)} % du budget consommé`,
       exploitation: `${serviceSummary(Object.values(views), 'Exploitation', ext.state.now).open.length} escalade(s) en cours`,
       csm: `${serviceSummary(Object.values(views), 'CSM', ext.state.now).open.length} escalade(s) contractuelle(s)`,
@@ -474,6 +476,19 @@ export function App() {
         {appView === 'itsm' && <ItsmRegistry connectors={ext.state.connectors} />}
         {appView === 'helpdesk' && (
           <HelpdeskCockpit
+            checklists={
+              can(role, 'management') ? (
+                <ChecklistSummary
+                  store={mgmt}
+                  scope={null}
+                  onOpen={(t) => {
+                    setPersona('resp-helpdesk');
+                    setMgmtTab(t);
+                    setAppView('management');
+                  }}
+                />
+              ) : undefined
+            }
             tickets={hdTickets}
             agents={state.agents}
             techsN2={extState.techs}
@@ -490,6 +505,8 @@ export function App() {
         )}
         {appView === 'management' && (
           <ManagementCockpit
+            tab={mgmtTab}
+            onTab={setMgmtTab}
             store={mgmt}
             role={role}
             persona={persona}
@@ -577,6 +594,19 @@ export function App() {
           trips={ext.state.trips}
           focusPersonId={focusPersonId}
           onOpenPerson={openPersonCockpit}
+          personExtras={(id) =>
+            MANAGER_IDS.includes(id) && can(role, 'management') ? (
+              <ChecklistSummary
+                store={mgmt}
+                scope={new Set(managerScope(id, mgmt.state).map((c) => c.id))}
+                onOpen={(t) => {
+                  setPersona(id);
+                  setMgmtTab(t);
+                  setAppView('management');
+                }}
+              />
+            ) : null
+          }
           availableModules={AVAILABLE_LINKS}
           onOpenModule={(m) => {
             if (m === 'deplacements' || m === 'recrutement' || m === 'finance') setFinTab(m === 'finance' ? 'global' : m);

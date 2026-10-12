@@ -526,3 +526,29 @@ main > .notice { margin-top: 0; }
 .prod-evidence { width: 100%; border: 1px solid #dce3ee; border-radius: 8px; padding: 8px; font: inherit; font-size: 12px; }
 .prod-report { white-space: pre-wrap; font-size: 11px; background: #f7f9fc; border: 1px solid var(--line); border-radius: 10px; padding: 12px; max-height: 60vh; overflow: auto; }
 .panel .itsm-missing { font-size: 12px; padding: 10px 12px; }
+
+/* Modification en direct */
+.ie-value { border: 1px dashed transparent; background: none; padding: 1px 4px; border-radius: 6px; font: inherit; color: inherit; cursor: text; display: inline-flex; align-items: center; gap: 4px; }
+.ie-value:hover, .ie-value:focus-visible { border-color: #9dbbe9; background: #f5f9ff; }
+.ie-value svg { opacity: .35; }
+.ie-ro { display: inline-flex; align-items: center; gap: 4px; }
+.ie-ro svg { opacity: .3; }
+.ie-edit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ie-edit input, .ie-edit select { border: 1px solid #3176e9; border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 12px; max-width: 160px; }
+.ie-ok, .ie-cancel { border: 1px solid #dce3ee; background: white; border-radius: 6px; padding: 2px 6px; display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; }
+.ie-ok { color: #15803d; }
+.ie-cancel { color: #b91c1c; }
+.ie-error { color: #b91c1c; font-size: 11px; width: 100%; }
+.ie-confirm { color: #9a5b00; font-size: 11px; width: 100%; }
+
+/* Checklists de suivi */
+.ck-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ck-list { list-style: none; margin: 0; padding: 0; font-size: 12px; }
+.ck-list li { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e3e9f1; }
+.ck-list li.done span:first-child, tr.done td:not(:last-child) { opacity: .5; text-decoration: line-through; }
+.ck-follow { display: inline-flex; gap: 6px; align-items: center; }
+.ck-follow select { border: 1px solid #dce3ee; border-radius: 6px; padding: 3px; font-size: 11px; }
+.ck-check { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; font-weight: 700; }
+.ck-summary { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.ck-bell { color: #d97706; vertical-align: -1px; }
+@media (max-width: 760px) { .ck-cols { grid-template-columns: 1fr; } }

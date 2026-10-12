@@ -1,6 +1,6 @@
 // Cockpit Helpdesk consolidé : équipes internes (N1) et sites clients INVIVO, PRIMAGAZ, MONEXT (N2).
 // Les compteurs, le tableau et le Kanban reposent sur le même jeu filtré.
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import type { Agent } from '../../types';
 import type { Priority, Service, Technician, TicketStatus } from '../../external/types';
@@ -34,6 +34,8 @@ interface Props {
   onAssign: (t: HdTicket, techId: string) => ActionResult;
   onCreate: (level: 'N1' | 'N2', clientId: string, input: NewTicketInput) => ActionResult;
   onBack: () => void;
+  /** Synthèse des checklists CRA / congés (cockpit de la responsable Helpdesk). */
+  checklists?: ReactNode;
 }
 
 /** Clients du périmètre : clients traités en N1 sur les plateaux + sites clients N2. */
@@ -205,6 +207,7 @@ export function HelpdeskCockpit(props: Props) {
 
       {tab === 'synthese' && (
         <>
+          {props.checklists}
           <h3>Effectifs (aujourd’hui)</h3>
           <div className="xc-kpis">
             {(

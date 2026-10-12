@@ -247,8 +247,8 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
   }, []);
 
   const setCeiling = useCallback((to: number, reason: string, role: Role): FinanceResult => {
-    // Habilitation simulée : seul le rôle Direction peut modifier le plafond.
-    return travelAction(role, 'Modification du plafond', (b, by) => changeCeiling(b, to, reason, role === 'direction', by, Date.now()));
+    // Procédure distincte de révision budgétaire : permission spécifique, justification, historique.
+    return travelAction(role, 'Modification du plafond', (b, by) => changeCeiling(b, to, reason, can(role, 'budget-revision', 'edit'), by, Date.now()));
   }, []);
 
   /** Déplacements CSM nouvellement planifiés : demandés automatiquement sur l'enveloppe (blocage possible). */
@@ -277,7 +277,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
   }, []);
 
   const setRule = useCallback((rule: ImputationRule, role: Role): FinanceResult => {
-    if (role !== 'direction' && !can(role, 'finance', 'edit')) return denied;
+    if (!can(role, 'budget-revision', 'edit') && !can(role, 'finance', 'edit')) return denied;
     const s = ref.current;
     const from = s.recruitment.rule;
     apply(logged({ ...s, recruitment: { ...s.recruitment, rule, ruleHistory: [{ at: Date.now(), by: who(role), from, to: rule }, ...s.recruitment.ruleHistory] } }, role, 'Règle d’imputation recrutement', `${from} → ${rule}`));

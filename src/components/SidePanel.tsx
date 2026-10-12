@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Activity, X } from 'lucide-react';
 import type { DemoState, Room, SiteId } from '../types';
 import { can, roleLabels, type Role } from '../auth/roles';
@@ -36,6 +37,8 @@ interface Props {
   availableModules?: Set<ModuleLink>;
   /** Ouvre le cockpit de la personne de l'encadrement. */
   onOpenPerson?: (personId: string) => void;
+  /** Contenu complémentaire du bureau d'une personne (checklists du manager). */
+  personExtras?: (personId: string) => ReactNode;
 }
 
 const isSite = (l: Room['location']): l is SiteId => l === 'laciotat' || l === 'montpellier' || l === 'paris';
@@ -53,7 +56,7 @@ function siteState(state: DemoState, site: SiteId): DemoState {
 }
 
 export function SidePanel(p: Props) {
-  const { room, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, trips, now, onOpenTicket, onOpenClient, focusPersonId, onOpenModule, onOpenPerson, availableModules = new Set() } = p;
+  const { room, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, trips, now, onOpenTicket, onOpenClient, focusPersonId, onOpenModule, onOpenPerson, personExtras, availableModules = new Set() } = p;
   const allowed = can(role, room.module);
   const site = isSite(room.location) ? room.location : null;
   const state = site ? siteState(p.state, site) : p.state;
@@ -91,6 +94,7 @@ export function SidePanel(p: Props) {
                   Ouvrir son cockpit
                 </button>
               )}
+              {personExtras?.(person.id)}
             </div>
           )}
           {!generic && moduleLinksFor(room.kind).filter((l) => availableModules.has(l.module)).map((l) => (

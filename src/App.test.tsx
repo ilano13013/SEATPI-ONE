@@ -187,36 +187,6 @@ describe('App (mode démo)', () => {
     expect((dlg.getByRole('button', { name: /Créer dans/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('management : refus de congé avec commentaire obligatoire et historique', () => {
-    render(<App />);
-    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management : congés/ }));
-    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
-    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
-    const before = mg.getAllByRole('button', { name: 'Refuser' }).length;
-    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
-    expect(screen.getByText(/commentaire est obligatoire/)).toBeTruthy();
-    fireEvent.change(mg.getAllByPlaceholderText(/Commentaire/)[0], { target: { value: 'Charge trop forte' } });
-    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
-    expect(mg.queryAllByRole('button', { name: 'Refuser' }).length).toBe(before - 1);
-    fireEvent.click(mg.getByRole('tab', { name: 'Historique' }));
-    expect(mg.getAllByText(/Charge trop forte/).length).toBeGreaterThan(0);
-  });
-
-  it('management : CRA — compteurs et validation d’un CRA soumis', () => {
-    render(<App />);
-    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management : congés/ }));
-    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
-    fireEvent.click(mg.getByRole('tab', { name: 'CRA' }));
-    const validated = () => Number(within(mg.getByRole('button', { name: /^Validés/ })).getByText(/^\d+$/).textContent);
-    const v0 = validated();
-    fireEvent.click(mg.getByRole('button', { name: /^Soumis/ }));
-    fireEvent.click(mg.getAllByRole('row')[1]);
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Valider' }));
-    expect(validated()).toBe(v0 + 1);
-  });
-
   it('budget déplacements : demande au-delà du plafond bloquée et journalisée ; plafond réservé à la direction', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'finance' } });
@@ -228,30 +198,10 @@ describe('App (mode démo)', () => {
     fireEvent.change(fin.getByLabelText('Montant estimé'), { target: { value: '999999' } });
     fireEvent.click(fin.getByRole('button', { name: /Soumettre/ }));
     expect(fin.getAllByText(/Bloquée/).length).toBeGreaterThan(0);
-    expect(fin.getByText(/réservée à une personne habilitée/)).toBeTruthy();
+    expect(fin.getByText(/Procédure de révision budgétaire réservée/)).toBeTruthy();
     // Recrutement : règle d'imputation à confirmer.
     fireEvent.click(fin.getByRole('tab', { name: 'Budget recrutement' }));
     expect(fin.getAllByText(/RÈGLE D’IMPUTATION À CONFIRMER/).length).toBeGreaterThan(0);
-  });
-
-  it('RÉINITIALISER LA DÉMONSTRATION remet tous les modules à leur état initial', () => {
-    render(<App />);
-    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
-    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
-    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
-    let mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
-    const pendingTab = () => mg.getByRole('tab', { name: /Congés/ }).textContent;
-    const before = pendingTab();
-    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
-    fireEvent.change(mg.getAllByPlaceholderText(/Commentaire/)[0], { target: { value: 'Non' } });
-    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
-    expect(pendingTab()).not.toBe(before);
-    fireEvent.click(screen.getByRole('button', { name: /RÉINITIALISER LA DÉMONSTRATION/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Confirmer' }));
-    expect(screen.getByText(/Démonstration réinitialisée/)).toBeTruthy();
-    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
-    mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
-    expect(pendingTab()).toBe(before);
   });
 
   it('préparation à la production : NO-GO, Validé exige une preuve, rapport généré', () => {
@@ -270,34 +220,6 @@ describe('App (mode démo)', () => {
     expect(within(screen.getByRole('dialog')).getByText(/Décision : NO-GO/)).toBeTruthy();
   });
 
-  it('une validation de congé se répercute sur les effectifs prévus du cockpit Helpdesk', () => {
-    render(<App />);
-    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
-    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
-    fireEvent.click(modules.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
-    const planned = () => Number(within(within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' })).getByRole('button', { name: /Agents prévus/ })).getByText(/^\d+$/).textContent);
-    const p0 = planned();
-    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
-    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
-    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
-    fireEvent.click(mg.getByRole('button', { name: /Saisir une demande/ }));
-    const today = new Date();
-    while (today.getDay() === 0 || today.getDay() === 6) today.setDate(today.getDate() + 1);
-    const d = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    fireEvent.change(mg.getByLabelText('Début'), { target: { value: d } });
-    fireEvent.change(mg.getByLabelText('Fin'), { target: { value: d } });
-    fireEvent.change(mg.getByLabelText('Collaborateur'), { target: { value: 'ag-01' } });
-    fireEvent.change(mg.getByLabelText('Type'), { target: { value: 'RTT' } });
-    fireEvent.click(mg.getByRole('button', { name: 'Soumettre' }));
-    const card = mg.getAllByRole('article').find((a) => a.textContent?.includes('RTT') && a.textContent.includes(new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })))!;
-    const c = within(card);
-    if (c.queryByRole('checkbox')) fireEvent.click(c.getByRole('checkbox'));
-    fireEvent.change(c.getByPlaceholderText(/Commentaire/), { target: { value: 'OK' } });
-    fireEvent.click(c.getByRole('button', { name: 'Valider' }));
-    fireEvent.click(modules.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
-    expect(planned()).toBe(p0 - 1);
-  });
-
   it('Moyens généraux : déplacements gérés opérationnellement, enveloppe Helpdesk non dupliquée et plafonnée', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
@@ -313,5 +235,50 @@ describe('App (mode démo)', () => {
     const before = mg.getAllByRole('row').length;
     fireEvent.change(mg.getAllByRole('combobox', { name: /Justificatif/ })[0], { target: { value: 'Reçu' } });
     expect(mg.getAllByRole('row').length).toBe(before - 1);
+  });
+
+  it('checklist CRA : cocher « Traité » met à jour les compteurs et l’historique du suivi', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management/ }));
+    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: 'Checklist CRA' }));
+    const remaining = () => Number(within(mg.getByLabelText('CRA restant à traiter')).getByText(/^\d+$/).textContent);
+    const r0 = remaining();
+    expect(r0).toBeGreaterThan(0);
+    fireEvent.click(mg.getAllByRole('checkbox', { name: /Traité : CRA/ })[0]);
+    expect(remaining()).toBe(r0 - 1);
+    expect(mg.getByText(/pas une validation officielle/)).toBeTruthy();
+    fireEvent.click(mg.getByRole('tab', { name: 'Historique du suivi' }));
+    expect(mg.getByText(/À traiter → Traité/)).toBeTruthy();
+  });
+
+  it('checklist congés et RÉINITIALISER LA DÉMONSTRATION', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
+    fireEvent.click(modules.getByRole('button', { name: /Management/ }));
+    let mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: 'Checklist congés' }));
+    const remaining = () => Number(within(mg.getByLabelText('Congés restant à traiter')).getByText(/^\d+$/).textContent);
+    const r0 = remaining();
+    fireEvent.change(mg.getAllByRole('combobox', { name: /Suivi : congé/ })[0], { target: { value: 'Traité' } });
+    expect(remaining()).toBe(r0 - 1);
+    fireEvent.click(screen.getByRole('button', { name: /RÉINITIALISER LA DÉMONSTRATION/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer' }));
+    expect(screen.getByText(/Démonstration réinitialisée/)).toBeTruthy();
+    fireEvent.click(modules.getByRole('button', { name: /Management/ }));
+    mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: 'Checklist congés' }));
+    expect(remaining()).toBe(r0);
+  });
+
+  it('les checklists sont accessibles depuis le cockpit de la responsable et le bureau 3D du manager', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
+    const hd = within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' }));
+    fireEvent.click(within(hd.getByLabelText('Checklists de suivi')).getByRole('button', { name: /Congés/ }));
+    expect(within(screen.getByRole('region', { name: 'Cockpit Management' })).getByRole('region', { name: 'Checklist congés' })).toBeTruthy();
   });
 });

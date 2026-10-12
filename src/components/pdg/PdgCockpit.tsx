@@ -79,7 +79,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
     { level: 'warn', label: `${noItsm.length} client(s) sans outil ITSM renseigné (${noItsm.map((c) => c.name).join(', ')}) — ${ITSM_NOT_SET}`, view: 'itsm' },
     ...(travel.consumedRate >= 80 ? [{ level: (travel.balance <= 0 ? 'bad' : 'warn') as Risk['level'], label: `Enveloppe déplacements consommée ou engagée à ${travel.consumedRate.toLocaleString("fr-FR")} % (solde ${eur(travel.balance)})`, view: 'finance' as AppView, sub: 'deplacements' }] : []),
     ...(fin.recruitment.rule === 'À confirmer' ? [{ level: 'warn' as const, label: `Budget recrutement : ${RULE_TO_CONFIRM}`, view: 'finance' as AppView, sub: 'recrutement' }] : []),
-    ...(conflicts.length ? [{ level: 'warn' as const, label: `${conflicts.length} demande(s) de congé en conflit d’effectif`, view: 'management' as AppView }] : []),
+    ...(conflicts.length ? [{ level: 'warn' as const, label: `${conflicts.length} demande(s) de congé en attente avec effectif réduit (checklist congés)`, view: 'management' as AppView }] : []),
     ...(cra.missing + cra.toFix ? [{ level: 'warn' as const, label: `${cra.missing} CRA manquant(s) et ${cra.toFix} à corriger (dernière semaine échue)`, view: 'management' as AppView }] : []),
     ...(toValidate.length ? [{ level: 'warn' as const, label: `${toValidate.length} prestation(s) à valider (${eur(toValidate.reduce((n, p) => n + prestationAmount(p), 0))})`, view: 'finance' as AppView, sub: 'revenus' }] : []),
     ...(closed.result < 0 ? [{ level: 'bad' as const, label: 'Résultat analytique Helpdesk négatif sur les mois clos', view: 'finance' as AppView, sub: 'rentabilite' }] : []),
@@ -216,7 +216,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
           <div key={p} className="xc-kpi">
             <small>{p}</small>
             <strong>{mgmt.collaborators.filter((c) => c.population === p).length}</strong>
-            <em>{pendingLeaves.filter((l) => mgmt.collaborators.find((c) => c.id === l.personId)?.population === p).length} congé(s) à valider</em>
+            <em>{pendingLeaves.filter((l) => mgmt.collaborators.find((c) => c.id === l.personId)?.population === p).length} congé(s) en attente (outil RH)</em>
           </div>
         ))}
       </div>

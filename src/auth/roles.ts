@@ -1,60 +1,190 @@
-// Matrice de droits de la maquette (cahier des charges §2).
+// Rôles et permissions de la démonstration.
 //
-// AVERTISSEMENT : ces contrôles ne servent qu'à illustrer l'expérience par rôle.
-// Un contrôle côté navigateur n'est PAS une mesure de sécurité : les permissions
-// effectives seront appliquées et journalisées par le backend.
+// AVERTISSEMENT : ces contrôles illustrent l'expérience par profil. Un contrôle côté
+// navigateur n'est PAS une mesure de sécurité : en production, chaque lecture et chaque
+// modification devront être autorisées et journalisées par le backend.
+//
+// Modèle : des règles « rôle × module × actions », éventuellement limitées à un périmètre
+// (département, pôle, équipe). Les règles par défaut ci-dessous sont modifiables par
+// l'administrateur dans Administration → Rôles & permissions, sans toucher au code.
 import type { ModuleId } from '../types';
 
-export type Role = 'agent' | 'teamLeader' | 'responsable' | 'rh' | 'finance' | 'direction' | 'admin';
+export type Role = 'admin' | 'responsable' | 'teamLeader' | 'finance' | 'agent' | 'rh' | 'direction';
 
 /**
- * - `view` : accès au module ;
- * - `individual` : données nominatives (pseudonymes) plutôt qu'agrégées ;
- * - `edit` : actions de modification (simulées) ;
- * - `configure` : paramétrage (objectifs, connecteurs).
+ * - `view` : lecture ; `individual` : données nominatives (pseudonymes) plutôt qu'agrégées ;
+ * - `create` / `edit` / `delete` : création, modification, suppression ;
+ * - `validate` : validation ; `configure` : administration du module.
+ * La visibilité ne donne jamais automatiquement le droit de modifier.
  */
-export type Action = 'view' | 'individual' | 'edit' | 'configure';
+export type Action = 'view' | 'individual' | 'create' | 'edit' | 'delete' | 'validate' | 'configure';
 
-export const roleLabels: Record<Role, string> = {
-  agent: 'Agent',
-  teamLeader: 'Team Leader',
-  responsable: 'Responsable Helpdesk',
-  rh: 'RH',
-  finance: 'Finance',
-  direction: 'Direction',
-  admin: 'Admin',
+export const ACTIONS: Action[] = ['view', 'individual', 'create', 'edit', 'delete', 'validate', 'configure'];
+
+export const actionLabels: Record<Action, string> = {
+  view: 'Lecture',
+  individual: 'Données nominatives',
+  create: 'Création',
+  edit: 'Modification',
+  delete: 'Suppression',
+  validate: 'Validation',
+  configure: 'Administration',
 };
 
-type Matrix = Record<Role, Partial<Record<ModuleId, Action[]>>>;
+/** Profils de démonstration. */
+export const roleLabels: Record<Role, string> = {
+  admin: 'Administrateur',
+  responsable: 'Responsable de département (Helpdesk)',
+  teamLeader: 'Manager',
+  finance: 'Finance',
+  agent: 'Technicien / agent',
+  rh: 'RH',
+  direction: 'Direction',
+};
 
-const ALL: Action[] = ['view', 'individual', 'edit'];
+/** Modules soumis à permissions (en plus des modules d'espace 3D). */
+export const permissionModules: { id: ModuleId; label: string }[] = [
+  { id: 'supervision', label: 'Supervision Helpdesk (plateaux, tickets N1)' },
+  { id: 'externes', label: 'Clients externes (tickets N2)' },
+  { id: 'management', label: 'Management : checklists CRA / congés, équipes' },
+  { id: 'objectifs', label: 'Objectifs' },
+  { id: 'clients', label: 'Référentiel clients (CRM)' },
+  { id: 'collaborateurs', label: 'Collaborateurs et affectations' },
+  { id: 'finance', label: 'Budget & Rentabilité (coûts, revenus, prévisions)' },
+  { id: 'budget-revision', label: 'Révision budgétaire (plafond déplacements)' },
+  { id: 'sla', label: 'Paramètres SLA' },
+  { id: 'telephonie', label: 'SLA décroché (QlikView)' },
+  { id: 'dashboard', label: 'Paramètres des tableaux de bord' },
+  { id: 'moyens', label: 'Moyens généraux (déplacements)' },
+  { id: 'pdg', label: 'Cockpit PDG' },
+  { id: 'integrations', label: 'Connexions & API, préparation production' },
+  { id: 'permissions', label: 'Rôles et permissions' },
+  { id: 'exploitation', label: 'Exploitation' },
+  { id: 'csm', label: 'CSM' },
+  { id: 'rh', label: 'Ressources humaines' },
+  { id: 'pause', label: 'Salle de pause' },
+  { id: 'stock', label: 'Stock' },
+  { id: 'vehicules', label: 'Parc automobile' },
+  { id: 'accueil', label: 'Accueil' },
+];
 
-const matrix: Matrix = {
-  agent: { supervision: ['view', 'individual'], pause: ['view'], stock: ['view'], vehicules: ['view'], accueil: ['view'] },
-  teamLeader: { supervision: ALL, pause: ['view', 'individual'], stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view', 'individual', 'edit'], integrations: ['view'], exploitation: ['view', 'individual'], csm: ['view', 'individual'] },
+export interface PermissionScope {
+  department?: string;
+  pole?: string;
+  team?: string;
+}
+
+export interface PermissionRule {
+  id: string;
+  role: Role;
+  module: ModuleId;
+  actions: Action[];
+  /** Périmètre : champ absent = tout le périmètre. */
+  scope?: PermissionScope;
+}
+
+const RW: Action[] = ['view', 'individual', 'create', 'edit', 'delete', 'validate'];
+const FULL: Action[] = [...RW, 'configure'];
+
+type Matrix = Partial<Record<ModuleId, Action[]>>;
+
+const DEFAULTS: Record<Role, Matrix> = {
+  // Droits complets sur les données et paramètres métier. La révision du plafond déplacements
+  // reste une procédure explicite (justification, confirmation, historique), même pour lui.
+  admin: Object.fromEntries(permissionModules.map((m) => [m.id, FULL])) as Matrix,
   responsable: {
-    supervision: ALL,
-    pause: ['view', 'individual'],
-    rh: ['view'],
-    stock: ['view', 'edit'],
-    finance: ['view'],
-    vehicules: ['view', 'edit'],
-    accueil: ['view'],
-    externes: ['view', 'individual', 'edit', 'configure'],
+    supervision: RW,
+    externes: [...RW, 'configure'],
+    management: RW,
+    objectifs: ['view', 'create', 'edit'],
+    clients: ['view', 'individual'],
+    collaborateurs: ['view', 'individual'],
+    finance: ['view', 'create', 'edit'],
+    sla: ['view'],
+    telephonie: ['view', 'individual'],
+    dashboard: ['view'],
+    moyens: ['view'],
+    pdg: ['view'],
     integrations: ['view', 'configure'],
     exploitation: ['view', 'individual'],
     csm: ['view', 'individual'],
-    moyens: ['view'],
+    pause: ['view', 'individual'],
+    rh: ['view'],
+    stock: ['view', 'edit'],
+    vehicules: ['view', 'edit'],
+    accueil: ['view'],
   },
-  rh: { rh: ALL, pause: ['view'], accueil: ['view'] },
-  finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'], csm: ['view'] },
-  direction: { supervision: ['view'], pause: ['view'], rh: ['view'], stock: ['view'], finance: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'], exploitation: ['view'], csm: ['view'] },
-  // Configuration technique, sans accès automatique aux données RH confidentielles ni aux données individuelles.
-  admin: { supervision: ['view'], stock: ['view', 'edit'], vehicules: ['view', 'edit'], accueil: ['view', 'edit'], pause: ['view'], externes: ['view'], integrations: ['view', 'configure'], exploitation: ['view'] },
+  teamLeader: {
+    supervision: RW,
+    externes: ['view', 'individual', 'edit'],
+    management: ['view', 'individual', 'edit'],
+    objectifs: ['view', 'edit'],
+    clients: ['view'],
+    collaborateurs: ['view', 'individual'],
+    telephonie: ['view'],
+    moyens: ['view'],
+    integrations: ['view'],
+    exploitation: ['view', 'individual'],
+    csm: ['view', 'individual'],
+    pause: ['view', 'individual'],
+    stock: ['view'],
+    vehicules: ['view'],
+    accueil: ['view'],
+  },
+  finance: {
+    finance: RW,
+    clients: ['view'],
+    externes: ['view'],
+    pdg: ['view'],
+    moyens: ['view'],
+    csm: ['view'],
+    stock: ['view'],
+    vehicules: ['view'],
+    accueil: ['view'],
+  },
+  agent: { supervision: ['view', 'individual'], clients: ['view'], pause: ['view'], stock: ['view'], vehicules: ['view'], accueil: ['view'] },
+  rh: { rh: RW, management: ['view', 'individual'], collaborateurs: ['view', 'individual'], pause: ['view'], accueil: ['view'] },
+  direction: {
+    supervision: ['view'],
+    externes: ['view'],
+    management: ['view'],
+    objectifs: ['view'],
+    clients: ['view'],
+    finance: ['view'],
+    'budget-revision': ['view', 'edit'],
+    sla: ['view'],
+    telephonie: ['view'],
+    moyens: ['view'],
+    pdg: ['view'],
+    exploitation: ['view'],
+    csm: ['view'],
+    pause: ['view'],
+    rh: ['view'],
+    stock: ['view'],
+    vehicules: ['view'],
+    accueil: ['view'],
+  },
 };
 
-export function can(role: Role, module: ModuleId, action: Action = 'view'): boolean {
-  return matrix[role][module]?.includes(action) ?? false;
+export const DEFAULT_RULES: PermissionRule[] = (Object.entries(DEFAULTS) as [Role, Matrix][]).flatMap(([role, m]) =>
+  (Object.entries(m) as [ModuleId, Action[]][]).map(([module, actions]) => ({ id: `${role}:${module}`, role, module, actions })),
+);
+
+let rules: PermissionRule[] = DEFAULT_RULES;
+
+/** Remplace les règles actives (appelé par l'application lorsque l'administrateur les modifie). */
+export function setPermissionRules(next: PermissionRule[]) {
+  rules = next;
+}
+
+export const activeRules = () => rules;
+
+const scopeMatches = (s: PermissionScope | undefined, ctx: PermissionScope | undefined) =>
+  !s || !ctx || (Object.keys(s) as (keyof PermissionScope)[]).every((k) => !s[k] || ctx[k] === undefined || s[k] === ctx[k]);
+
+/** Autorisation (simulée) d'une action sur un module, éventuellement dans un périmètre donné. */
+export function can(role: Role, module: ModuleId, action: Action = 'view', ctx?: PermissionScope): boolean {
+  return rules.some((r) => r.role === role && r.module === module && r.actions.includes(action) && scopeMatches(r.scope, ctx));
 }
 
 /** Périmètre client d'un agent dans la démo (son équipe uniquement). */

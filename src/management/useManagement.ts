@@ -1,46 +1,35 @@
-// État du management (démonstration) : congés, CRA, délégations et objectifs N1.
-// Les décisions sont réellement appliquées dans l'environnement simulé et
-// répercutées dans les autres modules (présence, CRA en attente, ventilation des coûts).
+// État du management (démonstration) : suivi des CRA et des congés sous forme de checklists,
+// objectifs N1 et effectifs prévisionnels. Les CRA et congés proviennent (en production) des
+// outils RH réellement utilisés ; SEATPI ONE n'en fait que le suivi managérial.
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Agent } from '../types';
 import type { Technician } from '../external/types';
 import { addDays, dateKey, isBusinessDay, startOfWeek } from '../external/calendar';
 import { createRng, type Rng } from '../services/random';
-import { can, type Role } from '../auth/roles';
 import { buildCollaborators, type Collaborator } from '../org/collaborators';
 import { personById } from '../org/people';
 import type { ObjectiveConfig } from '../external/config';
 import { clientRecord, POLE_CLIENTS } from '../config/itsm';
-import {
-  canDecide,
-  checkSubmission,
-  CRA_TRANSITIONS,
-  DEMO_LEAVE_RULES,
-  leaveConflicts,
-  leaveDays,
-  weekKey,
-  type CraLine,
-  type CraSheet,
-  type Delegation,
-  type LeaveRequest,
-  type LeaveRules,
-  type LeaveType,
-  WORK_CALENDAR,
-} from './rules';
+import { DEMO_LEAVE_RULES, leaveDays, weekKey, type CraLine, type CraSheet, type LeaveRequest, type LeaveRules, type LeaveType, WORK_CALENDAR } from './rules';
+import { setFollow, type FollowStatus, type FollowUps } from './checklists';
 
 export interface ManagementState {
   collaborators: Collaborator[];
+  /** Demandes de congés telles que fournies par l'outil RH (lecture seule dans SEATPI ONE). */
   leaves: LeaveRequest[];
+  /** État des CRA tel que fourni par l'outil CRA (lecture seule dans SEATPI ONE). */
   cra: CraSheet[];
-  delegations: Delegation[];
   rules: LeaveRules;
   internalObjectives: Record<string, ObjectiveConfig>;
+  /** Suivi managérial (checklists) : coches internes, avec historique. */
+  followUps: FollowUps;
+  /** Effectifs prévisionnels par équipe (saisie managériale). */
+  forecastHeadcount: Record<string, number>;
 }
 
 export interface MgmtResult {
   ok: boolean;
   message: string;
-  warnings?: string[];
 }
 
 /** Objectifs hebdomadaires de démonstration des équipes N1 (par client). */
@@ -155,17 +144,10 @@ export function initialManagement(agents: Agent[], techs: Technician[], now: num
   const rng = createRng(seed);
   const collaborators = buildCollaborators(agents, techs);
   const leaves = seedLeaves(collaborators, techs, now, rng);
-  return {
-    collaborators,
-    leaves,
-    cra: seedCra(collaborators, leaves, now, rng),
-    delegations: [{ id: 'DLG-1', fromManagerId: 'mgr-hd-mtp', toManagerId: 'mgr-hd-lc', start: dateKey(now), end: dateKey(addDays(now, 6)) }],
-    rules: DEMO_LEAVE_RULES,
-    internalObjectives: {},
-  };
+  const forecastHeadcount: Record<string, number> = {};
+  for (const c of collaborators) if (c.population === 'Agent N1' || c.population === 'Technicien N2') forecastHeadcount[c.teamId] = (forecastHeadcount[c.teamId] ?? 0) + 1;
+  return { collaborators, leaves, cra: seedCra(collaborators, leaves, now, rng), rules: DEMO_LEAVE_RULES, internalObjectives: {}, followUps: {}, forecastHeadcount };
 }
-
-const canManage = (role: Role) => can(role, 'supervision', 'edit');
 
 export function useManagement(agents: Agent[], techs: Technician[]) {
   const init = useRef<ManagementState>();
@@ -178,74 +160,10 @@ export function useManagement(agents: Agent[], techs: Technician[]) {
     setState(next);
   };
 
-  const submitLeave = useCallback((personId: string, type: LeaveType, start: string, end: string, by: string): MgmtResult => {
+  /** Coche de suivi (À traiter / Relancé / Traité) : suivi interne, pas une validation officielle. */
+  const setFollowUp = useCallback((key: string, to: FollowStatus, by: string, note?: string) => {
     const s = ref.current;
-    const check = checkSubmission({ personId, type, start, end }, s.leaves, s.rules, Date.now());
-    if (!check.ok) return { ok: false, message: check.errors.join(' '), warnings: check.warnings };
-    const now = Date.now();
-    const req: LeaveRequest = { id: `CG-${String(s.leaves.length + 1).padStart(4, '0')}`, personId, type, start, end, status: 'Soumise', submittedAt: now, comments: [], history: [{ at: now, by, action: 'Soumission (démonstration)' }] };
-    apply({ ...s, leaves: [...s.leaves, req] });
-    return { ok: true, message: `Demande ${req.id} soumise (${leaveDays(start, end).length} jour(s) ouvré(s)).`, warnings: check.warnings };
-  }, []);
-
-  const decideLeave = useCallback((id: string, decision: 'Validée' | 'Refusée', actorId: string, role: Role, comment: string, force = false): MgmtResult => {
-    const s = ref.current;
-    const req = s.leaves.find((l) => l.id === id);
-    if (!req) return { ok: false, message: 'Demande introuvable.' };
-    if (req.status !== 'Soumise') return { ok: false, message: 'Demande déjà traitée.' };
-    if (!canManage(role)) return { ok: false, message: 'Votre rôle ne permet pas de valider des congés (maquette).' };
-    const right = canDecide(actorId, req.personId, s.collaborators, s.delegations, Date.now());
-    if (!right.ok) return { ok: false, message: right.reason! };
-    if (decision === 'Refusée' && !comment.trim()) return { ok: false, message: 'Un commentaire est obligatoire pour un refus.' };
-    if (decision === 'Validée') {
-      const conflicts = leaveConflicts(req, s.collaborators, s.leaves, s.rules);
-      if (conflicts.length && !force) return { ok: false, message: `Conflit d’effectif : présence de l’équipe sous ${Math.round(s.rules.minTeamPresence * 100)} % le(s) ${conflicts.join(', ')}.` };
-      if (conflicts.length && !comment.trim()) return { ok: false, message: 'Une validation malgré conflit exige un commentaire.' };
-    }
-    const now = Date.now();
-    const by = actorName(actorId) + (right.via ? ` (délégation de ${actorName(right.via)})` : '');
-    const updated: LeaveRequest = {
-      ...req,
-      status: decision,
-      comments: comment.trim() ? [...req.comments, { at: now, by, text: comment.trim() }] : req.comments,
-      history: [...req.history, { at: now, by, action: decision === 'Validée' ? (force ? 'Validation malgré conflit' : 'Validation') : 'Refus', note: comment.trim() || undefined }],
-    };
-    apply({ ...s, leaves: s.leaves.map((l) => (l.id === id ? updated : l)) });
-    return { ok: true, message: `Demande ${id} ${decision === 'Validée' ? 'validée' : 'refusée'} par ${by}.` };
-  }, []);
-
-  const addDelegation = useCallback((fromManagerId: string, toManagerId: string, start: string, end: string, role: Role): MgmtResult => {
-    if (!canManage(role)) return { ok: false, message: 'Votre rôle ne permet pas de déléguer (maquette).' };
-    if (fromManagerId === toManagerId) return { ok: false, message: 'Délégation vers soi-même impossible.' };
-    if (end < start) return { ok: false, message: 'La date de fin précède la date de début.' };
-    const s = ref.current;
-    apply({ ...s, delegations: [...s.delegations, { id: `DLG-${s.delegations.length + 1}`, fromManagerId, toManagerId, start, end }] });
-    return { ok: true, message: `Délégation de ${actorName(fromManagerId)} à ${actorName(toManagerId)} enregistrée.` };
-  }, []);
-
-  const removeDelegation = useCallback((id: string) => {
-    const s = ref.current;
-    apply({ ...s, delegations: s.delegations.filter((d) => d.id !== id) });
-  }, []);
-
-  const updateCra = useCallback((id: string, lines: CraLine[], next: 'Brouillon' | 'Soumis' | 'Validé' | 'À corriger', actor: string, role: Role, comment = ''): MgmtResult => {
-    const s = ref.current;
-    const sheet = s.cra.find((c) => c.id === id);
-    if (!sheet) return { ok: false, message: 'CRA introuvable.' };
-    if (next !== 'Brouillon' && !CRA_TRANSITIONS[sheet.status].includes(next)) return { ok: false, message: `Transition ${sheet.status} → ${next} impossible.` };
-    if (next === 'Brouillon' && (sheet.status === 'Soumis' || sheet.status === 'Validé')) return { ok: false, message: 'CRA déjà soumis : modification impossible.' };
-    if ((next === 'Validé' || next === 'À corriger') && !canManage(role)) return { ok: false, message: 'Votre rôle ne permet pas de valider des CRA (maquette).' };
-    if (next === 'Validé' || next === 'À corriger') {
-      const right = canDecide(actor, sheet.personId, s.collaborators, s.delegations, Date.now());
-      if (!right.ok) return { ok: false, message: right.reason! };
-    }
-    if (next === 'À corriger' && !comment.trim()) return { ok: false, message: 'Un motif de rejet est obligatoire.' };
-    if (lines.some((l) => l.hours.some((h) => h < 0 || h > 12))) return { ok: false, message: 'Heures journalières hors limites (0 à 12 h).' };
-    const now = Date.now();
-    const action = { Brouillon: 'Enregistrement', Soumis: sheet.status === 'À corriger' ? 'Correction et nouvelle soumission' : 'Soumission', Validé: 'Validation', 'À corriger': 'Rejet' }[next];
-    const updated: CraSheet = { ...sheet, lines, status: next, comment: next === 'À corriger' ? comment.trim() : sheet.comment, history: [...sheet.history, { at: now, by: actorName(actor), action, note: comment.trim() || undefined }] };
-    apply({ ...s, cra: s.cra.map((c) => (c.id === id ? updated : c)) });
-    return { ok: true, message: `CRA ${action.toLowerCase()} (démonstration).` };
+    apply({ ...s, followUps: setFollow(s.followUps, key, to, by, Date.now(), note) });
   }, []);
 
   const setInternalObjective = useCallback((clientId: string, key: keyof ObjectiveConfig, value: number) => {
@@ -253,16 +171,33 @@ export function useManagement(agents: Agent[], techs: Technician[]) {
     apply({ ...s, internalObjectives: { ...s.internalObjectives, [clientId]: { ...(s.internalObjectives[clientId] ?? DEFAULT_N1_OBJECTIVES), [key]: value } } });
   }, []);
 
+  const setForecast = useCallback((teamId: string, value: number): MgmtResult => {
+    if (!Number.isInteger(value) || value < 0 || value > 500) return { ok: false, message: 'Effectif prévisionnel : nombre entier entre 0 et 500.' };
+    const s = ref.current;
+    apply({ ...s, forecastHeadcount: { ...s.forecastHeadcount, [teamId]: value } });
+    return { ok: true, message: 'Effectif prévisionnel mis à jour.' };
+  }, []);
+
+  /** Modification d'un collaborateur (pseudonyme, manager, ETP) — réservée à l'administration. */
+  const updateCollaborator = useCallback((id: string, patch: Partial<Pick<Collaborator, 'name' | 'managerId' | 'etp'>>): MgmtResult => {
+    const s = ref.current;
+    if (patch.etp !== undefined && (patch.etp <= 0 || patch.etp > 1)) return { ok: false, message: 'ETP compris entre 0 et 1.' };
+    if (patch.name !== undefined && !patch.name.trim()) return { ok: false, message: 'Le nom ne peut pas être vide.' };
+    if (patch.managerId && patch.managerId === id) return { ok: false, message: 'Un collaborateur ne peut pas être son propre manager.' };
+    apply({ ...s, collaborators: s.collaborators.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+    return { ok: true, message: 'Collaborateur mis à jour.' };
+  }, []);
+
   const reset = useCallback(() => apply(initialManagement(agents, techs, Date.now())), [agents, techs]);
 
-  /** Congés validés par collaborateur (dates), pour la présence dans les autres modules. */
+  /** Congés validés (dans l'outil RH) par collaborateur, pour la présence dans les autres modules. */
   const leaveDatesOf = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const l of state.leaves) if (l.status === 'Validée') map.set(l.personId, [...(map.get(l.personId) ?? []), ...leaveDays(l.start, l.end)]);
     return map;
   }, [state.leaves]);
 
-  return { state, submitLeave, decideLeave, addDelegation, removeDelegation, updateCra, setInternalObjective, reset, leaveDatesOf };
+  return { state, setFollowUp, setInternalObjective, setForecast, updateCollaborator, reset, leaveDatesOf };
 }
 
 export type ManagementStore = ReturnType<typeof useManagement>;
