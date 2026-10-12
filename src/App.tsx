@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import type { Agent, FloorId, RoomId } from './types';
 import { can, type Role } from './auth/roles';
@@ -61,6 +61,9 @@ import { AuditContext, useAuditLog } from './audit/audit';
 import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } from './auth/roles';
 import { Toast } from './components/external/common';
 import { ConnectionContext } from './admin/connectionStates';
+import { initialRoute, parseHash, toHash, type RouteState } from './navigation/route';
+import type { HdFilters } from './helpdesk/consolidation';
+import type { HdTab } from './components/helpdesk/HelpdeskCockpit';
 import { configStatus } from './admin/connections';
 
 /** Cockpit ouvert par un clic sur une personne de l'encadrement. */
@@ -79,13 +82,30 @@ export function App() {
   const [webgl] = useState(hasWebGL);
   const [reducedMotion] = useState(prefersReducedMotion);
   const [mode3d, setMode3d] = useState(webgl);
-  const [role, setRole] = useState<Role>('teamLeader');
+  const [route0] = useState(initialRoute);
+  // Rôle simulé mémorisé pour l'onglet (restauration après rafraîchissement).
+  const [role, setRoleState] = useState<Role>(() => {
+    try {
+      return (sessionStorage.getItem('seatpi-role') as Role | null) ?? 'teamLeader';
+    } catch {
+      return 'teamLeader';
+    }
+  });
+  const setRole = (r: Role) => {
+    try {
+      sessionStorage.setItem('seatpi-role', r);
+    } catch {
+      /* préférence non mémorisée */
+    }
+    setRoleState(r);
+  };
+  const [hdNav, setHdNav] = useState<{ tab: HdTab; filters: HdFilters; ticketId: string | null }>(route0.hd);
   // Règles de permissions modifiables par l'administrateur (appliquées avant le rendu des modules).
   const [permRules, setPermRules] = useState<PermissionRule[]>(DEFAULT_RULES);
   setPermissionRules(permRules);
   const audit = useAuditLog();
   const admin = useAdmin();
-  const [adminTab, setAdminTab] = useState<AdminTab>('connexions');
+  const [adminTab, setAdminTab] = useState<AdminTab>(route0.adminTab);
   // Arrivée sur la carte des trois sites SEATPI et des sites clients externes.
   const [floor, setFloor] = useState<FloorId>('carte');
   const [selected, setSelected] = useState<RoomId | null>('helpdesk');
@@ -97,16 +117,16 @@ export function App() {
   const [selectedPole, setSelectedPole] = useState<string | null>(null);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   // Vue principale : jumeau numérique 3D ou module applicatif.
-  const [appView, setAppView] = useState<AppView>('jumeau');
-  const [extNav, setExtNav] = useState<ExternalNav>({ scope: 'global', tab: 'dashboard' });
+  const [appView, setAppView] = useState<AppView>(route0.view);
+  const [extNav, setExtNav] = useState<ExternalNav>(route0.ext);
   const ext = useExternal(sim.running);
   const internal = useInternalTickets(sim.running);
   const mgmt = useManagement(state.agents, ext.state.techs);
   const [persona, setPersona] = useState('resp-helpdesk');
-  const [mgmtTab, setMgmtTab] = useState<MgmtTab>('cra');
+  const [mgmtTab, setMgmtTab] = useState<MgmtTab>(route0.mgmtTab);
   const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
-  const [finTab, setFinTab] = useState<FinanceTab>('global');
-  const [finEntity, setFinEntity] = useState<Entity>('helpdesk');
+  const [finTab, setFinTab] = useState<FinanceTab>(route0.finTab);
+  const [finEntity, setFinEntity] = useState<Entity>(route0.finEntity);
   const moyens = useMoyens(fin.state.travel);
   // Extraction fictive de la feuille QlikView « Qlik SLA décrocher » (aucune connexion réelle).
   const [qlikRows] = useState(() => demoExtraction(Date.now()));
@@ -451,6 +471,52 @@ export function App() {
   }, [state]);
 
   const room = selected ? roomById(selected) : null;
+
+  // --- URL dédiées : l'état de navigation est reflété dans l'adresse (Précédent / Suivant) ---
+  const routeState: RouteState = {
+    view: appView,
+    room: appView === 'jumeau' && panelOpen ? selected : null,
+    ext: { scope: extNav.scope, tab: extNav.tab, ticketId: extNav.ticketId },
+    hd: hdNav,
+    finEntity,
+    finTab,
+    mgmtTab,
+    adminTab,
+  };
+  const hash = toHash(routeState);
+  const routeRef = useRef(routeState);
+  routeRef.current = routeState;
+  const fromUrl = useRef(false);
+  useEffect(() => {
+    const apply = () => {
+      if (!window.location.hash) return;
+      const r = parseHash(window.location.hash, routeRef.current);
+      fromUrl.current = true;
+      setAppView(r.view);
+      if (r.view === 'jumeau' && r.room && rooms.some((x) => x.id === r.room) && r.room !== routeRef.current.room) selectRoom(r.room as RoomId);
+      setExtNav((prev) => ({ ...r.ext, filter: prev.scope === r.ext.scope && prev.tab === r.ext.tab ? prev.filter : undefined }));
+      setHdNav(r.hd);
+      setFinEntity(r.finEntity);
+      setFinTab(r.finTab);
+      setMgmtTab(r.mgmtTab);
+      setAdminTab(r.adminTab);
+    };
+    // Espace de la carte demandé par l'URL d'ouverture.
+    if (route0.view === 'jumeau' && route0.room && rooms.some((x) => x.id === route0.room)) selectRoom(route0.room as RoomId);
+    window.addEventListener('popstate', apply);
+    window.addEventListener('hashchange', apply);
+    return () => {
+      window.removeEventListener('popstate', apply);
+      window.removeEventListener('hashchange', apply);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (window.location.hash === hash) return (fromUrl.current = false), undefined;
+    // Adresse issue de l'URL mais normalisée : remplacement ; navigation : nouvelle entrée d'historique.
+    if (fromUrl.current || !window.location.hash) window.history.replaceState(null, '', hash);
+    else window.history.pushState(null, '', hash);
+    fromUrl.current = false;
+  }, [hash]);
   const connectionInfo = useMemo(
     () => ({
       running: sim.running,
@@ -521,6 +587,8 @@ export function App() {
         {show('itsm') && <ItsmRegistry connectors={ext.state.connectors} />}
         {show('helpdesk') && (
           <HelpdeskCockpit
+            nav={hdNav}
+            onNav={setHdNav}
             backlogHours={admin.state.dashboard.backlogHours}
             checklists={
               can(role, 'management') ? (

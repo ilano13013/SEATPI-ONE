@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from './App';
 import { helpdeskPoles, rooms } from './data/layout';
 
@@ -15,6 +15,9 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Chaque test repart d'une adresse et d'un rôle vierges (URL dédiées, rôle mémorisé).
+  window.history.replaceState(null, '', '/');
+  sessionStorage.clear();
 });
 
 const panel = () => within(screen.getByRole('complementary', { name: /./ }));
@@ -88,6 +91,28 @@ describe('App (mode démo)', () => {
     fireEvent.click(tile);
     const ck = within(screen.getByRole('region', { name: 'Checklist congés' }));
     expect(ck.getAllByRole('row').length - 1).toBe(count);
+  });
+
+  it('URL dédiées : lien direct, Précédent / Suivant et filtres conservés au retour d’une fiche ticket', () => {
+    window.history.replaceState(null, '', '/#/helpdesk/tickets?tool=GLPI');
+    render(<App />);
+    const hd = within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' }));
+    expect((hd.getByLabelText('Outil ITSM') as HTMLSelectElement).value).toBe('GLPI');
+    expect(hd.getByRole('tab', { name: /Tableau/, selected: true })).toBeTruthy();
+    // Ouverture d'une fiche : l'URL la référence ; fermeture : filtres intacts.
+    fireEvent.click(hd.getAllByRole('row')[1]);
+    expect(window.location.hash).toMatch(/ticket=SPI-/);
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: /Fermer/ })[0]);
+    expect(window.location.hash).not.toMatch(/ticket=/);
+    expect((hd.getByLabelText('Outil ITSM') as HTMLSelectElement).value).toBe('GLPI');
+    // Navigation vers un autre module puis retour arrière (popstate).
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: 'Clients externes' }));
+    expect(window.location.hash).toMatch(/^#\/externes\/global\/dashboard/);
+    window.history.replaceState(null, '', '/#/helpdesk/tickets?tool=GLPI');
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect((within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' })).getByLabelText('Outil ITSM') as HTMLSelectElement).value).toBe('GLPI');
   });
 
   it("n'effectue aucun appel réseau", () => {
