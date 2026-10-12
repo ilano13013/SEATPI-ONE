@@ -20,10 +20,21 @@ L'application reste en **mode démonstration** : données fictives générées d
 | A12 | Pas de séparation démo / production | `DemoDataProvider` / fournisseur de production conditionné à des prérequis validés ; centre de préparation ; `PRODUCTION_READINESS.md`. | `src/data/provider.ts`, `src/production/` |
 | A13 | Libellés obsolètes | Corrigés (« V3.0 — démonstration »). | — |
 
+## 1 bis. Mise à jour ciblée — pôles, ITSM, SLA, administration et permissions
+
+**Fichiers ajoutés** : `src/admin/connections.ts`, `src/admin/useAdmin.ts`, `src/admin/connections.test.ts`, `src/audit/audit.ts`, `src/components/InlineEdit.tsx`, `src/components/admin/AdminCenter.tsx`, `src/components/management/Checklists.tsx`, `src/components/moyens/MoyensCockpit.tsx`, `src/components/telephony/TelephonyCockpit.tsx`, `src/external/n2sla.ts`, `src/management/checklists.ts`, `src/moyens/useMoyens.ts`, `src/telephony/qlik.ts`, `src/telephony/qlik.test.ts`.
+
+**Fichiers modifiés** : `src/config/itsm.ts`, `src/external/types.ts`, `src/external/itsm/adapters.ts`, `src/external/source.ts`, `src/external/useExternal.ts`, `src/helpdesk/useInternalTickets.ts`, `src/helpdesk/consolidation.ts`, `src/data/demoData.ts`, `src/data/layout.ts`, `src/data/sites.ts`, `src/types.ts`, `src/auth/roles.ts`, `src/management/rules.ts`, `src/management/useManagement.ts`, `src/finance/useFinance.ts`, `src/production/readiness.ts`, `src/App.tsx`, `src/components/Header.tsx`, `src/components/Rail.tsx`, `src/components/MetricsBar.tsx`, `src/components/SidePanel.tsx`, `src/components/Workspace.tsx`, `src/components/helpdesk/HelpdeskCockpit.tsx`, `src/components/management/ManagementCockpit.tsx`, `src/components/management/ServiceCockpits.tsx`, `src/components/finance/FinanceCockpit.tsx`, `src/components/panels/DepartmentPanel.tsx`, `src/components/panels/HelpdeskPanel.tsx`, `src/components/pdg/PdgCockpit.tsx`, `src/scene/DeptRooms.tsx`, `src/scene/RoomContents.tsx`, `src/style.css`, tests associés, `README.md`, `PRODUCTION_READINESS.md`.
+
+**Corrections** : répartition Pôle Multi / Pôle Dédié et outils ITSM (ServiceNow pour PRIMAGAZ, SODIAAL, IRD ; ORTEC sur Jira ; G2S à confirmer) ; zones 3D « Dédié · … » dont une équipe PRIMAGAZ (2 agents ajoutés) ; suppression des faux services « Déplacements professionnels » (3 sites) au profit des Moyens généraux ; CRA et congés ramenés à des checklists de suivi (plus de saisie d'heures, de validation, de refus ni de délégation).
+
+**Ajouts** : filtre et colonne Pôle ; SLA décroché QlikView ; SLA N2 prise en charge / résolution ; Moyens généraux — déplacements ; Administration (Connexions & API, rôles & permissions, CRM, paramètres, historique) ; modification en direct avec historique ; procédure de révision budgétaire ; prérequis de production TEL-01 à TEL-05, ITSM-10, ITSM-11, G2S, Zendesk.
+
 ## 2. Propagation entre modules (démonstration)
 
-- Congé validé → retiré des effectifs prévus du cockpit Helpdesk ; techniciens N2 en congé dans les cockpits clients (charge, capacité).
-- CRA validé / rejeté → statut CRA des techniciens N2 dans les cockpits clients ; aucun effet sur les revenus.
+- Congés validés dans l'outil RH (données fictives) → effectifs prévus du cockpit Helpdesk ; techniciens N2 en congé dans les cockpits clients. Une coche de checklist n'a aucun effet officiel.
+- Statut des CRA (outil CRA, fictif) → checklist et cockpits clients ; aucun effet sur les revenus.
+- Revenu, coût, forfait contractuel, ajustement modifiés en direct → résultat, marge, graphiques et prévisions recalculés ; pôle ou outil ITSM modifiés dans le CRM → filtres, cockpits et fiches connecteurs.
 - Objectif modifié (Management) → objectifs du cockpit Helpdesk et du cockpit client recalculés.
 - Ticket créé, déplacé ou affecté → compteurs, tableau, Kanban et PDG recalculés.
 - Déplacement CSM planifié → soumis automatiquement à l'enveloppe déplacements ; bloqué et journalisé si le solde est insuffisant.
@@ -33,9 +44,12 @@ L'application reste en **mode démonstration** : données fictives générées d
 
 - **Aucune donnée réelle** : collaborateurs (pseudonymes), tickets, coûts employeur, prestations, enveloppes et implantations sont fictifs ; les montants ne doivent pas être interprétés.
 - **Aucune persistance** : les actions sont perdues au rechargement (seuls les objectifs des clients externes sont mémorisés dans le navigateur).
-- **Droits simulés** : le rôle est choisi dans une liste ; la matrice de droits côté navigateur n'est pas une sécurité. L'« habilitation direction » du plafond déplacements est simulée par le rôle Direction.
+- **Droits simulés** : le profil est choisi dans une liste ; les règles de permissions (modifiables dans l'administration) s'appliquent dans le navigateur et ne constituent pas une sécurité. La révision du plafond déplacements est réservée à la permission « Révision budgétaire » (Direction, Administrateur) via une procédure explicite.
+- **Administration** : configurations, CRM, paramètres et permissions non persistés (perdus au rechargement) ; aucune URL officielle de documentation pré-remplie, faute de pouvoir la vérifier depuis l'environnement de développement ; aucun test de connexion réel.
+- **SLA décroché** : extraction fictive ; définition officielle, délai et exclusions QlikView non reproduits ; SLA par client indisponible pour les files partagées du Pôle Multi ; objectifs contractuels non renseignés (objectifs de démonstration chargeables, identifiés comme fictifs).
+- **CRM** : un changement d'outil ITSM met à jour le référentiel, les filtres et les fiches connecteurs, mais ne régénère pas les flux de tickets fictifs déjà créés.
 - **Connecteurs simulés** : sources ITSM fictives, quirks (doublons, statuts inconnus, versions périmées) volontairement injectés ; transitions et droits d'écriture = hypothèses à confirmer par outil.
-- **Règles RH de démonstration** : préavis 7 jours, 15 jours ouvrés maximum, 60 % de présence d'équipe, calendrier unique.
+- **Suivi RH** : demandes de congés et états des CRA fictifs ; seuil de présence d'équipe (60 %) utilisé uniquement comme information dans la checklist.
 - **Finance** : barème de coût par population, prix de référence N1 et modes de facturation fictifs ; résultat analytique de département, distinct du résultat comptable. Les autres départements ne sont pas modélisés : aucun total entreprise n'est calculé.
 - **Téléphonie** : « en communication » ne concerne que le N1 simulé.
 - **Préparation à la production** : les changements de statut sont simulés et non enregistrés ; le taux de préparation n'est pas une certification de sécurité.

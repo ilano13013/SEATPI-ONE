@@ -42,6 +42,16 @@ describe('préparation à la production', () => {
   });
 });
 
+describe('prérequis ajoutés (QlikView, SLA, ServiceNow, Zendesk, G2S)', () => {
+  it('présents et au statut « À configurer » tant qu’ils ne sont pas vérifiés', () => {
+    for (const id of ['TEL-01', 'TEL-02', 'TEL-03', 'TEL-04', 'ITSM-11', 'ITSM-10', 'ITSM-09', 'ITSM-05']) {
+      const item = READINESS_ITEMS.find((i) => i.id === id)!;
+      expect(item, id).toBeDefined();
+      expect(item.status, id).toBe('À configurer');
+    }
+  });
+});
+
 describe('fournisseurs de données', () => {
   it('démonstration par défaut ; production refusée sans prérequis, avec avertissement visible', () => {
     expect(resolveProvider('demo', PAGES_CONFIG).provider).toBe(DemoDataProvider);

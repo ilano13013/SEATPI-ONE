@@ -7,17 +7,17 @@ Généré le 12/10/2026 depuis ADMINISTRATION → PRÉPARATION À LA PRODUCTION.
 
 ## Décision : NO-GO
 
-Motifs : 4 élément(s) bloquant(s) ; 15 élément(s) critique(s) non validé(s).
+Motifs : 3 élément(s) bloquant(s) ; 17 élément(s) critique(s) non validé(s).
 
 ## Synthèse
 
 | Indicateur | Valeur |
 |---|---|
-| Éléments | 37 |
+| Éléments | 44 |
 | Validés | 1 |
-| Bloquants | 4 |
+| Bloquants | 3 |
 | En cours / à tester | 7 |
-| Taux de préparation (avancement, pas une certification) | 2,7 % |
+| Taux de préparation (avancement, pas une certification) | 2,3 % |
 
 ## Éléments critiques manquants
 
@@ -27,11 +27,13 @@ Motifs : 4 élément(s) bloquant(s) ; 15 élément(s) critique(s) non validé(s)
 - **SEC-03 — Coffre de secrets côté serveur** (À configurer) : Aucun coffre : aucun secret n’existe encore (et aucun ne doit être dans le frontend). → Mettre en place un coffre de secrets accessible au seul backend. (RSSI)
 - **SEC-05 — Analyse RGPD des données RH et individuelles** (Non renseigné) : Aucune analyse d’impact réalisée. → Conduire l’analyse d’impact, définir durées de conservation et accès. (DPO)
 - **ITSM-01 — EasyVista — INVIVO, DMB, TERACT** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture auprès des clients. (Responsable Helpdesk)
-- **ITSM-02 — Jira — LBR FR, EURAPHARMA** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
+- **ITSM-02 — Jira — LBR FR, EURAPHARMA, ORTEC** (Non renseigné) : Instance, URL d’API, mode d’authentification et compte de service non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
 - **ITSM-03 — GLPI — ANGE, HSTV, NOCIBE** (Non renseigné) : Instance, URL d’API, jetons applicatifs non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
 - **ITSM-04 — ISILOG — THELEM, TRANSGOURMET, MONEXT** (Non renseigné) : Instance, URL d’API, mode d’authentification non fournis. → Obtenir les accès en lecture. (Responsable Helpdesk)
-- **ITSM-09 — Zendesk — SNR** (Non renseigné) : Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. → Obtenir les accès en lecture et la liste des statuts utilisés. (Responsable Helpdesk)
-- **ITSM-05 — Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S** (Bloquant) : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. → Identifier l’outil de chaque client et l’ajouter au registre. (Responsable Helpdesk)
+- **ITSM-09 — Zendesk — SNR** (À configurer) : Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. → Obtenir les accès en lecture et la liste des statuts utilisés. (Responsable Helpdesk)
+- **ITSM-10 — Accès aux API ServiceNow — PRIMAGAZ, SODIAAL, IRD** (À configurer) : Instance(s), URL d’API, mode d’authentification et compte de service non fournis ; états « On Hold » à confirmer. → Obtenir les accès en lecture et renseigner Administration → Connexions & API. (Responsable Helpdesk)
+- **TEL-01 — Accès aux instances QlikView** (À configurer) : Serveur(s), documents et droits d’accès non fournis. → Identifier les instances et ouvrir un accès en lecture pour le backend. (DSI)
+- **TEL-03 — Définition officielle du SLA décroché** (À configurer) : Délai de décroché, numérateur, dénominateur et exclusions (abandons courts, débordements) non confirmés. → Faire valider la définition et les règles d’agrégation. (Responsable Helpdesk)
 - **RH-01 — Source des effectifs et organigramme** (Non renseigné) : Collaborateurs et managers fictifs (pseudonymes). → Raccorder le SIRH au backend (lecture). (DRH)
 - **RH-05 — Information des représentants du personnel** (Non renseigné) : Non réalisée. → Présenter l’outil et ses indicateurs. (DRH)
 - **FIN-01 — Coûts employeur réels** (Non renseigné) : Barème fictif par population. → Fournir un export mensuel des coûts chargés par collaborateur. (DAF)
@@ -65,22 +67,34 @@ Motifs : 4 élément(s) bloquant(s) ; 15 élément(s) critique(s) non validé(s)
 | Réf. | Élément | Statut | Priorité | Ce qui manque | Pourquoi | Responsable | Action | Dépendances | Dernière vérification |
 |---|---|---|---|---|---|---|---|---|---|
 | ITSM-01 | EasyVista — INVIVO, DMB, TERACT | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture auprès des clients. | SEC-03 | — |
-| ITSM-02 | Jira — LBR FR, EURAPHARMA | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
+| ITSM-02 | Jira — LBR FR, EURAPHARMA, ORTEC | Non renseigné | Critique | Instance, URL d’API, mode d’authentification et compte de service non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
 | ITSM-03 | GLPI — ANGE, HSTV, NOCIBE | Non renseigné | Critique | Instance, URL d’API, jetons applicatifs non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
 | ITSM-04 | ISILOG — THELEM, TRANSGOURMET, MONEXT | Non renseigné | Critique | Instance, URL d’API, mode d’authentification non fournis. | Lire les tickets réels de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture. | SEC-03 | — |
-| ITSM-09 | Zendesk — SNR | Non renseigné | Critique | Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. | Lire les tickets réels de SNR (Pôle Multi). | Responsable Helpdesk | Obtenir les accès en lecture et la liste des statuts utilisés. | SEC-03 | — |
-| ITSM-05 | Outil ITSM de PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S | Bloquant | Critique | ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. | Sans outil identifié, aucun ticket ni SLA ne peut être mesuré pour ces clients. | Responsable Helpdesk | Identifier l’outil de chaque client et l’ajouter au registre. | — | — |
-| ITSM-06 | Correspondance des statuts et priorités | À tester | Haute | Tables de correspondance établies sur des hypothèses de démonstration. | Des statuts mal traduits faussent SLA, backlog et Kanban. | Responsable Helpdesk | Faire valider chaque table par le référent de l’outil. | ITSM-01, ITSM-02, ITSM-03, ITSM-04, ITSM-09 | — |
+| ITSM-09 | Zendesk — SNR | À configurer | Critique | Sous-domaine Zendesk, mode d’authentification (jeton API / OAuth) et compte de service non fournis ; statuts personnalisés à confirmer. | Lire les tickets réels de SNR (Pôle Multi). | Responsable Helpdesk | Obtenir les accès en lecture et la liste des statuts utilisés. | SEC-03 | — |
+| ITSM-05 | ITSM utilisé par G2S | À configurer | Haute | Outil « à confirmer » : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. | Sans outil identifié, aucun ticket ni SLA ne peut être mesuré pour G2S (Pôle Multi). | Responsable Helpdesk | Identifier l’outil de G2S et le renseigner dans Administration → Clients (CRM). | — | — |
+| ITSM-06 | Correspondance des statuts et priorités | À tester | Haute | Tables de correspondance établies sur des hypothèses de démonstration. | Des statuts mal traduits faussent SLA, backlog et Kanban. | Responsable Helpdesk | Faire valider chaque table par le référent de l’outil. | ITSM-01, ITSM-02, ITSM-03, ITSM-04, ITSM-09, ITSM-10 | — |
+| ITSM-10 | Accès aux API ServiceNow — PRIMAGAZ, SODIAAL, IRD | À configurer | Critique | Instance(s), URL d’API, mode d’authentification et compte de service non fournis ; états « On Hold » à confirmer. | Lire les tickets N1 (Pôle Dédié) et N2 (PRIMAGAZ) de ces clients. | Responsable Helpdesk | Obtenir les accès en lecture et renseigner Administration → Connexions & API. | SEC-03 | — |
+| ITSM-11 | Calendriers et règles SLA N2 | À configurer | Haute | Matrices de délais (prise en charge, résolution) et calendriers contractuels de démonstration. | Les SLA de prise en charge et de résolution N2 dépendent des contrats et des calendriers réels. | Responsable Helpdesk | Fournir, par client N2, les délais par priorité, calendriers, jours fériés, suspensions et objectifs. | — | — |
 | ITSM-07 | Cartographie client → outil ITSM | Validé | Haute | Rien : la cartographie fournie est appliquée depuis une source unique. | Chaque ticket doit provenir du bon outil. | Responsable Helpdesk | Maintenir le registre à jour lors de l’arrivée d’un client. | — | 2026-10-12 (preuve : Test automatisé src/config/itsm.test.ts (correspondance exacte avec la cartographie fournie), exécuté à chaque publication.) |
 | ITSM-08 | Droits d’écriture (transitions, affectations) | À configurer | Moyenne | Écritures simulées uniquement ; droits d’écriture non demandés. | Agir depuis SEATPI ONE suppose des droits explicites dans chaque outil. | Responsable Helpdesk | Décider client par client : lecture seule ou écriture. | ITSM-06 | — |
+
+## Téléphonie & statistiques
+
+| Réf. | Élément | Statut | Priorité | Ce qui manque | Pourquoi | Responsable | Action | Dépendances | Dernière vérification |
+|---|---|---|---|---|---|---|---|---|---|
+| TEL-01 | Accès aux instances QlikView | À configurer | Critique | Serveur(s), documents et droits d’accès non fournis. | Les statistiques SLA officielles sont produites dans QlikView. | DSI | Identifier les instances et ouvrir un accès en lecture pour le backend. | INF-01, SEC-03 | — |
+| TEL-02 | Méthode d’extraction des statistiques | À configurer | Haute | Export, API ou base intermédiaire non définis pour les feuilles « Qlik SLA décrocher » et « CC pilot SLA mensuel ». | Récupérer les volumes sources, et non des pourcentages déjà agrégés. | DSI | Choisir la méthode d’extraction et sa fréquence. | TEL-01 | — |
+| TEL-03 | Définition officielle du SLA décroché | À configurer | Critique | Délai de décroché, numérateur, dénominateur et exclusions (abandons courts, débordements) non confirmés. | Respecter exactement les règles de calcul du reporting QlikView. | Responsable Helpdesk | Faire valider la définition et les règles d’agrégation. | — | — |
+| TEL-04 | Objectifs SLA par client | À configurer | Haute | Objectifs contractuels de SLA décroché (et SLA N2) non renseignés. | Sans objectif, aucun écart ni alerte n’est calculé (aucun seuil inventé). | Responsable Helpdesk | Saisir les objectifs contractuels dans Administration → Paramètres SLA. | — | — |
+| TEL-05 | Accès API Genesys Cloud | À configurer | Moyenne | Organisation, région, client OAuth et périmètres non fournis. | États des agents et files en temps réel (aujourd’hui simulés). | DSI | Créer un client OAuth côté serveur avec des droits minimaux. | SEC-03 | — |
 
 ## RH
 
 | Réf. | Élément | Statut | Priorité | Ce qui manque | Pourquoi | Responsable | Action | Dépendances | Dernière vérification |
 |---|---|---|---|---|---|---|---|---|---|
 | RH-01 | Source des effectifs et organigramme | Non renseigné | Critique | Collaborateurs et managers fictifs (pseudonymes). | Les périmètres de validation dépendent de l’organigramme réel. | DRH | Raccorder le SIRH au backend (lecture). | INF-01, SEC-05 | — |
-| RH-02 | Règles de congés | À configurer | Haute | Préavis 7 jours, 15 jours maximum, 60 % de présence : valeurs de démonstration. | Les contrôles doivent refléter l’accord d’entreprise. | DRH | Fournir les règles et seuils par équipe. | — | — |
-| RH-03 | Circuit de validation des CRA et délégations | À tester | Haute | Circuit illustré en démonstration, non validé par les managers. | Qui valide, dans quel délai, avec quelle tolérance d’écart. | Responsable Helpdesk | Valider le circuit en atelier, puis recette. | RH-01 | — |
+| RH-02 | Source des demandes de congés (outil RH) | À configurer | Haute | Demandes de congés fictives ; SEATPI ONE n’en fait que le suivi (checklist). | La checklist doit refléter les demandes réelles ; aucune validation ni solde dans SEATPI ONE. | DRH | Ouvrir un accès en lecture au statut des demandes dans l’outil RH. | — | — |
+| RH-03 | Source des CRA (outil CRA) | À tester | Haute | États des CRA fictifs ; SEATPI ONE n’en fait que le suivi (checklist), sans saisie d’heures ni validation. | Une coche dans SEATPI ONE n’est pas une validation officielle tant qu’aucune intégration n’existe. | Responsable Helpdesk | Ouvrir un accès en lecture au statut des CRA (attendus, reçus, validés). | RH-01 | — |
 | RH-04 | Calendriers de travail et jours fériés | À configurer | Moyenne | Calendrier unique de démonstration. | Heures attendues et SLA dépendent des calendriers réels. | DRH | Fournir les calendriers par site et par contrat. | — | — |
 | RH-05 | Information des représentants du personnel | Non renseigné | Critique | Non réalisée. | Outil de suivi d’activité : information préalable requise ; aucun classement disciplinaire automatique. | DRH | Présenter l’outil et ses indicateurs. | SEC-05 | — |
 
