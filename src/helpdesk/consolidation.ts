@@ -62,9 +62,16 @@ export interface HdFilters {
   status: TicketStatus | '';
   period: PeriodFilter;
   tool: ItsmTool | '';
+  /** Recherche par numéro (SEATPI ou source) ou par titre. */
+  q: string;
 }
 
-export const EMPTY_FILTERS: HdFilters = { pole: '', client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '' };
+export const EMPTY_FILTERS: HdFilters = { pole: '', client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '', q: '' };
+
+const matches = (t: HdTicket, q: string) => {
+  const n = q.trim().toLowerCase();
+  return !n || t.id.toLowerCase().includes(n) || t.source.id.toLowerCase().includes(n) || t.title.toLowerCase().includes(n);
+};
 
 /** Ticket actif sur la période : créé, mis à jour ou encore ouvert pendant la période. */
 const inPeriod = (t: Ticket, p: Period) => t.createdAt < p.end && (isOpen(t) || t.updatedAt >= p.start);
@@ -81,6 +88,7 @@ export function applyFilters(list: HdTicket[], f: HdFilters, now: number): HdTic
       (!f.priority || t.priority === f.priority) &&
       (!f.status || t.status === f.status) &&
       (!f.tool || t.source.tool === f.tool) &&
+      matches(t, f.q ?? '') &&
       (!p || inPeriod(t, p)),
   );
 }

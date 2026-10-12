@@ -1,7 +1,7 @@
 // Cockpit Helpdesk consolidé : équipes internes (N1) et sites clients INVIVO, PRIMAGAZ, MONEXT (N2).
 // Les compteurs, le tableau et le Kanban reposent sur le même jeu filtré.
 import { useMemo, useState, type ReactNode } from 'react';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, Maximize2, Minimize2, X } from 'lucide-react';
 import type { Agent } from '../../types';
 import type { Priority, Service, Technician, TicketStatus } from '../../external/types';
 import type { ActionResult } from '../../external/useExternal';
@@ -19,7 +19,8 @@ import { Tabs } from '../ui';
 import { PriorityBadge, SlaBadge, StatusBadge, Toast, fmtDateTime } from '../external/common';
 import { TicketDetail } from '../external/TicketDetail';
 
-type Tab = 'synthese' | 'tickets' | 'kanban' | 'effectifs';
+export type HdTab = 'synthese' | 'tickets' | 'kanban' | 'effectifs';
+type Tab = HdTab;
 
 interface Props {
   tickets: HdTicket[];
@@ -39,7 +40,26 @@ interface Props {
   checklists?: ReactNode;
   /** Seuil du backlog (heures), paramétrable dans l'administration. */
   backlogHours?: number;
+  /** Navigation contrôlée (URL dédiée, Précédent / Suivant) : onglet, filtres et ticket ouvert. */
+  nav?: { tab: HdTab; filters: HdFilters; ticketId: string | null };
+  onNav?: (nav: { tab: HdTab; filters: HdFilters; ticketId: string | null }) => void;
 }
+
+type Col = 'source' | 'pole' | 'client' | 'equipe' | 'titre' | 'priorite' | 'statut' | 'statutSource' | 'sla' | 'affecte' | 'manager';
+const COLUMNS: { id: Col; label: string }[] = [
+  { id: 'source', label: 'Source' },
+  { id: 'pole', label: 'Pôle' },
+  { id: 'client', label: 'Client' },
+  { id: 'equipe', label: 'Équipe' },
+  { id: 'titre', label: 'Titre' },
+  { id: 'priorite', label: 'Priorité' },
+  { id: 'statut', label: 'Statut' },
+  { id: 'statutSource', label: 'Statut source' },
+  { id: 'sla', label: 'SLA' },
+  { id: 'affecte', label: 'Affecté à' },
+  { id: 'manager', label: 'Manager' },
+];
+const ARCHIVED: TicketStatus[] = ['Résolu', 'Clôturé'];
 
 /** Clients du périmètre : clients traités en N1 sur les plateaux + sites clients N2. */
 const SCOPE_CLIENTS = [...new Set([...n1Clients.map((c) => c.clientId), ...externalClients.map((c) => c.id)])];
@@ -51,11 +71,21 @@ const today = (now: number) => dateKey(now);
 
 export function HelpdeskCockpit(props: Props) {
   const { tickets, agents, techsN1, techsN2, leaveDates, targets, now, role } = props;
-  const [tab, setTab] = useState<Tab>('synthese');
-  const [filters, setFilters] = useState<HdFilters>(EMPTY_FILTERS);
+  const [tabL, setTabL] = useState<Tab>('synthese');
+  const [filtersL, setFiltersL] = useState<HdFilters>(EMPTY_FILTERS);
+  const [openIdL, setOpenIdL] = useState<string | null>(null);
+  const tab = props.nav?.tab ?? tabL;
+  const filters = props.nav?.filters ?? filtersL;
+  const openId = props.nav?.ticketId ?? (props.nav ? null : openIdL);
+  const nav = { tab, filters, ticketId: openId };
+  const setTab = (t: Tab) => (props.onNav ? props.onNav({ ...nav, tab: t }) : setTabL(t));
+  const setFilters = (fn: (f: HdFilters) => HdFilters) => (props.onNav ? props.onNav({ ...nav, filters: fn(filters) }) : setFiltersL(fn));
+  const setOpenId = (id: string | null) => (props.onNav ? props.onNav({ ...nav, ticketId: id }) : setOpenIdL(id));
+  const [showArchives, setShowArchives] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [cols, setCols] = useState<Set<Col>>(() => new Set(COLUMNS.map((c) => c.id)));
   const [drill, setDrill] = useState<{ label: string; ids: string[] } | null>(null);
   const [people, setPeople] = useState<{ label: string; ids: string[] } | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [toast, setToast] = useState<ActionResult | null>(null);
   const individual = can(role, 'supervision', 'individual');
@@ -90,9 +120,12 @@ export function HelpdeskCockpit(props: Props) {
   };
   const drillTo = (key: CounterKey) => {
     setDrill({ label: COUNTER_LABELS[key], ids: k[key] });
+    // Un compteur d'archives (résolus) s'ouvre sur le tableau, qui montre tout le périmètre.
     setTab('tickets');
     setPage(0);
   };
+  const kanbanList = showArchives ? shown : shown.filter((t) => !ARCHIVED.includes(t.status));
+  const activeChips = activeFilterChips(filters, { techName: (id) => personName(id) });
   const who = (t: HdTicket) => (t.assigneeId ? (individual ? (t.assigneeName ?? t.assigneeId) : 'Affecté') : 'Non affecté');
   const personName = (id: string) => agents.find((a) => a.id === id)?.name ?? techsN2.find((t) => t.id === id)?.name ?? id;
   const run = (r: ActionResult) => {
@@ -103,6 +136,118 @@ export function HelpdeskCockpit(props: Props) {
   const sumTargets = objectives.reduce((s, o) => s + o.target, 0);
   const sumDone = objectives.reduce((s, o) => s + o.done, 0);
   const maxEvo = Math.max(1, ...evolution.flatMap((e) => [e.created, e.resolved]));
+
+  const cell = (c: Col, t: HdTicket) => {
+    switch (c) {
+      case 'source':
+        return (
+          <>
+            {t.source.tool} <code>{t.source.id}</code>
+          </>
+        );
+      case 'pole':
+        return t.pole ? POLE_GROUP_LABEL[t.pole] : 'MCO N2';
+      case 'client':
+        return t.clientName;
+      case 'equipe':
+        return t.teamLabel;
+      case 'titre':
+        return t.title;
+      case 'priorite':
+        return <PriorityBadge p={t.priority} />;
+      case 'statut':
+        return <StatusBadge status={t.status} />;
+      case 'statutSource':
+        return <code>{t.sourceStatus}</code>;
+      case 'sla':
+        return <SlaBadge state={t.sla.state} paused={t.sla.paused} />;
+      case 'affecte':
+        return who(t);
+      case 'manager':
+        return managerLabel(t.managerId);
+    }
+  };
+  const visible = COLUMNS.filter((c) => cols.has(c.id));
+  const renderTable = () => (
+    <>
+      <div className="xc-tablewrap">
+        <table className="xc-table">
+          <thead>
+            <tr>
+              <th>N° SEATPI</th>
+              {visible.map((c) => (
+                <th key={c.id}>{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {shown.slice(page * PAGE, (page + 1) * PAGE).map((t) => (
+              <tr key={t.id} tabIndex={0} onClick={() => setOpenId(t.id)} onKeyDown={(e) => e.key === 'Enter' && setOpenId(t.id)} aria-label={`Ticket ${t.id} : ${t.title}`}>
+                <td>
+                  <b>{t.id}</b>
+                </td>
+                {visible.map((c) => (
+                  <td key={c.id} className={c.id === 'titre' ? 'title' : undefined}>
+                    {cell(c.id, t)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {shown.length === 0 && (
+              <tr>
+                <td colSpan={visible.length + 1} className="hint">
+                  Aucun ticket pour ces critères.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {shown.length > PAGE && (
+        <div className="xc-pager">
+          <button className="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            Précédent
+          </button>
+          <span>
+            {page * PAGE + 1}–{Math.min(shown.length, (page + 1) * PAGE)} sur {shown.length}
+          </span>
+          <button className="ghost" disabled={(page + 1) * PAGE >= shown.length} onClick={() => setPage((p) => p + 1)}>
+            Suivant
+          </button>
+        </div>
+      )}
+    </>
+  );
+  const renderKanban = () => (
+    <div className="xc-board hd-board">
+      {KANBAN.filter((s) => showArchives || !ARCHIVED.includes(s)).map((s) => {
+        const col = kanbanList.filter((t) => t.status === s || (s === 'Résolu' && t.status === 'Clôturé'));
+        return (
+          <div key={s} className="xc-col" aria-label={`Colonne ${s}`}>
+            <h4>
+              {s} <span className="tabcount">{col.length}</span>
+            </h4>
+            <div className="xc-cards">
+              {col.slice(0, 30).map((t) => (
+                <button key={t.id} className="xc-card hd-card" onClick={() => setOpenId(t.id)}>
+                  <span className="xc-card-top">
+                    <b>{t.id}</b>
+                    <PriorityBadge p={t.priority} />
+                  </span>
+                  <span className="xc-card-title">{t.title}</span>
+                  <small>
+                    {t.clientName} · {t.source.tool} · {who(t)}
+                  </small>
+                  {t.sla.state !== 'respecté' && <SlaBadge state={t.sla.state} />}
+                </button>
+              ))}
+              {col.length > 30 && <small className="hint">+ {col.length - 30} autre(s) — voir le tableau</small>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <section className="xc hd" aria-label="Cockpit Helpdesk consolidé">
@@ -183,12 +328,29 @@ export function HelpdeskCockpit(props: Props) {
             <option key={t}>{t}</option>
           ))}
         </select>
-        {JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS) && (
-          <button className="ghost" onClick={() => set(EMPTY_FILTERS)}>
+        <input type="search" aria-label="Rechercher un ticket (numéro ou titre)" placeholder="N° ou titre…" value={filters.q} onChange={(e) => set({ q: e.target.value })} />
+      </div>
+      {(activeChips.length > 0 || drill) && (
+        <div className="hd-chips" role="group" aria-label="Filtres actifs">
+          {activeChips.map((c) => (
+            <span key={c.key} className="xc-filterchip">
+              {c.label}
+              <button aria-label={`Retirer le filtre ${c.label}`} onClick={() => set({ [c.key]: EMPTY_FILTERS[c.key] } as Partial<HdFilters>)}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+          <button
+            className="ghost"
+            onClick={() => {
+              set(EMPTY_FILTERS);
+              setDrill(null);
+            }}
+          >
             Réinitialiser les filtres
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {filters.client === 'primagaz' && <p className="itsm-missing">PRIMAGAZ : {ITSM_NOT_SET}. Aucun ticket n’est affiché tant que l’outil n’est pas renseigné.</p>}
 
       <div className="xc-tabs">
@@ -198,7 +360,7 @@ export function HelpdeskCockpit(props: Props) {
           tabs={[
             { id: 'synthese', label: 'Synthèse' },
             { id: 'tickets', label: `Tableau (${shown.length})` },
-            { id: 'kanban', label: `Kanban (${shown.length})` },
+            { id: 'kanban', label: `Kanban (${kanbanList.length})` },
             { id: 'effectifs', label: 'Effectifs' },
           ]}
         />
@@ -323,112 +485,53 @@ export function HelpdeskCockpit(props: Props) {
         </>
       )}
 
-      {tab === 'tickets' && (
-        <>
-          <div className="xc-tablewrap">
-            <table className="xc-table">
-              <thead>
-                <tr>
-                  <th>N° SEATPI</th>
-                  <th>Source</th>
-                  <th>Pôle</th>
-                  <th>Client</th>
-                  <th>Équipe</th>
-                  <th>Titre</th>
-                  <th>Priorité</th>
-                  <th>Statut</th>
-                  <th>Statut source</th>
-                  <th>SLA</th>
-                  <th>Affecté à</th>
-                  <th>Manager</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.slice(page * PAGE, (page + 1) * PAGE).map((t) => (
-                  <tr key={t.id} tabIndex={0} onClick={() => setOpenId(t.id)} onKeyDown={(e) => e.key === 'Enter' && setOpenId(t.id)}>
-                    <td>
-                      <b>{t.id}</b>
-                    </td>
-                    <td>
-                      {t.source.tool} <code>{t.source.id}</code>
-                    </td>
-                    <td>{t.pole ? POLE_GROUP_LABEL[t.pole] : 'MCO N2'}</td>
-                    <td>{t.clientName}</td>
-                    <td>{t.teamLabel}</td>
-                    <td>{t.title}</td>
-                    <td>
-                      <PriorityBadge p={t.priority} />
-                    </td>
-                    <td>
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td>
-                      <code>{t.sourceStatus}</code>
-                    </td>
-                    <td>
-                      <SlaBadge state={t.sla.state} paused={t.sla.paused} />
-                    </td>
-                    <td>{who(t)}</td>
-                    <td>{managerLabel(t.managerId)}</td>
-                  </tr>
-                ))}
-                {shown.length === 0 && (
-                  <tr>
-                    <td colSpan={12} className="hint">
-                      Aucun ticket pour ces critères.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          {shown.length > PAGE && (
-            <div className="xc-pager">
-              <button className="ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-                Précédent
-              </button>
-              <span>
-                {page * PAGE + 1}–{Math.min(shown.length, (page + 1) * PAGE)} sur {shown.length}
-              </span>
-              <button className="ghost" disabled={(page + 1) * PAGE >= shown.length} onClick={() => setPage((p) => p + 1)}>
-                Suivant
-              </button>
-            </div>
+      {(tab === 'tickets' || tab === 'kanban') && (
+        <div className="hd-viewbar">
+          {tab === 'kanban' && (
+            <label className="ck-check">
+              <input type="checkbox" checked={showArchives} onChange={(e) => setShowArchives(e.target.checked)} /> Afficher les archives (résolus et clôturés)
+            </label>
           )}
-        </>
-      )}
-
-      {tab === 'kanban' && (
-        <div className="xc-board hd-board">
-          {KANBAN.map((s) => {
-            const col = shown.filter((t) => t.status === s || (s === 'Résolu' && t.status === 'Clôturé'));
-            return (
-              <div key={s} className="xc-col" aria-label={`Colonne ${s}`}>
-                <h4>
-                  {s} <span className="tabcount">{col.length}</span>
-                </h4>
-                <div className="xc-cards">
-                  {col.slice(0, 30).map((t) => (
-                    <button key={t.id} className="xc-card hd-card" onClick={() => setOpenId(t.id)}>
-                      <span className="xc-card-top">
-                        <b>{t.id}</b>
-                        <PriorityBadge p={t.priority} />
-                      </span>
-                      <span className="xc-card-title">{t.title}</span>
-                      <small>
-                        {t.clientName} · {t.source.tool} · {who(t)}
-                      </small>
-                      {t.sla.state !== 'respecté' && <SlaBadge state={t.sla.state} />}
-                    </button>
-                  ))}
-                  {col.length > 30 && <small className="hint">+ {col.length - 30} autre(s) — voir le tableau</small>}
-                </div>
-              </div>
-            );
-          })}
+          {tab === 'tickets' && (
+            <details className="col-picker">
+              <summary>Colonnes</summary>
+              {COLUMNS.map((c) => (
+                <label key={c.id}>
+                  <input
+                    type="checkbox"
+                    checked={cols.has(c.id)}
+                    onChange={() =>
+                      setCols((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(c.id)) next.delete(c.id);
+                        else next.add(c.id);
+                        return next;
+                      })
+                    }
+                  />{' '}
+                  {c.label}
+                </label>
+              ))}
+            </details>
+          )}
+          <button className="ghost" onClick={() => setFullscreen(true)} aria-label="Afficher en plein écran">
+            <Maximize2 size={13} aria-hidden /> Plein écran
+          </button>
         </div>
       )}
-
+      {fullscreen && (tab === 'tickets' || tab === 'kanban') && (
+        <div className="fs-backdrop" role="dialog" aria-modal="true" aria-label={tab === 'tickets' ? 'Tableau des tickets en plein écran' : 'Kanban en plein écran'} onKeyDown={(e) => e.key === 'Escape' && setFullscreen(false)}>
+          <div className="fs-bar">
+            <b>{tab === 'tickets' ? `Tableau · ${shown.length} ticket(s)` : `Kanban · ${kanbanList.length} ticket(s)`}</b>
+            <button className="ghost" autoFocus onClick={() => setFullscreen(false)}>
+              <Minimize2 size={13} aria-hidden /> Quitter le plein écran
+            </button>
+          </div>
+          {tab === 'tickets' ? renderTable() : renderKanban()}
+        </div>
+      )}
+      {tab === 'tickets' && !fullscreen && renderTable()}
+      {tab === 'kanban' && !fullscreen && renderKanban()}
       {tab === 'effectifs' && (
         <>
           <div className="xc-scopes">
@@ -491,4 +594,22 @@ export function HelpdeskCockpit(props: Props) {
       {toast && <Toast message={toast.message} ok={toast.ok} onDone={() => setToast(null)} />}
     </section>
   );
+}
+
+const PERIOD_LABEL: Record<HdFilters['period'], string> = { tout: 'Toute période', today: 'Aujourd’hui', week: 'Semaine en cours', prevWeek: 'Semaine précédente' };
+
+/** Filtres actifs lisibles (libellés métier, jamais d'identifiants techniques). */
+function activeFilterChips(f: HdFilters, o: { techName: (id: string) => string }): { key: keyof HdFilters; label: string }[] {
+  const chips: { key: keyof HdFilters; label: string }[] = [];
+  if (f.pole) chips.push({ key: 'pole', label: f.pole === 'n2' ? 'MCO N2 — sites clients' : `Pôle ${POLE_GROUP_LABEL[f.pole]}` });
+  if (f.client) chips.push({ key: 'client', label: `Client : ${clientRecord(f.client)?.name ?? f.client}` });
+  if (f.team) chips.push({ key: 'team', label: `Équipe : ${ticketTeams.find((t) => t.id === f.team)?.name ?? f.team}` });
+  if (f.manager) chips.push({ key: 'manager', label: `Manager : ${orgPeople.find((p) => p.id === f.manager)?.name ?? f.manager}` });
+  if (f.tech) chips.push({ key: 'tech', label: `Technicien : ${o.techName(f.tech)}` });
+  if (f.priority) chips.push({ key: 'priority', label: `Priorité ${f.priority}` });
+  if (f.status) chips.push({ key: 'status', label: `Statut : ${f.status}` });
+  if (f.period !== 'tout') chips.push({ key: 'period', label: PERIOD_LABEL[f.period] });
+  if (f.tool) chips.push({ key: 'tool', label: `Outil : ${f.tool}` });
+  if (f.q.trim()) chips.push({ key: 'q', label: `Recherche : « ${f.q.trim()} »` });
+  return chips;
 }

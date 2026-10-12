@@ -209,8 +209,20 @@ describe('App (mode démo)', () => {
     fireEvent.change(hd.getByLabelText('Outil ITSM'), { target: { value: 'GLPI' } });
     const rows = hd.getAllByRole('row').slice(1);
     expect(rows.every((r) => /GLPI/.test(r.textContent ?? '') || /Aucun ticket/.test(r.textContent ?? ''))).toBe(true);
-    const tableCount = hd.getByRole('tab', { name: /Tableau/ }).textContent;
-    expect(hd.getByRole('tab', { name: /Kanban/ }).textContent?.replace('Kanban', '')).toBe(tableCount?.replace('Tableau', ''));
+    const tabCount = (name: RegExp) => Number(hd.getByRole('tab', { name }).textContent?.match(/\((\d+)\)/)?.[1]);
+    // Kanban : travail actif par défaut, archives sur demande (même jeu filtré que le tableau).
+    fireEvent.click(hd.getByRole('tab', { name: /Kanban/ }));
+    expect(hd.queryByRole('region', { name: 'Colonne Résolu' })).toBeNull();
+    fireEvent.click(hd.getByRole('checkbox', { name: /Afficher les archives/ }));
+    expect(tabCount(/Kanban/)).toBe(tabCount(/Tableau/));
+    // Recherche par numéro : le filtre actif est affiché et réinitialisable.
+    fireEvent.click(hd.getByRole('tab', { name: /Tableau/ }));
+    const first = hd.getAllByRole('row')[1].querySelector('b')!.textContent!;
+    fireEvent.change(hd.getByLabelText('Rechercher un ticket (numéro ou titre)'), { target: { value: first } });
+    expect(tabCount(/Tableau/)).toBe(1);
+    expect(hd.getByRole('button', { name: new RegExp(`Retirer le filtre Recherche`) })).toBeTruthy();
+    fireEvent.click(hd.getByRole('button', { name: 'Réinitialiser les filtres' }));
+    expect(tabCount(/Tableau/)).toBeGreaterThan(1);
     // Pas de création de ticket dans ce cockpit de pilotage.
     expect(hd.queryByRole('button', { name: /Nouveau ticket/ })).toBeNull();
   });
