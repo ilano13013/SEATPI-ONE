@@ -44,6 +44,7 @@ const matrix: Matrix = {
     integrations: ['view', 'configure'],
     exploitation: ['view', 'individual'],
     csm: ['view', 'individual'],
+    moyens: ['view'],
   },
   rh: { rh: ALL, pause: ['view'], accueil: ['view'] },
   finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'], csm: ['view'] },

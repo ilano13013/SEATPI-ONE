@@ -122,9 +122,8 @@ export function DeptRoom({ kind }: { kind: RoomKind }) {
     case 'recrutement':
       return <OfficeRows chair="#7c3aed" screen="#8b5cf6" extra="table" />;
     case 'moyens':
-      return <OfficeRows chair="#65a30d" screen="#84cc16" extra="shelves" />;
-    case 'deplacements':
-      return <OfficeRows chair="#db2777" screen="#ec4899" extra="map" />;
+      // Moyens généraux : services généraux et pôle déplacements professionnels (carte murale).
+      return <OfficeRows chair="#65a30d" screen="#84cc16" extra="map" />;
     default:
       return null;
   }

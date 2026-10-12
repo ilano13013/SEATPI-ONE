@@ -297,4 +297,21 @@ describe('App (mode démo)', () => {
     fireEvent.click(modules.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
     expect(planned()).toBe(p0 - 1);
   });
+
+  it('Moyens généraux : déplacements gérés opérationnellement, enveloppe Helpdesk non dupliquée et plafonnée', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Moyens généraux/ }));
+    const mg = within(screen.getByRole('region', { name: 'Moyens généraux — déplacements' }));
+    expect(mg.getByText(/lecture seule ici/)).toBeTruthy();
+    fireEvent.change(mg.getByLabelText('Objet'), { target: { value: 'Séminaire' } });
+    fireEvent.change(mg.getByLabelText('Montant estimé'), { target: { value: '999999' } });
+    fireEvent.click(mg.getByRole('button', { name: 'Enregistrer la demande' }));
+    expect(mg.getAllByText(/Bloquée/).length).toBeGreaterThan(0);
+    for (const tab of ['Déplacements prévus', 'Réalisés', 'Dépenses', 'Historique']) fireEvent.click(mg.getByRole('tab', { name: new RegExp(tab) }));
+    fireEvent.click(mg.getByRole('tab', { name: /Justificatifs/ }));
+    const before = mg.getAllByRole('row').length;
+    fireEvent.change(mg.getAllByRole('combobox', { name: /Justificatif/ })[0], { target: { value: 'Reçu' } });
+    expect(mg.getAllByRole('row').length).toBe(before - 1);
+  });
 });

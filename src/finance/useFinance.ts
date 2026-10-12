@@ -284,7 +284,11 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     return { ok: true, message: `Règle d’imputation : ${rule}.` };
   }, []);
 
-  const reset = useCallback((list: Collaborator[], ags: Agent[], tr: Trip[]) => apply(initialFinance(list, ags, tr, Date.now())), []);
+  const reset = useCallback((list: Collaborator[], ags: Agent[], tr: Trip[]) => {
+    const fresh = initialFinance(list, ags, tr, Date.now());
+    apply(fresh);
+    return fresh;
+  }, []);
 
   return { state, setCost, addAdjustment, updatePrestation, addPrestation, submitTrip, addExpense, convert, cancel, setCeiling, syncTrips, addRecruitmentLine, setRule, reset };
 }

@@ -88,13 +88,19 @@ describe('trois sites internes', () => {
       const k = kindsOf(site);
       expect(k.has('rh')).toBe(false);
       expect(k.has('stock')).toBe(false);
-      for (const kind of ['helpdesk', 'mco', 'exploitation', 'formation', 'csm', 'finance', 'commercial', 'direction', 'recrutement', 'moyens', 'deplacements', 'pause', 'accueil', 'reunion']) {
+      for (const kind of ['helpdesk', 'mco', 'exploitation', 'formation', 'csm', 'finance', 'commercial', 'direction', 'recrutement', 'moyens', 'pause', 'accueil', 'reunion']) {
         expect(k.has(kind as never), `${site} : ${kind}`).toBe(true);
         expect(lc.has(kind as never), `La Ciotat : ${kind}`).toBe(true);
       }
     }
     expect(lc.has('rh')).toBe(true);
     expect(lc.has('stock')).toBe(true);
+  });
+
+  it('les déplacements professionnels relèvent des Moyens généraux (aucun espace ni département dédié)', () => {
+    expect(rooms.some((r) => (r.kind as string) === 'deplacements')).toBe(false);
+    expect(departments.some((d) => (d.id as string) === 'deplacements')).toBe(false);
+    expect(departments.find((d) => d.id === 'moyens')!.description).toMatch(/déplacements/);
   });
 
   it('chaque département de la configuration dispose d’un espace sur ses sites', () => {

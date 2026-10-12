@@ -29,7 +29,6 @@ export type RoomKind =
   | 'direction'
   | 'recrutement'
   | 'moyens'
-  | 'deplacements'
   | 'reunion'
   | 'external'
   | 'building';
@@ -52,7 +51,6 @@ export type ModuleId =
   | 'direction'
   | 'recrutement'
   | 'moyens'
-  | 'deplacements'
   | 'reunion'
   | 'carte';
 

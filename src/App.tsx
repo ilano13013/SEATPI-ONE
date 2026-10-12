@@ -42,13 +42,15 @@ import type { Technician } from './external/types';
 import { useFinance } from './finance/useFinance';
 import { FinanceCockpit, type FinanceTab } from './components/finance/FinanceCockpit';
 import { PdgCockpit } from './components/pdg/PdgCockpit';
+import { useMoyens } from './moyens/useMoyens';
+import { MoyensCockpit } from './components/moyens/MoyensCockpit';
 import { INITIAL_READINESS, ProductionCockpit } from './components/production/ProductionCockpit';
 import type { ReadinessItem } from './production/readiness';
 import { activeData } from './data/provider';
 import { Toast } from './components/external/common';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'finance', 'pdg', 'itsm', 'production']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'finance', 'pdg', 'itsm', 'production']);
 
 /** Lien d'un espace 3D vers un module applicatif. */
 const MODULE_VIEW: Record<ModuleLink, AppView> = {
@@ -57,6 +59,7 @@ const MODULE_VIEW: Record<ModuleLink, AppView> = {
   mco: 'mco',
   exploitation: 'exploitation',
   finance: 'finance',
+  moyens: 'moyens',
   deplacements: 'finance',
   recrutement: 'finance',
   pdg: 'pdg',
@@ -100,6 +103,7 @@ export function App() {
   const [persona, setPersona] = useState('resp-helpdesk');
   const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
   const [finTab, setFinTab] = useState<FinanceTab>('global');
+  const moyens = useMoyens(fin.state.travel);
   const { syncTrips } = fin;
   // Chaque déplacement CSM planifié est soumis à l'enveloppe déplacements (blocage si plafond atteint).
   useEffect(() => syncTrips(ext.state.trips), [ext.state.trips, syncTrips]);
@@ -200,7 +204,8 @@ export function App() {
     const fresh = ext.reset();
     internal.reset();
     mgmt.reset();
-    fin.reset(mgmt.state.collaborators, state.agents, fresh.trips);
+    const freshFin = fin.reset(mgmt.state.collaborators, state.agents, fresh.trips);
+    moyens.reset(freshFin.travel);
     setReadiness(INITIAL_READINESS);
     setPersona('resp-helpdesk');
     setFinTab('global');
@@ -496,6 +501,18 @@ export function App() {
           />
         )}
         {appView === 'finance' && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} onBack={backToMap} />}
+        {appView === 'moyens' && (
+          <MoyensCockpit
+            moyens={moyens}
+            fin={fin}
+            role={role}
+            onBack={backToMap}
+            onOpenBudget={() => {
+              setFinTab('deplacements');
+              setAppView('finance');
+            }}
+          />
+        )}
         {appView === 'pdg' && (
           <PdgCockpit
             sim={state}

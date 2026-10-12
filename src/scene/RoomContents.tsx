@@ -85,7 +85,6 @@ function Contents({ room, agents: allAgents, vehicles, inventory, animate, onAge
     case 'commercial':
     case 'recrutement':
     case 'moyens':
-    case 'deplacements':
     case 'reunion':
       return <DeptRoom kind={room.kind} />;
     case 'helpdesk':

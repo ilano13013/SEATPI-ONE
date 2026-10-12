@@ -35,8 +35,7 @@ export type DepartmentId =
   | 'direction'
   | 'recrutement'
   | 'moyens'
-  | 'stock'
-  | 'deplacements';
+  | 'stock';
 
 export interface Department {
   id: DepartmentId;
@@ -59,9 +58,8 @@ export const departments: Department[] = [
   { id: 'commercial', label: 'Commercial', description: 'Opportunités, propositions et appels d’offres', sites: ALL_SITES },
   { id: 'direction', label: 'Direction générale', description: 'Cockpit de direction : sites, départements, budgets et risques', sites: ALL_SITES },
   { id: 'recrutement', label: 'Recrutement', description: 'Postes ouverts, candidatures et budget recrutement', sites: ALL_SITES },
-  { id: 'moyens', label: 'Moyens généraux', description: 'Salles, maintenance, fournisseurs et demandes', sites: ALL_SITES },
+  { id: 'moyens', label: 'Moyens généraux', description: 'Salles, maintenance, fournisseurs, demandes et déplacements professionnels', sites: ALL_SITES },
   { id: 'stock', label: 'Stocks et matériel', description: 'Équipements, casques et affectations', sites: ['laciotat'] },
-  { id: 'deplacements', label: 'Déplacements professionnels', description: 'Demandes, réservations et enveloppe déplacements', sites: ALL_SITES },
 ];
 
 /** Service présent sur un site (règle RH / Stock uniquement à La Ciotat). */
@@ -89,8 +87,7 @@ const KIND: Record<Exclude<RoomKind, 'external' | 'building'>, KindMeta> = {
   commercial: { label: 'Commercial', module: 'commercial', color: '#fde2e4', description: 'Opportunités, propositions et appels d’offres' },
   direction: { label: 'Direction générale', module: 'direction', color: '#fff0be', description: 'Cockpit PDG : sites, départements, budgets et risques' },
   recrutement: { label: 'Recrutement', module: 'recrutement', color: '#ede9fe', description: 'Postes ouverts, candidatures, budget recrutement' },
-  moyens: { label: 'Moyens généraux', module: 'moyens', color: '#ecfccb', description: 'Salles, maintenance et demandes' },
-  deplacements: { label: 'Déplacements professionnels', module: 'deplacements', color: '#fce7f3', description: 'Demandes de déplacement et enveloppe dédiée' },
+  moyens: { label: 'Moyens généraux', module: 'moyens', color: '#ecfccb', description: 'Salles, maintenance, demandes et déplacements professionnels' },
   reunion: { label: 'Salle de réunion', module: 'reunion', color: '#f1f5f9', description: 'Réunions, comités et visioconférences' },
 };
 
@@ -105,6 +102,11 @@ const plateau = (right: [Slot['kind'], Slot['kind']]): Slot[] => [
   { kind: 'helpdesk', x: -1.85, z: 0, w: 6.9, d: 7.2 },
   { kind: right[0], x: 3.6, z: -1.85, w: 3.4, d: 3.5 },
   { kind: right[1], x: 3.6, z: 1.85, w: 3.4, d: 3.5 },
+];
+/** Deux espaces en haut, un espace pleine largeur en bas. */
+const twoAndWide = (top: [Slot['kind'], Slot['kind']], wide: Slot['kind']): Slot[] => [
+  ...grid2x2(top),
+  { kind: wide, x: 0, z: 1.85, w: 11.2, d: 3.5 },
 ];
 const halves = (kinds: [Slot['kind'], Slot['kind']]): Slot[] => [
   { kind: kinds[0], x: -2.8, z: 0, w: 5.4, d: 7.2 },
@@ -135,7 +137,7 @@ export const sitePlans: Record<SiteId, FloorPlan[]> = {
     { id: 'etage1', label: 'Étage 1', short: 'É1', slots: [{ ...plateau(['rh', 'direction'])[0], id: 'helpdesk' }, { ...plateau(['rh', 'direction'])[1], id: 'rh' }, { ...plateau(['rh', 'direction'])[2], id: 'direction' }] },
     { id: 'etage2', label: 'Étage 2', short: 'É2', slots: halves(['exploitation', 'csm']).map((s) => ({ ...s, id: s.kind })) },
     { id: 'lc-e3', label: 'Étage 3', short: 'É3', slots: grid2x2(['mco', 'formation', 'finance', 'commercial']) },
-    { id: 'lc-e4', label: 'Étage 4', short: 'É4', slots: grid2x2(['recrutement', 'deplacements', 'moyens', 'reunion']) },
+    { id: 'lc-e4', label: 'Étage 4', short: 'É4', slots: twoAndWide(['recrutement', 'reunion'], 'moyens') },
   ],
   montpellier: siteTemplate('mtp'),
   paris: siteTemplate('par'),
@@ -144,7 +146,7 @@ export const sitePlans: Record<SiteId, FloorPlan[]> = {
 /** Gabarit commun aux sites secondaires : mêmes services, sans RH ni Stock. */
 function siteTemplate(p: string): FloorPlan[] {
   return [
-    { id: `${p}-rdc`, label: 'Rez-de-chaussée', short: 'RDC', slots: grid2x2(['accueil', 'pause', 'moyens', 'deplacements']) },
+    { id: `${p}-rdc`, label: 'Rez-de-chaussée', short: 'RDC', slots: twoAndWide(['accueil', 'pause'], 'moyens') },
     { id: `${p}-e1`, label: 'Étage 1', short: 'É1', slots: plateau(['direction', 'finance']) },
     { id: `${p}-e2`, label: 'Étage 2', short: 'É2', slots: halves(['exploitation', 'csm']) },
     { id: `${p}-e3`, label: 'Étage 3', short: 'É3', slots: grid3x2(['mco', 'formation', 'commercial', 'recrutement', 'reunion']) },
