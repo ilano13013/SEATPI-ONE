@@ -9,7 +9,7 @@ import type { HdTicket } from '../../helpdesk/consolidation';
 import { counters } from '../../helpdesk/consolidation';
 import type { ManagementState } from '../../management/useManagement';
 import type { FinanceState } from '../../finance/useFinance';
-import { closedTotals, landingTotals, monthResult, monthsOf, prestationAmount, recruitmentBalance, recruitmentImputed, RULE_TO_CONFIRM, travelBalance } from '../../finance/budget';
+import { closedTotals, ENTITIES, ENTITY_LABEL, forEntity, landingTotals, monthResult, monthsOf, prestationAmount, recruitmentBalance, recruitmentImputed, RULE_TO_CONFIRM, travelBalance, type Entity } from '../../finance/budget';
 import { craCounters, leaveConflicts } from '../../management/rules';
 import { departments, internalSites } from '../../data/sites';
 import { rooms } from '../../data/layout';
@@ -55,9 +55,18 @@ export function PdgCockpit(props: Props) {
 }
 
 function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props) {
-  const rows = useMemo(() => monthsOf(fin.year).map((m) => monthResult(m, fin.currentMonth, fin.costs, fin.adjustments, fin.prestations, recruitmentImputed(fin.recruitment, m))), [fin]);
-  const closed = closedTotals(rows);
-  const landing = landingTotals(rows);
+  // Budgets distincts : Helpdesk N1 (frais de recrutement imputables selon la règle) et MCO N2.
+  const byEntity = useMemo(
+    () =>
+      Object.fromEntries(
+        ENTITIES.map((e) => {
+          const d = forEntity(fin, e);
+          const rows = monthsOf(fin.year).map((m) => monthResult(m, fin.currentMonth, d.costs, d.adjustments, d.prestations, e === 'helpdesk' ? recruitmentImputed(fin.recruitment, m) : 0));
+          return [e, { closed: closedTotals(rows), landing: landingTotals(rows) }];
+        }),
+      ) as Record<Entity, { closed: ReturnType<typeof closedTotals>; landing: ReturnType<typeof landingTotals> }>,
+    [fin],
+  );
   const travel = travelBalance(fin.travel);
   const recruit = recruitmentBalance(fin.recruitment);
   const week = periods(now).week;
@@ -82,7 +91,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
     ...(conflicts.length ? [{ level: 'warn' as const, label: `${conflicts.length} demande(s) de congé en attente avec effectif réduit (checklist congés)`, view: 'management' as AppView }] : []),
     ...(cra.missing + cra.toFix ? [{ level: 'warn' as const, label: `${cra.missing} CRA manquant(s) et ${cra.toFix} à corriger (dernière semaine échue)`, view: 'management' as AppView }] : []),
     ...(toValidate.length ? [{ level: 'warn' as const, label: `${toValidate.length} prestation(s) à valider (${eur(toValidate.reduce((n, p) => n + prestationAmount(p), 0))})`, view: 'finance' as AppView, sub: 'revenus' }] : []),
-    ...(closed.result < 0 ? [{ level: 'bad' as const, label: 'Résultat analytique Helpdesk négatif sur les mois clos', view: 'finance' as AppView, sub: 'rentabilite' }] : []),
+    ...ENTITIES.filter((e) => byEntity[e].closed.result < 0).map((e) => ({ level: 'bad' as const, label: `Résultat analytique ${ENTITY_LABEL[e]} négatif sur les mois clos`, view: 'finance' as AppView, sub: `rentabilite@${e}` })),
   ];
 
   const byPop = (site: string | null) => mgmt.collaborators.filter((c) => c.site === site);
@@ -111,28 +120,37 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
         ))}
       </ul>
 
-      <h3>Département Helpdesk — entité financière consolidée</h3>
-      <div className="xc-kpis">
-        <button className="xc-kpi" onClick={() => onOpen('finance', 'rentabilite')}>
-          <small>Résultat analytique (mois clos)</small>
-          <strong className={closed.result < 0 ? 'xc-warn' : ''}>{eur(closed.result)}</strong>
-          <em>marge {pct(closed.margin)} · périmètre Helpdesk</em>
-        </button>
-        <button className="xc-kpi" onClick={() => onOpen('finance', 'previsions')}>
-          <small>Atterrissage annuel</small>
-          <strong>{eur(landing.result)}</strong>
-          <em>marge projetée {pct(landing.margin)}</em>
-        </button>
-        <button className="xc-kpi" onClick={() => onOpen('finance', 'revenus')}>
-          <small>Revenus validés (mois clos)</small>
-          <strong>{eur(closed.revenue)}</strong>
-        </button>
-        <button className="xc-kpi" onClick={() => onOpen('finance', 'couts')}>
-          <small>Coûts opérationnels (mois clos)</small>
-          <strong>{eur(closed.cost)}</strong>
-        </button>
-      </div>
-      <p className="hint">Résultat analytique de département, distinct du résultat comptable de l’entreprise. Les autres départements ne sont pas encore modélisés : aucun total entreprise n’est calculé.</p>
+      {ENTITIES.map((e) => {
+        const t = byEntity[e];
+        return (
+          <div key={e}>
+            <h3>Budget {ENTITY_LABEL[e]} — entité financière distincte</h3>
+            <div className="xc-kpis">
+              <button className="xc-kpi" onClick={() => onOpen('finance', `rentabilite@${e}`)}>
+                <small>Résultat analytique (mois clos)</small>
+                <strong className={t.closed.result < 0 ? 'xc-warn' : ''}>{eur(t.closed.result)}</strong>
+                <em>
+                  marge {pct(t.closed.margin)} · périmètre {ENTITY_LABEL[e]}
+                </em>
+              </button>
+              <button className="xc-kpi" onClick={() => onOpen('finance', `previsions@${e}`)}>
+                <small>Atterrissage annuel</small>
+                <strong>{eur(t.landing.result)}</strong>
+                <em>marge projetée {pct(t.landing.margin)}</em>
+              </button>
+              <button className="xc-kpi" onClick={() => onOpen('finance', `revenus@${e}`)}>
+                <small>Revenus validés (mois clos)</small>
+                <strong>{eur(t.closed.revenue)}</strong>
+              </button>
+              <button className="xc-kpi" onClick={() => onOpen('finance', `couts@${e}`)}>
+                <small>Coûts opérationnels (mois clos)</small>
+                <strong>{eur(t.closed.cost)}</strong>
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      <p className="hint">Deux budgets distincts (Helpdesk N1 et MCO N2) : leurs résultats ne sont jamais additionnés. Résultats analytiques de département, distincts du résultat comptable de l’entreprise ; aucun total entreprise n’est calculé.</p>
 
       <h3>Enveloppes suivies séparément (non additionnées au résultat)</h3>
       <div className="xc-kpis">
@@ -173,7 +191,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
               <td>{sim.agents.length} agents</td>
             </tr>
             <tr tabIndex={0} onClick={() => onOpen('mco')}>
-              <td>MCO N2 — sites clients INVIVO, MONEXT (PRIMAGAZ non mesuré)</td>
+              <td>MCO N2 — sites clients INVIVO, PRIMAGAZ, MONEXT</td>
               <td>{kN2.ouverts.length}</td>
               <td>{kN2.horsSla.length}</td>
               <td>{kN2.resolus.length}</td>

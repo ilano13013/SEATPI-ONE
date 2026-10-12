@@ -18,11 +18,11 @@ const KIND_TO_DEPARTMENT: Partial<Record<Room['kind'], DepartmentId>> = {
 };
 
 /** Modules applicatifs accessibles depuis un espace. */
-export type ModuleLink = 'helpdesk' | 'management' | 'finance' | 'moyens' | 'deplacements' | 'recrutement' | 'pdg' | 'mco' | 'exploitation' | 'production';
+export type ModuleLink = 'helpdesk' | 'management' | 'finance' | 'finance-mco' | 'moyens' | 'deplacements' | 'recrutement' | 'pdg' | 'mco' | 'exploitation' | 'production';
 
 const LINKS: Partial<Record<Room['kind'], { module: ModuleLink; label: string }[]>> = {
   helpdesk: [{ module: 'helpdesk', label: 'Cockpit Helpdesk consolidé' }, { module: 'management', label: 'Management : congés, CRA, objectifs' }],
-  mco: [{ module: 'mco', label: 'Cockpit MCO / Support N2' }],
+  mco: [{ module: 'mco', label: 'Cockpit MCO / Support N2' }, { module: 'finance-mco', label: 'Budget & Rentabilité MCO N2' }],
   exploitation: [{ module: 'exploitation', label: 'Cockpit Exploitation' }],
   moyens: [{ module: 'moyens', label: 'Moyens généraux : déplacements professionnels' }],
   finance: [{ module: 'finance', label: 'Budget & Rentabilité du Helpdesk' }, { module: 'deplacements', label: 'Enveloppe déplacements Helpdesk' }],

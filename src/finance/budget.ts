@@ -20,6 +20,35 @@ export const monthLabel = (m: Month) => new Date(`${m}-15T12:00:00`).toLocaleDat
 const round = (n: number) => Math.round(n);
 const pct = (num: number, den: number) => (den ? Math.round((num / den) * 1000) / 10 : null);
 
+// --- Budgets distincts : Helpdesk N1 et MCO N2 -------------------------------------
+
+/**
+ * Deux entités budgétaires séparées, jamais additionnées :
+ * - Helpdesk N1 : agents des plateaux, encadrement Helpdesk, prestations N1 (contrats CTR-INT-…) ;
+ * - MCO N2 : techniciens chez les clients, manager MCO, contrats N2 (INVIVO, PRIMAGAZ, MONEXT).
+ */
+export type Entity = 'helpdesk' | 'mco';
+export const ENTITIES: Entity[] = ['helpdesk', 'mco'];
+export const ENTITY_LABEL: Record<Entity, string> = { helpdesk: 'Helpdesk N1', mco: 'MCO N2' };
+
+export const entityOfCost = (e: Pick<CostEntry, 'population' | 'personId'>): Entity => (e.population === 'Technicien N2' || e.personId === 'mgr-mco' ? 'mco' : 'helpdesk');
+export const entityOfPrestation = (p: Pick<Prestation, 'contractId'>): Entity => (p.contractId.startsWith('CTR-INT-') ? 'helpdesk' : 'mco');
+
+export interface EntityData {
+  costs: CostEntry[];
+  adjustments: CostAdjustment[];
+  prestations: Prestation[];
+}
+
+/** Données d'une seule entité budgétaire. */
+export function forEntity(d: EntityData, entity: Entity): EntityData {
+  return {
+    costs: d.costs.filter((c) => entityOfCost(c) === entity),
+    adjustments: d.adjustments.filter((a) => a.entity === entity),
+    prestations: d.prestations.filter((p) => entityOfPrestation(p) === entity),
+  };
+}
+
 // --- Coûts --------------------------------------------------------------------------
 
 export interface CostEntry {
@@ -42,6 +71,8 @@ export interface CostEntry {
 export type AdjustmentKind = 'Prime' | 'Heures supplémentaires' | 'Remplacement' | 'Autre';
 
 export interface CostAdjustment {
+  /** Budget concerné : Helpdesk N1 ou MCO N2 (budgets distincts). */
+  entity: Entity;
   id: string;
   month: Month;
   kind: AdjustmentKind;

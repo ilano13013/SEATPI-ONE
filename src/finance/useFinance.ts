@@ -30,6 +30,7 @@ import {
   type RecruitmentLine,
   type TravelBudget,
   type TravelCommitment,
+  type Entity,
 } from './budget';
 
 export interface FinanceLogEntry {
@@ -60,7 +61,7 @@ export const TRIP_COST: Record<string, number> = { Train: 240, 'Véhicule de ser
 export const tripCost = (t: Trip) => TRIP_COST[t.transport] ?? 120;
 
 /** Prix fictif de référence d'un ETP N1 facturé (démonstration). */
-const N1_REFERENCE = 3300;
+const N1_REFERENCE = 3900;
 
 /** Mode de facturation de démonstration des clients internes (à remplacer par les contrats réels). */
 const INTERNAL_BILLING: Record<string, PrestationType> = { thelem: 'ETP', ird: 'Forfait', ortec: 'Forfait', sodiaal: 'Forfait', invivo: 'Acte', dmb: 'Acte', transgourmet: 'Acte', lbrfr: 'Horaire', eurapharma: 'Forfait', ange: 'ETP', hstv: 'Acte', snr: 'Acte', nocibe: 'Horaire', teract: 'Acte', g2s: 'Forfait' };
@@ -95,12 +96,18 @@ function seedPrestations(agents: Agent[], year: number, current: string): Presta
 function seedAdjustments(year: number, current: string): CostAdjustment[] {
   const list: CostAdjustment[] = [];
   let n = 1;
-  const add = (month: string, kind: AdjustmentKind, label: string, amount: number) => list.push({ id: `AJ-${String(n++).padStart(3, '0')}`, month, kind, label, amount });
+  const add = (entity: Entity, month: string, kind: AdjustmentKind, label: string, amount: number) => list.push({ id: `AJ-${String(n++).padStart(3, '0')}`, entity, month, kind, label, amount });
   for (const [i, m] of monthsOf(year).entries()) {
-    if ((i + 1) % 3 === 0) add(m, 'Prime', 'Primes trimestrielles sur objectifs (fictif)', 3200);
-    add(m, 'Heures supplémentaires', m <= current ? 'Heures supplémentaires réalisées (fictif)' : 'Heures supplémentaires prévues (fictif)', m <= current ? 600 + ((i * 337) % 900) : 800);
+    if ((i + 1) % 3 === 0) {
+      add('helpdesk', m, 'Prime', 'Primes trimestrielles sur objectifs N1 (fictif)', 2000);
+      add('mco', m, 'Prime', 'Primes trimestrielles sur objectifs N2 (fictif)', 1200);
+    }
+    const hs = m <= current ? 600 + ((i * 337) % 900) : 800;
+    add('helpdesk', m, 'Heures supplémentaires', m <= current ? 'Heures supplémentaires N1 réalisées (fictif)' : 'Heures supplémentaires N1 prévues (fictif)', Math.round(hs * 0.6));
+    add('mco', m, 'Heures supplémentaires', m <= current ? 'Astreintes et heures supplémentaires N2 réalisées (fictif)' : 'Astreintes et heures supplémentaires N2 prévues (fictif)', Math.round(hs * 0.4));
   }
-  add(`${year}-08`, 'Remplacement', 'Intérim — remplacement congés d’été (fictif)', 4800);
+  add('helpdesk', `${year}-08`, 'Remplacement', 'Intérim — remplacement congés d’été plateau (fictif)', 3000);
+  add('mco', `${year}-08`, 'Remplacement', 'Renfort N2 — congés d’été chez les clients (fictif)', 1800);
   return list;
 }
 

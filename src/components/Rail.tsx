@@ -11,7 +11,7 @@ const MODULES: { view: AppView; label: string; Icon: LucideIcon }[] = [
   { view: 'mco', label: 'Cockpit MCO / Support N2', Icon: Wrench },
   { view: 'exploitation', label: 'Cockpit Exploitation', Icon: Server },
   { view: 'moyens', label: 'Moyens généraux : déplacements', Icon: Plane },
-  { view: 'finance', label: 'Budget & Rentabilité Helpdesk', Icon: PiggyBank },
+  { view: 'finance', label: 'Budget & Rentabilité (Helpdesk N1 / MCO N2)', Icon: PiggyBank },
   { view: 'pdg', label: 'Cockpit PDG', Icon: Landmark },
   { view: 'itsm', label: 'Connecteurs ITSM', Icon: Plug },
   { view: 'production', label: 'Préparation à la production', Icon: ShieldCheck },

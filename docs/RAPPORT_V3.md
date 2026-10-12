@@ -30,6 +30,10 @@ L'application reste en **mode démonstration** : données fictives générées d
 
 **Ajouts** : filtre et colonne Pôle ; SLA décroché QlikView ; SLA N2 prise en charge / résolution ; Moyens généraux — déplacements ; Administration (Connexions & API, rôles & permissions, CRM, paramètres, historique) ; modification en direct avec historique ; procédure de révision budgétaire ; prérequis de production TEL-01 à TEL-05, ITSM-10, ITSM-11, G2S, Zendesk.
 
+## 1 ter. Budgets séparés Helpdesk N1 / MCO N2
+
+Le module Budget & Rentabilité porte deux entités budgétaires distinctes : **Helpdesk N1** (agents des plateaux, responsable et managers Helpdesk, prestations des contrats N1 `CTR-INT-…`, enveloppes déplacements et recrutement) et **MCO N2** (techniciens chez les clients, manager MCO, contrats N2 INVIVO, PRIMAGAZ, MONEXT). Primes, heures supplémentaires et remplacements sont rattachés à une entité. Le cockpit PDG affiche les deux résultats côte à côte, sans les additionner (`src/finance/budget.ts` : `forEntity`, `entityOfCost`, `entityOfPrestation`).
+
 ## 2. Propagation entre modules (démonstration)
 
 - Congés validés dans l'outil RH (données fictives) → effectifs prévus du cockpit Helpdesk ; techniciens N2 en congé dans les cockpits clients. Une coche de checklist n'a aucun effet officiel.

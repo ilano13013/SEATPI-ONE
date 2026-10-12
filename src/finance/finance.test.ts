@@ -6,6 +6,7 @@ import { initialFinance } from './useFinance';
 import {
   addRecruitment,
   clientBreakdown,
+  forEntity,
   addTravelExpense,
   changeCeiling,
   closedTotals,
@@ -129,5 +130,21 @@ describe('contribution par client', () => {
     const adjustments = closed.reduce((n, r) => n + r.costs.Primes + r.costs['Heures supplémentaires'] + r.costs.Remplacements + r.costs.Autres, 0);
     const sum = clients.reduce((n, c) => n + c.contribution, 0) - unallocated - adjustments;
     expect(Math.abs(sum - closedTotals(rows).result)).toBeLessThanOrEqual(clients.length + 2); // arrondis
+  });
+
+});
+
+describe('budgets distincts Helpdesk N1 / MCO N2', () => {
+  it('chaque coût, ajustement et prestation appartient à un seul budget ; aucune perte ni double compte', () => {
+    const hd = forEntity(f, 'helpdesk');
+    const mco = forEntity(f, 'mco');
+    expect(hd.costs.length + mco.costs.length).toBe(f.costs.length);
+    expect(hd.prestations.length + mco.prestations.length).toBe(f.prestations.length);
+    expect(hd.adjustments.length + mco.adjustments.length).toBe(f.adjustments.length);
+    expect(mco.costs.every((c) => c.population === 'Technicien N2' || c.personId === 'mgr-mco')).toBe(true);
+    expect(hd.costs.some((c) => c.population === 'Technicien N2')).toBe(false);
+    expect(new Set(mco.prestations.map((p) => p.contractId))).toEqual(new Set(['CTR-INV-01', 'CTR-PRI-01', 'CTR-MNX-01']));
+    expect(hd.prestations.every((p) => p.contractId.startsWith('CTR-INT-'))).toBe(true);
+    expect(hd.costs.some((c) => c.personId === 'resp-helpdesk')).toBe(true);
   });
 });

@@ -41,6 +41,7 @@ import type { ExternalState } from './external/useExternal';
 import { externalClients, externalTeams } from './external/config';
 import type { Technician } from './external/types';
 import { useFinance } from './finance/useFinance';
+import type { Entity } from './finance/budget';
 import { FinanceCockpit, type FinanceTab } from './components/finance/FinanceCockpit';
 import { PdgCockpit } from './components/pdg/PdgCockpit';
 import { useMoyens } from './moyens/useMoyens';
@@ -66,6 +67,7 @@ const MODULE_VIEW: Record<ModuleLink, AppView> = {
   mco: 'mco',
   exploitation: 'exploitation',
   finance: 'finance',
+  'finance-mco': 'finance',
   moyens: 'moyens',
   deplacements: 'finance',
   recrutement: 'finance',
@@ -117,6 +119,7 @@ export function App() {
   const [mgmtTab, setMgmtTab] = useState<MgmtTab>('cra');
   const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
   const [finTab, setFinTab] = useState<FinanceTab>('global');
+  const [finEntity, setFinEntity] = useState<Entity>('helpdesk');
   const moyens = useMoyens(fin.state.travel);
   // Extraction fictive de la feuille QlikView « Qlik SLA décrocher » (aucune connexion réelle).
   const [qlikRows] = useState(() => demoExtraction(Date.now()));
@@ -536,7 +539,7 @@ export function App() {
             onBack={backToMap}
           />
         )}
-        {appView === 'finance' && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} onBack={backToMap} />}
+        {appView === 'finance' && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} entity={finEntity} onEntity={setFinEntity} onBack={backToMap} />}
         {appView === 'moyens' && (
           <MoyensCockpit
             moyens={moyens}
@@ -573,7 +576,11 @@ export function App() {
             role={role}
             onBack={backToMap}
             onOpen={(v, sub) => {
-              if (v === 'finance' && sub) setFinTab(sub as FinanceTab);
+              if (v === 'finance' && sub) {
+                const [t, e] = sub.split('@');
+                setFinTab(t as FinanceTab);
+                setFinEntity(e === 'mco' ? 'mco' : 'helpdesk');
+              }
               if (v === 'externes') openExternal({ scope: 'global', tab: 'dashboard' });
               else setAppView(v);
             }}
@@ -597,7 +604,7 @@ export function App() {
           />
         )}
         {appView === 'production' && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
-        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} objectives={{ takeCharge: admin.state.sla.n2TakeCharge, resolution: admin.state.sla.n2Resolution }} />}
+        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} objectives={{ takeCharge: admin.state.sla.n2TakeCharge, resolution: admin.state.sla.n2Resolution }} onOpenBudget={() => { setFinEntity('mco'); setFinTab('global'); setAppView('finance'); }} />}
         {appView === 'exploitation' && (
           <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />
         )}
@@ -658,7 +665,9 @@ export function App() {
           }
           availableModules={AVAILABLE_LINKS}
           onOpenModule={(m) => {
-            if (m === 'deplacements' || m === 'recrutement' || m === 'finance') setFinTab(m === 'finance' ? 'global' : m);
+            if (m === 'deplacements' || m === 'recrutement' || m === 'finance' || m === 'finance-mco') setFinTab(m === 'finance' || m === 'finance-mco' ? 'global' : m);
+            if (m === 'finance-mco') setFinEntity('mco');
+            else if (m === 'finance' || m === 'deplacements' || m === 'recrutement') setFinEntity('helpdesk');
             setAppView(MODULE_VIEW[m]);
           }}
           now={ext.state.now}

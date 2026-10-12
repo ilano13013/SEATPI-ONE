@@ -192,7 +192,7 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'finance' } });
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Budget & Rentabilité/ }));
     const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
-    expect(fin.getByText(/pas le résultat comptable/)).toBeTruthy();
+    expect(fin.getByText(/distinct du résultat comptable/)).toBeTruthy();
     fireEvent.click(fin.getByRole('tab', { name: 'Budget déplacements' }));
     fireEvent.change(fin.getByLabelText('Objet du déplacement'), { target: { value: 'Séminaire client' } });
     fireEvent.change(fin.getByLabelText('Montant estimé'), { target: { value: '999999' } });
@@ -371,9 +371,26 @@ describe('App (mode démo)', () => {
   it('cockpit MCO : SLA de prise en charge et SLA de résolution distincts', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /MCO/ }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: 'Cockpit MCO / Support N2' }));
     const mco = within(screen.getByRole('region', { name: 'Cockpit MCO N2' }));
     expect(mco.getByRole('region', { name: 'SLA de prise en charge' })).toBeTruthy();
     expect(mco.getByRole('region', { name: 'SLA de résolution' })).toBeTruthy();
+  });
+
+  it('budgets séparés : Helpdesk N1 et MCO N2, enveloppes déplacements / recrutement uniquement côté Helpdesk', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'finance' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Budget & Rentabilité/ }));
+    const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
+    const result = () => within(fin.getByRole('button', { name: /^Résultat analytique/ })).getByText(/€/).textContent;
+    const hd = result();
+    expect(fin.getByRole('tab', { name: 'Budget déplacements' })).toBeTruthy();
+    fireEvent.click(fin.getByRole('radio', { name: /Budget MCO N2/ }));
+    expect(fin.getByText(/Budget & Rentabilité — MCO N2/)).toBeTruthy();
+    expect(result()).not.toBe(hd);
+    expect(fin.queryByRole('tab', { name: 'Budget déplacements' })).toBeNull();
+    fireEvent.click(fin.getByRole('tab', { name: /Revenus/ }));
+    expect(fin.queryAllByText(/CTR-INT-/).length).toBe(0);
+    expect(fin.getAllByText('CTR-PRI-01').length).toBeGreaterThan(0);
   });
 });

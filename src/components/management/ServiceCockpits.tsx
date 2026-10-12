@@ -21,7 +21,7 @@ interface Common {
   onBack: () => void;
 }
 
-export function McoCockpit({ views, now, onBack, onOpen, objectives }: Common & { onOpen: (nav: ExternalNav) => void; objectives: { takeCharge: Record<string, number | null>; resolution: Record<string, number | null> } }) {
+export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudget }: Common & { onOpen: (nav: ExternalNav) => void; onOpenBudget?: () => void; objectives: { takeCharge: Record<string, number | null>; resolution: Record<string, number | null> } }) {
   const week = periods(now).week;
   const [periodKey, setPeriodKey] = useState<'week' | 'prevWeek'>('week');
   const period = periods(now)[periodKey];
@@ -35,6 +35,11 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives }: Common & 
           <b>MCO / Support N2 — équipes chez les clients</b>
           <span>INVIVO, PRIMAGAZ, MONEXT · indicateurs N2 distincts du Helpdesk N1 · données de démonstration</span>
         </div>
+        {onOpenBudget && (
+          <button className="ghost" onClick={onOpenBudget}>
+            Budget & Rentabilité MCO N2
+          </button>
+        )}
       </div>
       <div className="xc-tablewrap">
         <table className="xc-table">

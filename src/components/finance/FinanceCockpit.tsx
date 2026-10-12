@@ -1,4 +1,4 @@
-// Départements → Helpdesk → Direction du département → Budget & Rentabilité.
+// Budget & Rentabilité : deux budgets distincts, Helpdesk N1 et MCO N2 (jamais additionnés).
 // Valeurs FICTIVES de démonstration, modifiables avec recalcul immédiat.
 import { useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
@@ -23,6 +23,10 @@ import {
   type PrestationStatus,
   type PrestationType,
   type RecruitmentKind,
+  ENTITIES,
+  ENTITY_LABEL,
+  forEntity,
+  type Entity,
 } from '../../finance/budget';
 import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
@@ -37,6 +41,9 @@ interface Props {
   role: Role;
   tab: FinanceTab;
   onTab: (t: FinanceTab) => void;
+  /** Budget affiché : Helpdesk N1 ou MCO N2 (budgets distincts, jamais additionnés). */
+  entity: Entity;
+  onEntity: (e: Entity) => void;
   onBack: () => void;
 }
 
@@ -45,15 +52,20 @@ const pctTxt = (n: number | null) => (n === null ? '—' : `${n.toLocaleString('
 const tone = (n: number) => (n >= 0 ? 'ok' : 'bad');
 const RULES: ImputationRule[] = ['À confirmer', 'Imputé au résultat Helpdesk', 'Hors résultat Helpdesk (coût de structure)'];
 
-export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
+export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, entity, onEntity, onBack }: Props) {
+  // Vue limitée au budget sélectionné : coûts, ajustements et prestations de l'entité uniquement.
+  const store = useMemo(() => ({ ...fullStore, state: { ...fullStore.state, ...forEntity(fullStore.state, entity) } }), [fullStore, entity]);
   const { state } = store;
+  const isHelpdesk = entity === 'helpdesk';
+  const tab: FinanceTab = !isHelpdesk && (rawTab === 'deplacements' || rawTab === 'recrutement') ? 'global' : rawTab;
+  const imputed = (m: string) => (isHelpdesk ? recruitmentImputed(state.recruitment, m) : 0);
   const [toast, setToast] = useState<FinanceResult | null>(null);
   const run = (r: FinanceResult) => (setToast(r), r);
   const editable = can(role, 'finance', 'edit');
   const months = monthsOf(state.year);
   const rows = useMemo(
-    () => months.map((m) => monthResult(m, state.currentMonth, state.costs, state.adjustments, state.prestations, recruitmentImputed(state.recruitment, m))),
-    [state.costs, state.adjustments, state.prestations, state.recruitment, state.currentMonth], // eslint-disable-line react-hooks/exhaustive-deps
+    () => months.map((m) => monthResult(m, state.currentMonth, state.costs, state.adjustments, state.prestations, imputed(m))),
+    [state.costs, state.adjustments, state.prestations, state.recruitment, state.currentMonth, entity], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const closed = closedTotals(rows);
   const landing = landingTotals(rows);
@@ -67,7 +79,7 @@ export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
         <button className="ghost" onClick={onBack}>
           <ArrowLeft size={14} /> Carte 3D
         </button>
-        <p className="restricted">Accès réservé aux rôles Finance, Direction et Responsable Helpdesk (maquette, pas une mesure de sécurité).</p>
+        <p className="restricted">Accès réservé aux profils Finance, Direction, Responsable et Administrateur (maquette, pas une mesure de sécurité).</p>
       </section>
     );
   }
@@ -79,14 +91,26 @@ export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
           <ArrowLeft size={14} /> Carte 3D
         </button>
         <div>
-          <small className="crumb">Départements › Helpdesk › Direction du département › Budget & Rentabilité</small>
-          <b>Budget & Rentabilité — département Helpdesk {state.year}</b>
+          <small className="crumb">Départements › {ENTITY_LABEL[entity]} › Direction du département › Budget & Rentabilité</small>
+          <b>
+            Budget & Rentabilité — {isHelpdesk ? 'Helpdesk N1' : 'MCO N2'} {state.year}
+          </b>
           <span>Valeurs FICTIVES de démonstration · {editable ? 'modifiables (recalcul immédiat)' : 'consultation'} · mois en cours : {monthLabel(state.currentMonth)}</span>
         </div>
       </div>
+      <div className="xc-scopes" role="radiogroup" aria-label="Budget">
+        {ENTITIES.map((e) => (
+          <button key={e} role="radio" aria-checked={entity === e} className={entity === e ? 'active' : ''} onClick={() => onEntity(e)}>
+            Budget {ENTITY_LABEL[e]} <small>{e === 'helpdesk' ? 'plateaux, encadrement Helpdesk, prestations N1' : 'techniciens chez les clients, manager MCO, contrats N2'}</small>
+          </button>
+        ))}
+      </div>
       <p className="fin-warning">
-        Résultat analytique du département Helpdesk (revenus des prestations − coûts opérationnels). Il ne constitue pas le résultat comptable de l’entreprise. Les enveloppes déplacements et recrutement sont suivies séparément et ne
-        sont pas additionnées au résultat.
+        {isHelpdesk
+          ? 'Budget du Helpdesk N1 : agents des plateaux (Pôle Multi, Pôle Dédié), encadrement Helpdesk et prestations N1. Le MCO N2 a son propre budget, jamais additionné à celui-ci.'
+          : 'Budget du MCO N2 : techniciens affectés chez INVIVO, PRIMAGAZ et MONEXT, manager MCO et contrats N2. Il est distinct du budget Helpdesk N1 et ne lui est jamais additionné.'}{' '}
+        Résultat analytique (revenus des prestations − coûts opérationnels), distinct du résultat comptable de l’entreprise.
+        {isHelpdesk ? ' Les enveloppes déplacements et recrutement du Helpdesk sont suivies séparément et ne sont pas additionnées au résultat.' : ' Aucune enveloppe déplacements ni recrutement n’est rattachée au MCO dans la démonstration.'}
       </p>
 
       <div className="xc-tabs">
@@ -98,8 +122,12 @@ export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
             { id: 'rentabilite', label: 'Rentabilité' },
             { id: 'couts', label: 'Coûts agents' },
             { id: 'revenus', label: `Revenus (${pending.length} à valider)` },
-            { id: 'deplacements', label: 'Budget déplacements' },
-            { id: 'recrutement', label: 'Budget recrutement' },
+            ...(isHelpdesk
+              ? [
+                  { id: 'deplacements' as const, label: 'Budget déplacements' },
+                  { id: 'recrutement' as const, label: 'Budget recrutement' },
+                ]
+              : []),
             { id: 'previsions', label: 'Prévisions' },
             { id: 'historique', label: 'Historique et validations' },
           ]}
@@ -119,6 +147,7 @@ export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
           </div>
           <ProfitChart rows={rows} projected />
           <p className="hint">Barres bleues : revenus (clair = à valider / prévisionnels) · orange : coûts (clair = prévision) · courbe verte : résultat analytique projeté.</p>
+          {isHelpdesk && (
           <div className="fin-envelopes">
             <button className="fin-envelope" onClick={() => onTab('deplacements')}>
               <b>Enveloppe déplacements {state.year}</b>
@@ -137,11 +166,12 @@ export function FinanceCockpit({ store, role, tab, onTab, onBack }: Props) {
               <small>{state.recruitment.rule === 'À confirmer' ? RULE_TO_CONFIRM : `Imputation : ${state.recruitment.rule}`}</small>
             </button>
           </div>
+          )}
         </>
       )}
 
       {tab === 'rentabilite' && <Profitability store={store} rows={rows} />}
-      {tab === 'couts' && <Costs store={store} role={role} run={run} editable={editable} />}
+      {tab === 'couts' && <Costs store={store} role={role} run={run} editable={editable} entity={entity} />}
       {tab === 'revenus' && <Revenues store={store} role={role} run={run} editable={editable} />}
       {tab === 'deplacements' && <Travel store={store} role={role} run={run} editable={editable} />}
       {tab === 'recrutement' && <Recruitment store={store} role={role} run={run} editable={editable} />}
@@ -286,7 +316,7 @@ function Profitability({ store, rows }: { store: FinanceStore; rows: ReturnType<
               <td>—</td>
             </tr>
             <tr className="total">
-              <td>Résultat analytique Helpdesk</td>
+              <td>Résultat analytique {ENTITY_LABEL[store.state.costs.some((c) => c.population === 'Technicien N2') ? 'mco' : 'helpdesk']}</td>
               <td>{eur(totals.revenue)}</td>
               <td>{eur(totals.cost)}</td>
               <td>{eur(totals.result)}</td>
@@ -302,11 +332,11 @@ function Profitability({ store, rows }: { store: FinanceStore; rows: ReturnType<
 
 const CATS: CostCategory[] = ['Agents N1', 'Techniciens N2', 'Management', 'Primes', 'Heures supplémentaires', 'Remplacements', 'Autres', 'Recrutement (imputé)'];
 
-function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role; run: (r: FinanceResult) => FinanceResult; editable: boolean }) {
+function Costs({ store, role, run, editable, entity }: { store: FinanceStore; role: Role; run: (r: FinanceResult) => FinanceResult; editable: boolean; entity: Entity }) {
   const { state } = store;
   const [month, setMonth] = useState(state.currentMonth);
   const [adj, setAdj] = useState({ kind: 'Prime' as AdjustmentKind, label: '', amount: 0 });
-  const r = monthResult(month, state.currentMonth, state.costs, state.adjustments, state.prestations, recruitmentImputed(state.recruitment, month));
+  const r = monthResult(month, state.currentMonth, state.costs, state.adjustments, state.prestations, entity === 'helpdesk' ? recruitmentImputed(state.recruitment, month) : 0);
   const etp = state.costs.reduce((n, c) => n + c.etp * c.allocation * presenceRatio(c, month), 0);
   return (
     <>
@@ -321,7 +351,7 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
             ))}
           </select>
         </label>
-        <span className="hint">Coût employeur chargé (fictif) — jamais le salaire net. ETP Helpdesk sur le mois : {etp.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}</span>
+        <span className="hint">Coût employeur chargé (fictif) — jamais le salaire net. ETP du budget sur le mois : {etp.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}</span>
       </div>
       <div className="xc-kpis">
         {CATS.map((c) => (
@@ -355,7 +385,7 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
           </select>
           <input aria-label="Libellé de l’ajustement" placeholder="Libellé" value={adj.label} onChange={(e) => setAdj({ ...adj, label: e.target.value })} />
           <input aria-label="Montant de l’ajustement" type="number" min={0} value={adj.amount || ''} onChange={(e) => setAdj({ ...adj, amount: Number(e.target.value) })} />
-          <button className="action" onClick={() => run(store.addAdjustment({ month, ...adj }, role)).ok && setAdj({ ...adj, label: '', amount: 0 })}>
+          <button className="action" onClick={() => run(store.addAdjustment({ month, entity, ...adj }, role)).ok && setAdj({ ...adj, label: '', amount: 0 })}>
             Ajouter
           </button>
         </div>
@@ -370,7 +400,7 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
               <th>Équipe</th>
               <th>ETP</th>
               <th>Coût employeur mensuel</th>
-              <th>Affectation Helpdesk</th>
+              <th>Affectation au budget</th>
               <th>Présence {monthLabel(month)}</th>
               <th>Coût du mois</th>
               <th>Mouvement</th>
@@ -387,7 +417,7 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
                   <InlineEdit value={c.monthlyCost} field={`Coût employeur mensuel ${c.name}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} format={(v) => eur(v)} onSave={(v) => store.setCost(c.personId, { monthlyCost: v }, role)} />
                 </td>
                 <td>
-                  <InlineEdit value={Math.round(c.allocation * 100)} field={`Affectation Helpdesk ${c.name}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} max={100} step={5} format={(v) => `${v} %`} onSave={(v) => store.setCost(c.personId, { allocation: v / 100 }, role)} />
+                  <InlineEdit value={Math.round(c.allocation * 100)} field={`Affectation au budget ${c.name}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} max={100} step={5} format={(v) => `${v} %`} onSave={(v) => store.setCost(c.personId, { allocation: v / 100 }, role)} />
                 </td>
                 <td>{Math.round(presenceRatio(c, month) * 100)} %</td>
                 <td>{eur(entryCost(c, month))}</td>
