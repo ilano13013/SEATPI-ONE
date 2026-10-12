@@ -32,7 +32,9 @@ import { internalTeams } from './helpdesk/teams';
 import { internalClientById } from './helpdesk/internalClients';
 import { consolidate, type HdTicket } from './helpdesk/consolidation';
 import { useManagement, DEFAULT_N1_OBJECTIVES } from './management/useManagement';
-import { declaredHours } from './management/rules';
+import { declaredHours, leaveDays } from './management/rules';
+import { leaveChecklist, NO_FILTERS } from './management/checklists';
+import { dateKey } from './external/calendar';
 import { HelpdeskCockpit } from './components/helpdesk/HelpdeskCockpit';
 import { MANAGER_IDS, ManagementCockpit, managerScope, type MgmtTab, type ObjectiveScope } from './components/management/ManagementCockpit';
 import { ChecklistSummary } from './components/management/Checklists';
@@ -284,6 +286,16 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Compteurs RH : même calcul que la checklist congés (pas de compteur figé).
+  const rhCounters = useMemo(() => {
+    const m = mgmt.state;
+    const leave = leaveChecklist(m.leaves, m.collaborators, m.followUps, m.rules, NO_FILTERS);
+    const helpdesk = m.collaborators.filter((c) => c.population === 'Agent N1' || c.population === 'Technicien N2');
+    const today = dateKey(Math.max(ext.state.now, internal.state.now));
+    const away = new Set(m.leaves.filter((l) => l.status === 'Validée' && leaveDays(l.start, l.end).includes(today)).map((l) => l.personId));
+    return { pending: leave.pending, remaining: leave.remaining, headcount: helpdesk.length, onLeaveToday: helpdesk.filter((c) => away.has(c.id)).length };
+  }, [mgmt.state, ext.state.now, internal.state.now]);
+
   const badges = useMemo<Partial<Record<RoomId, string>>>(() => {
     const lowStock = state.inventory.filter((i) => i.inStock <= i.alertThreshold).length;
     const available = state.vehicles.filter((v) => v.status === 'Disponible').length;
@@ -295,7 +307,7 @@ export function App() {
       accueil: `${state.reception.length} évènements aujourd'hui`,
       stock: `${lowStock} alerte${lowStock > 1 ? 's' : ''} de stock`,
       parking: `${available} véhicule${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}`,
-      rh: `${mgmt.state.leaves.filter((l) => l.status === "Soumise").length} demandes de congé en attente (suivi)`,
+      rh: `${rhCounters.pending} congé(s) à valider (outil RH)`,
       direction: `${Math.round((spent / allocated) * 100)} % du budget consommé`,
       exploitation: `${serviceSummary(Object.values(views), 'Exploitation', ext.state.now).open.length} escalade(s) en cours`,
       csm: `${serviceSummary(Object.values(views), 'CSM', ext.state.now).open.length} escalade(s) contractuelle(s)`,
@@ -323,7 +335,7 @@ export function App() {
         }),
       ),
     };
-  }, [state, metrics, views, ext.state.now, mgmt.state.leaves]);
+  }, [state, metrics, views, ext.state.now, rhCounters]);
 
   // Données 3D des sites clients : état opérationnel, équipes et techniciens.
   const sites = useMemo<Record<string, SiteSceneData>>(() => {
@@ -662,6 +674,16 @@ export function App() {
           trips={ext.state.trips}
           focusPersonId={focusPersonId}
           onOpenPerson={openPersonCockpit}
+          rh={{
+            ...rhCounters,
+            onOpenLeaves: can(role, 'management')
+              ? () => {
+                  setPersona('resp-helpdesk');
+                  setMgmtTab('conges');
+                  setAppView('management');
+                }
+              : undefined,
+          }}
           personExtras={(id) =>
             MANAGER_IDS.includes(id) && can(role, 'management') ? (
               <ChecklistSummary

@@ -5,7 +5,7 @@ import { roleLabels, type Role } from '../auth/roles';
 import { roomDataAccess } from '../auth/access';
 import { HelpdeskPanel } from './panels/HelpdeskPanel';
 import { PausePanel } from './panels/PausePanel';
-import { AccueilPanel, DirectionPanel, ParkingPanel, RhPanel, StockPanel } from './panels/OtherPanels';
+import { AccueilPanel, DirectionPanel, ParkingPanel, RhPanel, StockPanel, type RhCounters } from './panels/OtherPanels';
 import { AccessNotice } from './ui';
 import { CsmPanel, ExploitationPanel } from './panels/ServicesPanels';
 import type { ClientView } from '../external/derive';
@@ -36,6 +36,8 @@ interface Props {
   onOpenModule?: (m: ModuleLink) => void;
   /** Ouvre le cockpit de la personne de l'encadrement. */
   onOpenPerson?: (personId: string) => void;
+  /** Compteurs RH (même source que la checklist congés). */
+  rh?: RhCounters;
   /** Contenu complémentaire du bureau d'une personne (checklists du manager). */
   personExtras?: (personId: string) => ReactNode;
 }
@@ -107,7 +109,7 @@ export function SidePanel(p: Props) {
           )}
           {room.kind === 'helpdesk' && (!site || polesOf(site).length > 0) && <HelpdeskPanel {...props} selectedPole={selectedPole} onSelectPole={onSelectPole} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
           {room.kind === 'pause' && <PausePanel {...props} />}
-          {room.kind === 'rh' && <RhPanel {...props} />}
+          {room.kind === 'rh' && <RhPanel {...props} rh={p.rh} />}
           {room.kind === 'stock' && <StockPanel {...props} />}
           {room.kind === 'parking' && <ParkingPanel {...props} />}
           {room.id === 'direction' && <DirectionPanel {...props} />}

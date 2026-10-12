@@ -9,16 +9,48 @@ interface Props {
   role: Role;
 }
 
-export function RhPanel({ state, role }: Props) {
+/** Compteurs RH calculés depuis la même source que la checklist congés (outil RH simulé). */
+export interface RhCounters {
+  /** Demandes « Soumise » dans l'outil RH = lignes de la checklist congés. */
+  pending: number;
+  /** Demandes dont le suivi interne n'est pas « Traité ». */
+  remaining: number;
+  /** Collaborateurs Helpdesk (N1 et N2) des trois sites. */
+  headcount: number;
+  /** En congé validé aujourd'hui (outil RH). */
+  onLeaveToday: number;
+  onOpenLeaves?: () => void;
+}
+
+export function RhPanel({ state, role, rh }: Props & { rh?: RhCounters }) {
   const { hr } = state;
   return (
     <>
       <p className="hint">Indicateurs agrégés uniquement. Les données RH nominatives restent dans le SIRH.</p>
+      {rh && (
+        <>
+          <p className="hint">Périmètre : collaborateurs Helpdesk (N1 et N2) des trois sites · aujourd’hui · demandes en attente dans l’outil RH (simulé).</p>
+          <div className="kpis">
+            <button className="as-button" onClick={rh.onOpenLeaves} disabled={!rh.onOpenLeaves} aria-label={`Congés à valider dans l’outil RH : ${rh.pending} — ouvrir la checklist congés`}>
+              <small>Congés à valider (outil RH)</small>
+              <strong>{rh.pending}</strong>
+            </button>
+            <div>
+              <small>Dont suivi « À traiter / Relancé »</small>
+              <strong>{rh.remaining}</strong>
+            </div>
+            <div>
+              <small>Effectif Helpdesk</small>
+              <strong>{rh.headcount}</strong>
+            </div>
+            <div>
+              <small>Prévus aujourd’hui (hors congés validés)</small>
+              <strong>{rh.headcount - rh.onLeaveToday}</strong>
+            </div>
+          </div>
+        </>
+      )}
       <div className="kpis">
-        <div>
-          <small>Congés à valider</small>
-          <strong>{hr.pendingLeaves}</strong>
-        </div>
         <div>
           <small>Formations à venir</small>
           <strong>{hr.upcomingTrainings}</strong>
@@ -27,11 +59,8 @@ export function RhPanel({ state, role }: Props) {
           <small>Habilitations à renouveler</small>
           <strong>{hr.certificationsToRenew}</strong>
         </div>
-        <div>
-          <small>Effectif planifié</small>
-          <strong>{hr.plannedHeadcount}</strong>
-        </div>
       </div>
+      <p className="hint">Formations et habilitations : indicateurs fictifs (SIRH non connecté). Le suivi interne des congés ne valide rien dans l’outil RH.</p>
       <SimulatedAction label="Ouvrir la file de validation des congés" allowed={can(role, 'rh', 'edit')} />
     </>
   );

@@ -224,6 +224,9 @@ main > .notice { margin-top: 0; }
 
 .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
 .kpis > div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.kpis > button { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: #fff; text-align: left; cursor: pointer; font: inherit; }
+.kpis > button:hover:not(:disabled) { border-color: #9dbbe9; background: #f5f9ff; }
+.kpis > button:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
 .kpis small { font-size: 10px; color: #6c7f98; }
 .kpis strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 
@@ -595,3 +598,6 @@ main > .notice { margin-top: 0; }
 .link-refused { margin-top: 10px; }
 .link-refused .action { margin-top: 0; cursor: not-allowed; opacity: .75; }
 .link-refused small { display: block; font-size: 11px; color: #9a3412; line-height: 1.45; margin-top: 4px; }
+details.defs { margin: 6px 0 10px; font-size: 12px; color: #475569; }
+details.defs summary { cursor: pointer; font-weight: 600; color: #36557f; }
+details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }

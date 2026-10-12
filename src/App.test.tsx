@@ -78,6 +78,18 @@ describe('App (mode démo)', () => {
     expect(panel().getAllByText(/Droit manquant : Lecture sur « Supervision Helpdesk/).length).toBeGreaterThan(0);
   });
 
+  it('compteur RH = checklist congés (même source), le clic ouvre exactement les demandes comptées', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Suspendre la simulation' }));
+    openRoom('Ressources humaines');
+    const tile = panel().getByRole('button', { name: /Congés à valider dans l’outil RH/ });
+    const count = Number(tile.querySelector('strong')!.textContent);
+    fireEvent.click(tile);
+    const ck = within(screen.getByRole('region', { name: 'Checklist congés' }));
+    expect(ck.getAllByRole('row').length - 1).toBe(count);
+  });
+
   it("n'effectue aucun appel réseau", () => {
     render(<App />);
     openRoom('Stock informatique');

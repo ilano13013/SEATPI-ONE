@@ -6,11 +6,13 @@ import type { Agent } from '../../types';
 import type { Priority, Service, Technician, TicketStatus } from '../../external/types';
 import type { ActionResult } from '../../external/useExternal';
 import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
-import { applyFilters, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
+import { applyFilters, BACKLOG_AGE_H, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
 import { ticketTeams } from '../../helpdesk/teams';
 import { dateKey } from '../../external/calendar';
 import { clientRecord, ITSM_NOT_SET, itsmOf, n1Clients, POLE_GROUP_LABEL } from '../../config/itsm';
 import { externalClients } from '../../external/config';
+import { poleByClient } from '../../data/layout';
+import { siteById } from '../../data/sites';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
@@ -62,7 +64,22 @@ export function HelpdeskCockpit(props: Props) {
   const shown = useMemo(() => (drill ? filtered.filter((t) => drill.ids.includes(t.id)) : filtered), [filtered, drill]);
   const k = useMemo(() => counters(filtered, now, props.backlogHours), [filtered, now, props.backlogHours]);
   const busy = useMemo(() => new Set(tickets.filter((t) => t.scope === 'externe' && t.status === 'En cours' && t.assigneeId).map((t) => t.assigneeId!)), [tickets]);
-  const staff = useMemo(() => staffing(agents, techsN2, leaveDates, today(now), busy), [agents, techsN2, leaveDates, now, busy]);
+  // Effectifs du périmètre filtré (pôle, client) : mêmes filtres que les tickets.
+  const staffAgents = useMemo(
+    () =>
+      agents.filter((a) => {
+        const group = poleByClient(a.clientId)?.group;
+        if (filters.pole === 'n2') return false;
+        if (filters.pole && group !== filters.pole) return false;
+        if (filters.client) return a.clientId === filters.client || (group === 'multi' && clientRecord(filters.client)?.pole === 'multi');
+        return true;
+      }),
+    [agents, filters.pole, filters.client],
+  );
+  const staffTechs = useMemo(() => techsN2.filter((t) => (!filters.pole || filters.pole === 'n2') && (!filters.client || t.clientId === filters.client)), [techsN2, filters.pole, filters.client]);
+  const staff = useMemo(() => staffing(staffAgents, staffTechs, leaveDates, today(now), busy), [staffAgents, staffTechs, leaveDates, now, busy]);
+  const staffSites = [...new Set(staffAgents.map((a) => siteById(a.site).name))];
+  const staffScope = `${filters.pole ? (filters.pole === 'n2' ? 'MCO N2 (sites clients)' : `Pôle ${POLE_GROUP_LABEL[filters.pole]}`) : 'Tous les pôles'}${filters.client ? ` · ${clientRecord(filters.client)?.name ?? filters.client}` : ''} · N1 : ${staffSites.length ? staffSites.join(', ') : 'aucun site'} · N2 : ${staffTechs.length} technicien(s) chez les clients · aujourd’hui`;
   const objectives = useMemo(() => teamObjectives(tickets, targets, now), [tickets, targets, now]);
   const evolution = useMemo(() => weeklyEvolution(filtered, now), [filtered, now]);
   const opened = openId ? tickets.find((t) => t.id === openId) : undefined;
@@ -200,6 +217,7 @@ export function HelpdeskCockpit(props: Props) {
         <>
           {props.checklists}
           <h3>Effectifs (aujourd’hui)</h3>
+          <p className="hint">Périmètre : {staffScope}.</p>
           <div className="xc-kpis">
             {(
               [
@@ -216,16 +234,34 @@ export function HelpdeskCockpit(props: Props) {
               </button>
             ))}
           </div>
+          <details className="defs">
+            <summary>Définitions des effectifs</summary>
+            <ul>
+              <li><b>Agents prévus</b> : collaborateurs du périmètre, hors congés validés dans l’outil RH (simulé) pour aujourd’hui.</li>
+              <li><b>Présents</b> : prévus et connectés (N1 non « Hors ligne ») ; les techniciens N2 prévus sont comptés présents chez le client.</li>
+              <li><b>Disponibles</b> : présents sans appel en cours (N1) ou sans ticket « En cours » (N2).</li>
+              <li><b>En communication</b> : agents N1 en appel (téléphonie du plateau simulée).</li>
+            </ul>
+          </details>
           <h3>Tickets</h3>
+          <p className="hint">Périmètre : tickets N1 des plateaux (3 sites) et tickets N2 des sites clients, selon les filtres actifs. La carte des sites n’affiche que les files du plateau sélectionné.</p>
           <div className="xc-kpis">
             {(Object.keys(COUNTER_LABELS) as CounterKey[]).map((key) => (
               <button key={key} className={`xc-kpi ${key === 'horsSla' || key === 'critiques' || key === 'bloques' ? (k[key].length ? 'bad' : 'ok') : key === 'procheSla' || key === 'sansAffectation' ? (k[key].length ? 'warn' : 'ok') : ''}`} onClick={() => drillTo(key)}>
-                <small>{COUNTER_LABELS[key]}</small>
+                <small>{key === 'backlog' ? `Backlog (ouverts depuis plus de ${props.backlogHours ?? BACKLOG_AGE_H} h)` : COUNTER_LABELS[key]}</small>
                 <strong>{k[key].length}</strong>
                 <em>voir les tickets</em>
               </button>
             ))}
           </div>
+          <details className="defs">
+            <summary>Définitions des compteurs de tickets</summary>
+            <ul>
+              <li><b>Tickets ouverts</b> : tous les tickets non résolus et non clôturés.</li>
+              <li><b>Backlog</b> : tickets ouverts depuis plus de {props.backlogHours ?? BACKLOG_AGE_H} h (seuil paramétrable dans Administration → Paramètres).</li>
+              <li><b>Reste à traiter (objectifs)</b> : objectif de volume de la semaine moins les tickets résolus ; ce n’est pas le backlog.</li>
+            </ul>
+          </details>
           <h3>Objectifs de la semaine (volume)</h3>
           <div className="xc-kpis">
             <div className="xc-kpi">
@@ -237,7 +273,7 @@ export function HelpdeskCockpit(props: Props) {
               <strong>{sumDone}</strong>
             </div>
             <div className="xc-kpi">
-              <small>Reste</small>
+              <small>Reste à traiter (objectif)</small>
               <strong>{Math.max(0, sumTargets - sumDone)}</strong>
             </div>
           </div>
@@ -438,7 +474,7 @@ export function HelpdeskCockpit(props: Props) {
               </tbody>
             </table>
           </div>
-          <p className="hint">« En communication » ne concerne que le N1 (téléphonie du plateau simulée). Les congés validés dans le cockpit Management retirent la personne des effectifs prévus.</p>
+          <p className="hint">Périmètre : {staffScope}. « En communication » ne concerne que le N1 (téléphonie du plateau simulée). Seuls les congés validés dans l’outil RH (simulé) retirent une personne des effectifs prévus ; le suivi des checklists ne modifie jamais ces effectifs.</p>
         </>
       )}
 
