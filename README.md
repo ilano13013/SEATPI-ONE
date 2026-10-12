@@ -59,6 +59,10 @@ Activation (une seule fois) : *Settings* → *Pages* → *Build and deployment* 
 
 Cockpit opérationnel des collaborateurs SEATPI affectés chez **INVIVO** (GLPI), **PRIMAGAZ** (EasyVista, lecture seule) et **MONEXT** (Jira). Accès : bouton « Clients externes » du rail, ou étage **Sites clients** de la carte 3D.
 
+Organisation : chez les clients, SEATPI n'intervient qu'en **MCO N2** (une équipe N2 par client). Le **Helpdesk N1**, l'**Exploitation** et le **CSM** sont des services internes SEATPI : les tickets N2 arrivent du Helpdesk N1 (ou de la supervision) et peuvent être escaladés vers l'Exploitation (infrastructure), le CSM (contractuel) ou une équipe externe (éditeur, constructeur, opérateur). Les services **Exploitation** et **CSM** ont leur salle à l'**étage 2** de la carte 3D, avec leurs escalades reçues, leur personnel et, pour le CSM, le suivi de chaque compte.
+
+**Déplacements** : les interventions des techniciens N2 sur le site secondaire du client sont suivies en temps réel (aller, sur site, retour) : véhicules animés sur la carte des sites, onglet « Déplacements » par client, section dans la vue globale, mention sur la fiche et la liste des techniciens.
+
 - **Carte 3D** : un bâtiment par client avec voyant d'état (vert : dans les seuils · orange : risque SLA, surcharge ou backlog au-dessus du seuil · rouge : incident critique, ex. P1 hors SLA ou P1/P2 non pris en charge) qui pulse discrètement en cas d'alerte. Clic bâtiment → cockpit du client ; clic équipe → ses tickets ouverts ; clic technicien → sa fiche (selon le rôle).
 - **Vue globale** (responsable Helpdesk) : par client et pour le plateau interne — effectif, ouverts, en cours, résolus, backlog, SLA, objectif hebdo, réalisé, reste à faire, charge, CRA et congés en attente, budget, coût, rentabilité (colonnes financières selon le rôle). Un clic ouvre le détail.
 - **Tableau de bord client** : indicateurs Tickets et Activité par période (aujourd'hui, semaine, semaine précédente), tous cliquables vers la liste des tickets concernés ; reçus par jour, ancienneté, charge des équipes, alertes, définitions explicites.

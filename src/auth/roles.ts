@@ -31,7 +31,7 @@ const ALL: Action[] = ['view', 'individual', 'edit'];
 
 const matrix: Matrix = {
   agent: { supervision: ['view', 'individual'], pause: ['view'], stock: ['view'], vehicules: ['view'], accueil: ['view'] },
-  teamLeader: { supervision: ALL, pause: ['view', 'individual'], stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view', 'individual', 'edit'], integrations: ['view'] },
+  teamLeader: { supervision: ALL, pause: ['view', 'individual'], stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view', 'individual', 'edit'], integrations: ['view'], exploitation: ['view', 'individual'], csm: ['view', 'individual'] },
   responsable: {
     supervision: ALL,
     pause: ['view', 'individual'],
@@ -42,12 +42,14 @@ const matrix: Matrix = {
     accueil: ['view'],
     externes: ['view', 'individual', 'edit', 'configure'],
     integrations: ['view', 'configure'],
+    exploitation: ['view', 'individual'],
+    csm: ['view', 'individual'],
   },
   rh: { rh: ALL, pause: ['view'], accueil: ['view'] },
-  finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'] },
-  direction: { supervision: ['view'], pause: ['view'], rh: ['view'], stock: ['view'], finance: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'] },
+  finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'], csm: ['view'] },
+  direction: { supervision: ['view'], pause: ['view'], rh: ['view'], stock: ['view'], finance: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'], exploitation: ['view'], csm: ['view'] },
   // Configuration technique, sans accès automatique aux données RH confidentielles ni aux données individuelles.
-  admin: { supervision: ['view'], stock: ['view', 'edit'], vehicules: ['view', 'edit'], accueil: ['view', 'edit'], pause: ['view'], externes: ['view'], integrations: ['view', 'configure'] },
+  admin: { supervision: ['view'], stock: ['view', 'edit'], vehicules: ['view', 'edit'], accueil: ['view', 'edit'], pause: ['view'], externes: ['view'], integrations: ['view', 'configure'], exploitation: ['view'] },
 };
 
 export function can(role: Role, module: ModuleId, action: Action = 'view'): boolean {

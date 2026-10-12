@@ -18,6 +18,10 @@ import { isOpen, periods, slaRate } from './external/metrics';
 import { isOnLeave } from './external/workload';
 import type { ExternalClientId } from './external/types';
 import type { SiteSceneData } from './scene/ExternalSite';
+import type { ServicesSceneData } from './scene/ServiceRooms';
+import { clientById } from './external/config';
+import { csmTeam, exploitationTeam, serviceSummary } from './external/services';
+import { activeTripOf, isTripActive } from './external/trips';
 
 export function App() {
   const sim = useDemoSimulation();
@@ -68,6 +72,8 @@ export function App() {
     },
     [views, openExternal],
   );
+
+  const openTrip = useCallback((clientId: string) => openExternal({ scope: clientId as ExternalClientId, tab: 'trips' }), [openExternal]);
 
   const openTech = useCallback(
     (clientId: string, techId: string) => openExternal({ scope: clientId as ExternalClientId, tab: 'techs', techId }),
@@ -124,6 +130,8 @@ export function App() {
       parking: `${available} véhicule${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}`,
       rh: `${state.hr.pendingLeaves} congés à valider`,
       direction: `${Math.round((spent / allocated) * 100)} % du budget consommé`,
+      exploitation: `${serviceSummary(Object.values(views), 'Exploitation', ext.state.now).open.length} escalade(s) en cours`,
+      csm: `${serviceSummary(Object.values(views), 'CSM', ext.state.now).open.length} escalade(s) contractuelle(s)`,
       ...Object.fromEntries(
         Object.values(views).map((v) => {
           const sla = slaRate(v.tickets, periods(ext.state.now).week).rate;
@@ -144,6 +152,10 @@ export function App() {
           name: v.client.name,
           accent: v.client.accent,
           health: v.health,
+          secondarySite: v.client.sites[1],
+          trips: ext.state.trips
+            .filter((t) => t.clientId === v.client.id && isTripActive(t, ext.state.now))
+            .map((t) => ({ ...t, techLabel: individual ? (v.techs.find((x) => x.id === t.techId)?.name ?? 'Technicien') : 'Technicien' })),
           teams: v.loads.map((l) => ({
             id: l.team.id,
             name: l.team.name,
@@ -153,7 +165,7 @@ export function App() {
               return {
                 id: t.id,
                 name: individual ? t.name : 'Technicien',
-                state: isOnLeave(t, ext.state.now) ? 'congé' : inProgress ? 'occupé' : 'disponible',
+                state: isOnLeave(t, ext.state.now) ? 'congé' : activeTripOf(ext.state.trips, t.id, ext.state.now) ? 'déplacement' : inProgress ? 'occupé' : 'disponible',
                 tooltip: individual ? `${inProgress} ticket(s) en cours` : 'Détail réservé (rôle)',
               };
             }),
@@ -161,6 +173,37 @@ export function App() {
         },
       ]),
     );
+  }, [views, role, ext.state.now]);
+
+  // Personnel des services internes Exploitation et CSM, occupé selon les escalades reçues.
+  const services = useMemo<ServicesSceneData>(() => {
+    const individual = (m: 'exploitation' | 'csm') => can(role, m, 'individual');
+    const list = Object.values(views);
+    const exp = serviceSummary(list, 'Exploitation', ext.state.now);
+    const csm = serviceSummary(list, 'CSM', ext.state.now);
+    return {
+      exploitation: exploitationTeam.map((m) => {
+        const mine = exp.open.filter((r) => r.ownerId === m.id);
+        return {
+          id: m.id,
+          name: individual('exploitation') ? m.name : 'Exploitation',
+          state: !m.present ? 'absent' : mine.length ? 'occupé' : 'disponible',
+          tooltip: mine.length ? `Escalade ${mine[0].clientName} · ${mine[0].ticket.id}` : m.onCall ? 'Disponible · astreinte' : 'Disponible',
+        };
+      }),
+      csm: csmTeam.map((m) => {
+        const client = clientById(m.clientId!);
+        const mine = csm.open.filter((r) => r.ownerId === m.id);
+        return {
+          id: m.id,
+          name: individual('csm') ? m.name : 'CSM',
+          state: mine.length ? 'occupé' : 'disponible',
+          tooltip: mine.length ? `${mine.length} escalade(s) ${client.name} en cours` : `Compte ${client.name}`,
+          accent: client.accent,
+          label: `CSM ${client.name}`,
+        };
+      }),
+    };
   }, [views, role, ext.state.now]);
 
   // Ligne « interne » de la vue consolidée, issue de la simulation du plateau.
@@ -239,8 +282,10 @@ export function App() {
         <Workspace
           hidden={appView === 'externes'}
           sites={sites}
+          services={services}
           onTeamClick={openTeam}
           onTechClick={openTech}
+          onTripClick={openTrip}
           mode3d={mode3d}
           floor={floor}
           selected={selected}
@@ -268,6 +313,10 @@ export function App() {
           focusAgentId={focusAgentId}
           onFocusAgent={setFocusAgentId}
           onClose={() => setPanelOpen(false)}
+          views={Object.values(views)}
+          now={ext.state.now}
+          onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })}
+          onOpenClient={(clientId) => openExternal({ scope: clientId, tab: 'dashboard' })}
         />
       )}
     </div>

@@ -91,8 +91,17 @@ h1 span { color: var(--brand); }
 .pole-label span { background: #14253ecc; color: white; border-radius: 6px; padding: 3px 7px; font-size: 10px; font-weight: 800; }
 .pole-label.selected span { background: #2e72e6; }
 .pole-label em { font-style: normal; font-size: 10px; font-weight: 700; background: white; color: var(--navy); border: 1px solid #d6e1ee; border-radius: 6px; padding: 2px 6px; }
+.kv.as-button { width: 100%; border: 0; border-bottom: 1px solid #e9eef5; background: none; text-align: left; flex-wrap: wrap; font-size: 12px; }
+.kv.as-button:hover { background: #f7f9fc; }
+.kv small { color: #8a9aae; font-size: 11px; }
+.csm-card { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+.csm-head { width: 100%; border: 0; background: none; padding: 0 0 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; text-align: left; }
+.csm-head b { font-size: 14px; }
+.csm-head small { width: 100%; font-size: 11px; color: #6c7f98; }
 .scene-tip { pointer-events: none; background: var(--navy); color: white; border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 2px; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 14px #14253e33; }
 .scene-tip span { color: #b9c8de; font-size: 10px; }
+.trip-chip { border: 0; background: #1d4ed8; color: white; border-radius: 6px; padding: 2px 6px; font-size: 9px; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 6px #1d4ed844; }
+.trip-chip:hover { background: #1e3a8a; }
 
 /* Mode 2D */
 .twod { position: absolute; inset: 0; padding: 78px 20px 64px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
@@ -219,6 +228,7 @@ main > .notice { margin-top: 0; }
 .xc-scopes button.active { background: var(--navy); color: white; border-color: var(--navy); }
 .xc-scopes button.active small { color: #b9c8de; }
 .xc-tabs { overflow-x: auto; margin: 8px 0 16px; }
+.tabcount { background: #dbeafe; color: #1d4ed8; border-radius: 10px; padding: 0 6px; font-size: 10px; }
 .xc-tabs button { flex: 0 0 auto; padding: 10px 12px; display: inline-flex; align-items: center; gap: 6px; }
 .xc h3 { font-size: 14px; margin: 18px 0 10px; }
 .xc h4 { font-size: 12px; margin: 14px 0 8px; color: #33465f; }

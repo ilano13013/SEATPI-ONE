@@ -43,7 +43,7 @@ export function ticketFrom(createdAt: number, steps: [number, string][], priorit
     priority,
     status: prev as NormalizedRecord['status'],
     assigneeLogin: 'tech.inv01',
-    group: 'GRP_SUPPORT_N1',
+    group: 'GRP_MCO_N2',
     createdAt,
     updatedAt: history[history.length - 1].at,
     timeSpentMin: 30,

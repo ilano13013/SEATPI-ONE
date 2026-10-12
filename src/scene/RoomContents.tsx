@@ -3,6 +3,7 @@ import { BREAK_STATUSES } from '../services/simulation';
 import { Avatar } from './Avatar';
 import { HelpdeskPoles, type PoleProps } from './HelpdeskPoles';
 import { ExternalSite, type SiteSceneData } from './ExternalSite';
+import { CsmRoom, ExploitationRoom, type ServicesSceneData } from './ServiceRooms';
 import { Cabinet, Car, Chair, CoffeeMachine, Counter, Desk, Plant, RoundTable, Shelf, Sofa, Tree, WallScreen } from './furniture';
 
 export interface RoomContentProps extends PoleProps {
@@ -16,6 +17,9 @@ export interface RoomContentProps extends PoleProps {
   sites?: Record<string, SiteSceneData>;
   onTeamClick?: (clientId: string, teamId: string) => void;
   onTechClick?: (clientId: string, techId: string) => void;
+  onTripClick?: (clientId: string, tripId: string) => void;
+  /** Personnel des services internes Exploitation et CSM. */
+  services?: ServicesSceneData;
 }
 
 const vehicleColors: Record<Vehicle['status'], string> = {
@@ -36,14 +40,18 @@ const pauseSeats: [number, number, number][] = [
   [0.6, 1.1, Math.PI],
 ];
 
-export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, ...poles }: RoomContentProps) {
+export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, onTripClick, services, ...poles }: RoomContentProps) {
   if (room.externalClientId) {
     const site = sites?.[room.externalClientId];
     if (!site) return null;
     const id = room.externalClientId;
-    return <ExternalSite site={site} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} />;
+    return <ExternalSite site={site} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} onTripClick={(t) => onTripClick?.(id, t)} />;
   }
   switch (room.id) {
+    case 'exploitation':
+      return <ExploitationRoom people={services?.exploitation ?? []} animate={animate} />;
+    case 'csm':
+      return <CsmRoom people={services?.csm ?? []} animate={animate} />;
     case 'helpdesk':
       return (
         <>

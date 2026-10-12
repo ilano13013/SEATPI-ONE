@@ -10,7 +10,9 @@ import { statusIntervals } from './sla';
 const MIN = 60_000;
 const ROUND = (t: number) => Math.floor(t / MIN) * MIN;
 
-const RATE_PER_DAY: Record<string, number> = { invivo: 19, primagaz: 15, monext: 16 };
+// Volume N2 : tickets transmis par le Helpdesk N1 SEATPI ou détectés par la supervision.
+const RATE_PER_DAY: Record<string, number> = { invivo: 13, primagaz: 11, monext: 11 };
+const CREATION_SOURCES = ['Escalade Helpdesk N1 (SEATPI)', 'Escalade Helpdesk N1 (SEATPI)', 'Portail utilisateur', 'Supervision'];
 const HISTORY_BUSINESS_DAYS = 15;
 
 const TITLES: Record<string, string[]> = {
@@ -21,17 +23,15 @@ const TITLES: Record<string, string[]> = {
   Réseau: ['Wi-Fi instable en salle de réunion', 'VPN ne se connecte pas', 'Prise réseau inactive', 'Lenteurs réseau site'],
   'Applicatif métier': ['Erreur à la validation de commande', 'Export indisponible', 'Lenteurs de l’application métier', 'Habilitation applicative'],
   Téléphonie: ['Softphone sans tonalité', 'Renvoi d’appel à configurer', 'Casque non reconnu'],
-  Exploitation: ['Traitement batch en échec', 'Espace disque critique serveur', 'Sauvegarde nocturne incomplète', 'Supervision : alerte service'],
   Monétique: ['Terminal de paiement hors ligne', 'Rejets de transactions', 'Erreur de télécollecte', 'Paramétrage TPE à mettre à jour'],
 };
 
-const ESCALATION_TARGET: Record<Service, Service> = {
-  'Helpdesk N1': 'MCO N2',
-  'MCO N2': 'Équipe externe',
-  Exploitation: 'Équipe externe',
-  CSM: 'MCO N2',
-  'Équipe externe': 'MCO N2',
-};
+/** Destinataires possibles d'une escalade depuis le MCO N2 client, avec leurs motifs. */
+export const ESCALATIONS: { to: Service; reasons: string[]; weight: number }[] = [
+  { to: 'Exploitation', reasons: ['Incident infrastructure suspecté', 'Intervention serveur ou réseau requise', 'Restauration de sauvegarde nécessaire'], weight: 5 },
+  { to: 'Équipe externe', reasons: ['Correctif éditeur nécessaire', 'Matériel sous garantie constructeur', 'Intervention opérateur télécom'], weight: 3 },
+  { to: 'CSM', reasons: ['Demande de dérogation contractuelle', 'Insatisfaction client à traiter', 'Demande hors périmètre du contrat'], weight: 2 },
+];
 const OWNER: Record<Service, string> = {
   'Helpdesk N1': 'Superviseur Helpdesk N1',
   'MCO N2': 'Responsable MCO N2',
@@ -39,7 +39,6 @@ const OWNER: Record<Service, string> = {
   CSM: 'CSM du compte',
   'Équipe externe': 'Support éditeur (externe)',
 };
-const REASONS = ['Compétence N2 requise', 'Incident infrastructure suspecté', 'Correctif éditeur nécessaire', 'Demande de dérogation contractuelle', 'Analyse approfondie requise'];
 
 function pick<T>(items: T[], rng: Rng): T {
   return items[Math.floor(rng() * items.length)];
@@ -76,7 +75,7 @@ function lifecycle(client: ExternalClient, team: ExternalTeam, tech: Technician,
   const cal = client.calendar;
   const sla = client.sla[priority];
   const add = (t: number, m: number) => addBusinessMinutes(t, Math.max(1, Math.round(m)), cal);
-  const d: Draft = { events: [{ at: createdAt, kind: 'création', by: pick(['Portail utilisateur', 'Téléphone', 'E-mail'], rng) }], escalations: [] };
+  const d: Draft = { events: [{ at: createdAt, kind: 'création', by: pick(CREATION_SOURCES, rng) }], escalations: [] };
   const who = tech.name;
 
   let t = add(createdAt, sla.takeChargeMin * (0.1 + rng() * 0.6));
@@ -100,7 +99,8 @@ function lifecycle(client: ExternalClient, team: ExternalTeam, tech: Technician,
     t = add(t, 60 + rng() * 540);
     status(d, t, 'Bloqué', 'En cours', who);
   } else if (r < 0.3) {
-    const to = ESCALATION_TARGET[team.service];
+    const target = weighted(ESCALATIONS.map((e) => [e, e.weight] as [typeof e, number]), rng);
+    const to = target.to;
     const at = ROUND(t);
     status(d, at, 'En cours', 'Escaladé', who);
     const back = add(t, 60 + rng() * 420);
@@ -109,7 +109,7 @@ function lifecycle(client: ExternalClient, team: ExternalTeam, tech: Technician,
       at,
       from: team.service,
       to,
-      reason: pick(REASONS, rng),
+      reason: pick(target.reasons, rng),
       owner: OWNER[to],
       status: 'Traitée',
       history: [
@@ -180,8 +180,8 @@ function workedMinutes(r: NormalizedRecord, now: number, cal: ExternalClient['ca
 
 function newTicketBase(client: ExternalClient, seq: number, createdAt: number, rng: Rng) {
   const teams = externalTeams.filter((t) => t.clientId === client.id);
-  const team = rng() < 0.72 ? teams[0] : teams[1];
-  const categories = team.service === 'Exploitation' ? ['Exploitation'] : client.categories.filter((c) => c !== 'Exploitation');
+  const team = teams[Math.floor(rng() * teams.length)];
+  const categories = client.categories;
   const category = client.id === 'monext' && rng() < 0.4 ? 'Monétique' : pick(categories, rng);
   const title = pick(TITLES[category] ?? ['Demande d’assistance'], rng);
   const site = pick(client.sites, rng);
@@ -257,7 +257,15 @@ export interface WriteResult {
 const teamOfGroup = (group: string) => externalTeams.find((t) => t.sourceGroup === group);
 
 /** Applique un changement de statut dans la source (écriture simulée). */
-export function applyTransition(records: NormalizedRecord[], sourceId: string, to: TicketStatus, by: string, now: number, client: ExternalClient): WriteResult {
+export function applyTransition(
+  records: NormalizedRecord[],
+  sourceId: string,
+  to: TicketStatus,
+  by: string,
+  now: number,
+  client: ExternalClient,
+  escalateTo: Service = 'Exploitation',
+): WriteResult {
   const r = records.find((x) => x.sourceId === sourceId);
   if (!r) return { records, ok: false, message: 'Ticket introuvable dans la source.' };
   if ((to === 'Affecté' || to === 'En cours') && !r.assigneeLogin) {
@@ -268,7 +276,7 @@ export function applyTransition(records: NormalizedRecord[], sourceId: string, t
   const history: TicketEvent[] = [...r.history, { at, kind: 'statut', from: r.status, to, by }];
   let escalations = r.escalations;
   if (to === 'Escaladé' && team) {
-    const dest = ESCALATION_TARGET[team.service];
+    const dest = escalateTo;
     escalations = [
       ...escalations,
       { id: `ESC-${sourceId}-${escalations.length + 1}`, at, from: team.service, to: dest, reason: 'Escalade demandée depuis SEATPI ONE', owner: OWNER[dest], status: 'En cours', history: [{ at, label: `Escalade ${team.service} → ${dest}` }] },

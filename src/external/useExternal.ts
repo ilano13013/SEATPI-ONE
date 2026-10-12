@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ExternalClientId, NormalizedRecord, Technician, Ticket, TicketStatus } from './types';
+import type { ExternalClientId, NormalizedRecord, Service, Technician, Ticket, TicketStatus } from './types';
 import { buildTechnicians, defaultObjectives, externalClients, type ObjectiveConfig, clientById } from './config';
 import { generateSource, evolveSource, applyTransition, applyAssignment } from './source';
 import { emptyRegistry, readSource, syncClient, type ConnectorState, type IdRegistry, type SyncLogEntry } from './sync';
@@ -7,11 +7,13 @@ import { adapters, checkTransition } from './itsm/adapters';
 import { defaultAlertSettings, type AlertSettings } from './alerts';
 import { createRng, type Rng } from '../services/random';
 import { can, type Role } from '../auth/roles';
+import { evolveTrips, initialTrips, type Trip } from './trips';
 
 /** Intervalle contractuel de synchronisation (minutes) — accéléré en démo. */
 export const SYNC_INTERVAL_MIN = 15;
 export const DEMO_SYNC_SECONDS = 45;
-const OBJECTIVES_KEY = 'seatpi.externes.objectifs.v1';
+// v2 : organisation N2 uniquement (cibles recalibrées).
+const OBJECTIVES_KEY = 'seatpi.externes.objectifs.v2';
 
 export interface ExternalState {
   now: number;
@@ -23,6 +25,8 @@ export interface ExternalState {
   objectives: Record<ExternalClientId, ObjectiveConfig>;
   alertSettings: AlertSettings;
   writes: SyncLogEntry[];
+  /** Déplacements des techniciens (en cours et terminés récemment). */
+  trips: Trip[];
 }
 
 export interface ActionResult {
@@ -73,6 +77,7 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
     const res = syncClient(client, readSource(client, source, rng), next.tickets[id] ?? [], next.registry, next.techs, now);
     next = { ...next, registry: res.registry };
     next.tickets[id] = res.tickets;
+    if (mode.evolve) next.trips = evolveTrips(next.trips, res.tickets, next.techs, client, now, rng);
     next.connectors[id] = {
       clientId: id,
       tool: client.tool,
@@ -103,8 +108,11 @@ function initialState(seed: number): { state: ExternalState; rngs: Record<string
     objectives: loadObjectives(),
     alertSettings: defaultAlertSettings,
     writes: [],
+    trips: [],
   };
-  return { state: runSync(base, externalClients.map((c) => c.id), now, rngs, { evolve: false, mayFail: false }), rngs };
+  const synced = runSync(base, externalClients.map((c) => c.id), now, rngs, { evolve: false, mayFail: false });
+  const trips = externalClients.flatMap((c) => initialTrips(synced.tickets[c.id], techs, c, now, rngs[c.id]));
+  return { state: { ...synced, trips }, rngs };
 }
 
 export function useExternal(running: boolean, seed = 2026) {
@@ -155,11 +163,11 @@ export function useExternal(running: boolean, seed = 2026) {
   }, []);
 
   const moveTicket = useCallback(
-    (ticketId: string, to: TicketStatus, role: Role) =>
+    (ticketId: string, to: TicketStatus, role: Role, escalateTo?: Service) =>
       write(ticketId, role, (t, s) => {
         const check = checkTransition(adapters[t.source.tool], t.status, to);
         if (!check.ok) return { ok: false, message: check.reason! };
-        const res = applyTransition(s.sources[t.clientId], t.source.id, to, 'Responsable (SEATPI ONE)', Date.now(), clientById(t.clientId));
+        const res = applyTransition(s.sources[t.clientId], t.source.id, to, 'Responsable (SEATPI ONE)', Date.now(), clientById(t.clientId), escalateTo);
         return { ok: res.ok, message: res.ok ? `${t.id} : ${res.message}` : res.message, records: res.records };
       }),
     [write],

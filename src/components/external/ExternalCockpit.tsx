@@ -17,12 +17,15 @@ import { Objectives } from './Objectives';
 import { Escalations } from './Escalations';
 import { Integration } from './Integration';
 import { WeeklyReport } from './WeeklyReport';
+import { TripsTable } from './Trips';
+import { isTripActive } from '../../external/trips';
 
 const TABS: { id: ClientTab; label: string }[] = [
   { id: 'dashboard', label: 'Tableau de bord' },
   { id: 'tickets', label: 'Tickets' },
   { id: 'kanban', label: 'Backlog (Kanban)' },
   { id: 'techs', label: 'Techniciens' },
+  { id: 'trips', label: 'Déplacements' },
   { id: 'objectives', label: 'Objectifs' },
   { id: 'escalations', label: 'Escalades' },
   { id: 'integration', label: 'Intégration ITSM' },
@@ -100,6 +103,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
             {TABS.map((t) => (
               <button key={t.id} role="tab" aria-selected={nav.tab === t.id} className={nav.tab === t.id ? 'active' : ''} onClick={() => go({ tab: t.id, filter: t.id === 'tickets' ? nav.filter : undefined })}>
                 {t.label}
+                {t.id === 'trips' && <small className="tabcount">{state.trips.filter((x) => x.clientId === view.client.id && isTripActive(x, state.now)).length}</small>}
                 {t.id === 'integration' && view.connector.status !== 'connecté' && <i className={`hdot ${view.connector.status === 'erreur' ? 'rouge' : 'orange'}`} />}
               </button>
             ))}
@@ -124,7 +128,17 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
               onFilter={filterTo}
             />
           )}
-          {nav.tab === 'techs' && <Technicians view={view} now={state.now} individual={individual} onOpenTech={(id) => go({ techId: id })} onFilter={filterTo} />}
+          {nav.tab === 'techs' && <Technicians view={view} now={state.now} trips={state.trips} individual={individual} onOpenTech={(id) => go({ techId: id })} onFilter={filterTo} />}
+          {nav.tab === 'trips' && (
+            <TripsTable
+              trips={state.trips.filter((t) => t.clientId === view.client.id)}
+              tickets={view.tickets}
+              techs={view.techs}
+              individual={individual}
+              onOpenTicket={(t) => go({ ticketId: t.id })}
+              onOpenTech={(id) => go({ techId: id })}
+            />
+          )}
           {nav.tab === 'objectives' && (
             <Objectives
               view={view}
@@ -152,6 +166,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
           {nav.tab === 'globalReport' ? (
             <WeeklyReport views={viewList} state={state} showFinance={showFinance} />
           ) : (
+            <>
             <GlobalCockpit
               rows={[...rows, internalRow]}
               total={total}
@@ -161,6 +176,20 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
               onOpenInternal={onOpenInternal}
               onAlert={(id, label, ids) => onNavigate({ scope: id, tab: 'tickets', filter: { label, ids } })}
             />
+            <h3>Déplacements en cours</h3>
+            <TripsTable
+              trips={state.trips.filter((t) => isTripActive(t, state.now))}
+              tickets={allTickets}
+              techs={state.techs}
+              individual={individual}
+              clientNames={Object.fromEntries(viewList.map((v) => [v.client.id, v.client.name]))}
+              onOpenTicket={(t) => onNavigate({ scope: t.clientId, tab: 'trips', ticketId: t.id })}
+              onOpenTech={(id) => {
+                const tech = state.techs.find((x) => x.id === id)!;
+                onNavigate({ scope: tech.clientId, tab: 'techs', techId: id });
+              }}
+            />
+            </>
           )}
         </>
       )}
@@ -171,12 +200,12 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
           techs={state.techs.filter((t) => t.clientId === openTicket.clientId)}
           role={role}
           onClose={() => go({ ticketId: undefined })}
-          onMove={(to) => store.moveTicket(openTicket.id, to, role)}
+          onMove={(to, escalateTo) => store.moveTicket(openTicket.id, to, role, escalateTo)}
           onAssign={(techId) => store.assignTicket(openTicket.id, techId, role)}
         />
       )}
       {openTech && (
-        <TechnicianSheet tech={openTech} view={views[openTech.clientId]} now={state.now} onClose={() => go({ techId: undefined })} onOpenTicket={(id) => go({ techId: undefined, ticketId: id })} />
+        <TechnicianSheet tech={openTech} view={views[openTech.clientId]} now={state.now} trips={state.trips} onClose={() => go({ techId: undefined })} onOpenTicket={(id) => go({ techId: undefined, ticketId: id })} />
       )}
       {nav.techId && !individual && (
         <div className="restricted">Fiche technicien non accessible avec ce rôle : seules des données agrégées sont affichées.</div>

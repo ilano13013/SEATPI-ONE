@@ -24,8 +24,8 @@ describe('App (mode démo)', () => {
     render(<App />);
     expect(screen.getByText('MODE DÉMO')).toBeTruthy();
     expect(screen.getByText(/WebGL n'est pas disponible/)).toBeTruthy();
-    // 7 pièces internes + 3 sites clients externes
-    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(10);
+    // 7 pièces, 2 services internes (Exploitation, CSM) et 3 sites clients externes
+    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(12);
     expect(document.querySelectorAll('.twod-grid.poles button')).toHaveLength(5);
   });
 
@@ -105,5 +105,24 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'agent' } });
     fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
     expect(screen.getByText('Accès restreint')).toBeTruthy();
+  });
+
+  it('présente les services internes Exploitation et CSM', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    openRoom('Service Exploitation');
+    expect(panel().getByRole('heading', { name: 'Service Exploitation' })).toBeTruthy();
+    expect(panel().getByRole('heading', { name: 'Escalades en cours' })).toBeTruthy();
+    openRoom('Service CSM');
+    expect(panel().getByRole('heading', { name: 'Service CSM' })).toBeTruthy();
+    expect(panel().getAllByText(/INVIVO|PRIMAGAZ|MONEXT/).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('liste les déplacements en cours dans la vue globale', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
+    expect(screen.getByRole('heading', { name: 'Déplacements en cours' })).toBeTruthy();
+    expect(screen.getAllByText(/En route|Sur site|Retour/).length).toBeGreaterThan(0);
   });
 });

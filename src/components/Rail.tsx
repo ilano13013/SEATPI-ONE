@@ -1,4 +1,4 @@
-import { Briefcase, Building2, Car, Coffee, DoorOpen, Headphones, Package, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { Briefcase, Building2, Car, Coffee, DoorOpen, Handshake, Headphones, Package, Server, Users, Wallet, type LucideIcon } from 'lucide-react';
 import type { RoomId } from '../types';
 import { roomById } from '../data/layout';
 
@@ -10,6 +10,8 @@ const items: [RoomId, LucideIcon][] = [
   ['stock', Package],
   ['parking', Car],
   ['direction', Wallet],
+  ['exploitation', Server],
+  ['csm', Handshake],
 ];
 
 export function Rail({

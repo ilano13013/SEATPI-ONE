@@ -1,6 +1,6 @@
 // Modèle métier de démonstration (sous-ensemble du §5 du cahier des charges).
 
-export type FloorId = 'rdc' | 'etage1' | 'sites';
+export type FloorId = 'rdc' | 'etage1' | 'etage2' | 'sites';
 
 export type RoomId =
   | 'accueil'
@@ -10,11 +10,13 @@ export type RoomId =
   | 'helpdesk'
   | 'rh'
   | 'direction'
+  | 'exploitation'
+  | 'csm'
   | 'ext-invivo'
   | 'ext-primagaz'
   | 'ext-monext';
 
-export type ModuleId = 'supervision' | 'pause' | 'rh' | 'stock' | 'finance' | 'vehicules' | 'accueil' | 'externes' | 'integrations';
+export type ModuleId = 'supervision' | 'pause' | 'rh' | 'stock' | 'finance' | 'vehicules' | 'accueil' | 'externes' | 'integrations' | 'exploitation' | 'csm';
 
 export interface Floor {
   id: FloorId;

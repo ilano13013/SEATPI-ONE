@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Technician, Ticket, TicketStatus } from '../../external/types';
+import type { Service, Technician, Ticket, TicketStatus } from '../../external/types';
 import { adapters, ALL_STATUSES, checkTransition } from '../../external/itsm/adapters';
 import { clientById, contractById, externalTeams } from '../../external/config';
 import { formatMinutesOuvrees } from '../../external/metrics';
@@ -13,7 +13,7 @@ interface Props {
   techs: Technician[];
   role: Role;
   onClose: () => void;
-  onMove: (to: TicketStatus) => ActionResult;
+  onMove: (to: TicketStatus, escalateTo?: Service) => ActionResult;
   onAssign: (techId: string) => ActionResult;
 }
 
@@ -21,6 +21,7 @@ const KIND_LABEL = { création: 'Création', statut: 'Statut', affectation: 'Aff
 
 export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign }: Props) {
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [escalateTo, setEscalateTo] = useState<Service>('Exploitation');
   const adapter = adapters[t.source.tool];
   const client = clientById(t.clientId);
   const team = externalTeams.find((x) => x.id === t.teamId);
@@ -100,7 +101,7 @@ export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign
               value=""
               disabled={!editable}
               onChange={(e) => {
-                if (e.target.value) setResult(onMove(e.target.value as TicketStatus));
+                if (e.target.value) setResult(onMove(e.target.value as TicketStatus, escalateTo));
               }}
             >
               <option value="">— Choisir —</option>
@@ -110,6 +111,14 @@ export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign
                   {check.ok ? '' : ' (non autorisé par la source)'}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="field block">
+            <span>Destinataire en cas d’escalade</span>
+            <select value={escalateTo} disabled={!editable} onChange={(e) => setEscalateTo(e.target.value as Service)}>
+              <option value="Exploitation">Exploitation (service interne SEATPI)</option>
+              <option value="CSM">CSM (service interne SEATPI)</option>
+              <option value="Équipe externe">Équipe externe (éditeur, constructeur, opérateur)</option>
             </select>
           </label>
           {individual && (

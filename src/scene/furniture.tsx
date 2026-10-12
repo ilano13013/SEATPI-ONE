@@ -138,6 +138,20 @@ export function Cabinet({ position, rotation }: P) {
   );
 }
 
+export function Rack({ position, rotation }: P) {
+  return (
+    <Group position={position} rotation={rotation}>
+      <Box args={[0.5, 1.5, 0.55]} position={[0, 0.75, 0]} color="#1f2733" />
+      {[0.35, 0.65, 0.95, 1.25].map((y, i) => (
+        <mesh key={y} position={[0.12, y, 0.28]}>
+          <boxGeometry args={[0.16, 0.03, 0.01]} />
+          <meshStandardMaterial color={i === 2 ? '#f59e0b' : '#22c55e'} emissive={i === 2 ? '#f59e0b' : '#22c55e'} emissiveIntensity={0.9} />
+        </mesh>
+      ))}
+    </Group>
+  );
+}
+
 export function WallScreen({ position, rotation, color = '#2f6fe4' }: P & { color?: string }) {
   return (
     <Group position={position} rotation={rotation}>

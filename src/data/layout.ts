@@ -3,6 +3,7 @@ import type { Floor, FloorId, Room, RoomId } from '../types';
 export const floors: Floor[] = [
   { id: 'rdc', label: 'Rez-de-chaussée', short: 'RDC' },
   { id: 'etage1', label: 'Étage 1', short: 'É1' },
+  { id: 'etage2', label: 'Étage 2', short: 'É2' },
   { id: 'sites', label: 'Sites clients', short: 'Sites' },
 ];
 
@@ -13,6 +14,8 @@ export const rooms: Room[] = [
   { id: 'parking', floor: 'rdc', module: 'vehicules', label: 'Parc automobile', description: 'Véhicules disponibles et réservations', x: 0, z: 2.2, width: 10.6, depth: 3.4, color: '#dfe4ea', outdoor: true },
   { id: 'helpdesk', floor: 'etage1', module: 'supervision', label: 'Plateau Helpdesk', description: 'Files clients, agents, SLA et tickets', x: -1.85, z: 0, width: 6.9, depth: 7.2, color: '#d9e9ff' },
   { id: 'rh', floor: 'etage1', module: 'rh', label: 'Ressources humaines', description: 'Congés, planning et formations (données agrégées)', x: 3.6, z: -1.85, width: 3.4, depth: 3.5, color: '#f4e3ff' },
+  { id: 'exploitation', floor: 'etage2', module: 'exploitation', label: 'Service Exploitation', description: 'Infrastructure, supervision et escalades reçues du MCO N2 des clients', x: -2.8, z: 0, width: 5.4, depth: 7.2, color: '#dde9f6' },
+  { id: 'csm', floor: 'etage2', module: 'csm', label: 'Service CSM', description: 'Relation client, gouvernance des contrats et escalades contractuelles', x: 2.8, z: 0, width: 5.4, depth: 7.2, color: '#f9e4ec' },
   ...(['invivo', 'primagaz', 'monext'] as const).map((c, i) => ({
     id: `ext-${c}` as RoomId,
     floor: 'sites' as FloorId,

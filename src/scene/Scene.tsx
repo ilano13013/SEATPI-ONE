@@ -7,6 +7,7 @@ import { poleByClient, roomById, roomsOnFloor } from '../data/layout';
 import { CameraRig, type CameraFocus } from './CameraRig';
 import { RoomMesh } from './RoomMesh';
 import type { SiteSceneData } from './ExternalSite';
+import type { ServicesSceneData } from './ServiceRooms';
 
 export interface SceneProps {
   floor: FloorId;
@@ -22,8 +23,10 @@ export interface SceneProps {
   poleBadges: Partial<Record<string, string>>;
   onSelectPole: (clientId: string) => void;
   sites: Record<string, SiteSceneData>;
+  services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
   onTechClick: (clientId: string, techId: string) => void;
+  onTripClick: (clientId: string, tripId: string) => void;
   reducedMotion: boolean;
   onSelect: (id: RoomId) => void;
   onAgentClick: (agent: Agent) => void;
@@ -48,7 +51,7 @@ function FloorTransition({ animate, children }: { animate: boolean; children: Re
 }
 
 export default function Scene(props: SceneProps) {
-  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, onTeamClick, onTechClick, reducedMotion, onSelect, onAgentClick } = props;
+  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, services, onTeamClick, onTechClick, onTripClick, reducedMotion, onSelect, onAgentClick } = props;
   const [hovered, setHovered] = useState<RoomId | null>(null);
   const [hoveredPole, setHoveredPole] = useState<string | null>(null);
   const animate = !reducedMotion;
@@ -56,7 +59,9 @@ export default function Scene(props: SceneProps) {
 
   const focus = useMemo<CameraFocus>(() => {
     const room = selected ? roomById(selected) : null;
-    if (overview || !room || room.floor !== floor) return { target: [0, 0, 0], distance: OVERVIEW_DISTANCE, key: focusKey };
+    // L'étage des sites inclut la route des déplacements : vue légèrement recentrée vers l'avant.
+    if (overview || !room || room.floor !== floor)
+      return floor === 'sites' ? { target: [0, 0, 1.4], distance: OVERVIEW_DISTANCE + 2, key: focusKey } : { target: [0, 0, 0], distance: OVERVIEW_DISTANCE, key: focusKey };
     const pole = room.id === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
     if (pole) {
       const distance = Math.max(pole.width, pole.depth) * 1.4 + 6.5;
@@ -108,8 +113,8 @@ export default function Scene(props: SceneProps) {
 
       <FloorTransition key={floor} animate={animate}>
         {/* Dalle de l'étage */}
-        <mesh position={[0, -0.04, 0]} receiveShadow>
-          <boxGeometry args={[floor === 'sites' ? 12 : 11.4, 0.06, floor === 'rdc' ? 8.4 : floor === 'sites' ? 8.6 : 7.9]} />
+        <mesh position={[0, -0.04, floor === 'sites' ? 1.4 : 0]} receiveShadow>
+          <boxGeometry args={[floor === 'sites' ? 12 : 11.4, 0.06, floor === 'rdc' ? 8.4 : floor === 'sites' ? 11.4 : 7.9]} />
           <meshStandardMaterial color={floor === 'rdc' ? '#f4f6f9' : floor === 'sites' ? '#e6efe2' : '#eef2f8'} />
         </mesh>
         {floorRooms.map((room) => (
@@ -131,8 +136,10 @@ export default function Scene(props: SceneProps) {
             poleBadges={poleBadges}
             onSelectPole={onSelectPole}
             sites={sites}
+            services={services}
             onTeamClick={onTeamClick}
             onTechClick={onTechClick}
+            onTripClick={onTripClick}
             onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}

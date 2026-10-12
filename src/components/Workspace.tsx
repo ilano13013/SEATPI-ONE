@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { ChevronRight, Maximize2 } from 'lucide-react';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
 import type { SiteSceneData } from '../scene/ExternalSite';
+import type { ServicesSceneData } from '../scene/ServiceRooms';
 import { floors, helpdeskPoles, rooms, roomsOnFloor } from '../data/layout';
 import { allStatuses, statusColors } from '../lib/status';
 
@@ -19,8 +20,10 @@ interface Props {
   poleBadges: Partial<Record<string, string>>;
   onSelectPole: (clientId: string) => void;
   sites: Record<string, SiteSceneData>;
+  services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
   onTechClick: (clientId: string, techId: string) => void;
+  onTripClick: (clientId: string, tripId: string) => void;
   /** Masque l'espace sans démonter la scène 3D. */
   hidden?: boolean;
   reducedMotion: boolean;
