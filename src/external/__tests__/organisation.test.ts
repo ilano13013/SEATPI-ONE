@@ -52,7 +52,7 @@ describe('déplacements des managers CSM', () => {
     clientId: 'invivo',
     memberId: 'csm-01',
     purpose: 'Revue de service',
-    from: 'Siège SEATPI',
+    from: 'SEATPI La Ciotat',
     to: 'Siège INVIVO',
     transport: 'Train',
     departAt: NOW,
@@ -76,7 +76,7 @@ describe('déplacements des managers CSM', () => {
       const csm = csmTeam.find((x) => x.id === t.memberId);
       expect(csm).toBeDefined();
       expect(t.clientId).toBe(csm!.clientId);
-      expect(t.from).toBe('Siège SEATPI');
+      expect(t.from).toMatch(/^SEATPI (La Ciotat|Montpellier|Paris)$/);
       expect(isTripActive(t, NOW)).toBe(true);
       expect(activeTripOf(trips, t.memberId, NOW)).toBe(t);
     }

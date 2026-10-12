@@ -4,6 +4,7 @@ import type { ExternalClientId } from './types';
 import type { Rng } from '../services/random';
 import { csmTeam, nextCommittee } from './services';
 import { clientById } from './config';
+import { siteById } from '../data/sites';
 
 export type TripPhase = 'En route' | 'Chez le client' | 'Retour' | 'Terminé';
 export type TripPurpose = 'Comité de pilotage' | 'Revue de service' | 'Point escalade';
@@ -32,7 +33,6 @@ export interface TripStatus {
 }
 
 const MIN = 60_000;
-export const HQ_LABEL = 'Siège SEATPI';
 const TRANSPORTS = ['Véhicule de service SEATPI', 'Train', 'Véhicule de service SEATPI', 'Transport en commun'];
 
 export function tripStatus(trip: Trip, now: number): TripStatus {
@@ -68,7 +68,7 @@ function makeTrip(memberId: string, clientId: ExternalClientId, departAt: number
     clientId,
     memberId,
     purpose,
-    from: HQ_LABEL,
+    from: `SEATPI ${siteById(csmTeam.find((m) => m.id === memberId)!.site).name}`,
     to: `Siège ${clientById(clientId).name}`,
     transport: TRANSPORTS[Math.floor(rng() * TRANSPORTS.length)],
     departAt: Math.floor(departAt / MIN) * MIN,

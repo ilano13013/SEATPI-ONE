@@ -1,4 +1,6 @@
 import type { ExternalClientId } from '../../external/types';
+import type { SiteId } from '../../types';
+import { siteById } from '../../data/sites';
 import type { ClientView } from '../../external/derive';
 import { csmCards, exploitationTeam, serviceSummary, supervisionChecks, csmTeam } from '../../external/services';
 import { periods, slaRate } from '../../external/metrics';
@@ -15,9 +17,12 @@ interface Props {
   now: number;
   onOpenTicket: (clientId: ExternalClientId, ticketId: string) => void;
   onOpenClient: (clientId: ExternalClientId) => void;
+  /** Site de l'espace consulté : n'affiche que le personnel rattaché. */
+  site?: SiteId | null;
 }
 
-export function ExploitationPanel({ views, role, now, onOpenTicket }: Props) {
+export function ExploitationPanel({ views, role, now, onOpenTicket, site }: Props) {
+  const team = site ? exploitationTeam.filter((m) => m.site === site) : exploitationTeam;
   const s = serviceSummary(views, 'Exploitation', now);
   const individual = can(role, 'exploitation', 'individual');
   const name = (id: string) => exploitationTeam.find((m) => m.id === id)?.name ?? id;
@@ -36,7 +41,7 @@ export function ExploitationPanel({ views, role, now, onOpenTicket }: Props) {
         <div>
           <small>Présents</small>
           <strong>
-            {exploitationTeam.filter((m) => m.present).length}/{exploitationTeam.length}
+            {team.filter((m) => m.present).length}/{team.length}
           </strong>
         </div>
         <div>
@@ -81,9 +86,10 @@ export function ExploitationPanel({ views, role, now, onOpenTicket }: Props) {
       </div>
       {individual && (
         <>
-          <h3>Équipe</h3>
+          <h3>Équipe{site ? ` — ${siteById(site).name}` : ''}</h3>
           <div className="list">
-            {exploitationTeam.map((m) => (
+            {team.length === 0 && <p className="hint">Aucun membre rattaché à ce site.</p>}
+            {team.map((m) => (
               <div className="kv" key={m.id}>
                 <span>
                   <b>{m.name}</b> <small>{m.skills.join(', ')}</small>
@@ -101,13 +107,15 @@ export function ExploitationPanel({ views, role, now, onOpenTicket }: Props) {
   );
 }
 
-export function CsmPanel({ views, trips, role, now, onOpenTicket, onOpenClient }: Props) {
+export function CsmPanel({ views, trips, role, now, onOpenTicket, onOpenClient, site }: Props) {
   const individual = can(role, 'csm', 'individual');
   const week = periods(now).week;
   return (
     <>
       <p className="hint">Service interne SEATPI : relation client et gouvernance des contrats. Il reçoit les escalades contractuelles (dérogations, insatisfactions, demandes hors périmètre).</p>
-      {csmCards(views, now).map((c) => {
+      {csmCards(views, now)
+        .filter((c) => !site || c.csm.site === site)
+        .map((c) => {
         const sla = slaRate(c.view.tickets, week).rate;
         const atRisk = c.view.objectives.filter((o) => o.status === 'à risque' || o.status === 'non atteint').length;
         return (

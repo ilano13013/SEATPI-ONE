@@ -1,25 +1,64 @@
 // Modèle métier de démonstration (sous-ensemble du §5 du cahier des charges).
 
-export type FloorId = 'rdc' | 'etage1' | 'etage2' | 'sites';
+/** Sites internes SEATPI. La Ciotat est le site principal de référence. */
+export type SiteId = 'laciotat' | 'montpellier' | 'paris';
 
-export type RoomId =
+/** Zones navigables : carte d'ensemble, sites internes, sites clients externes. */
+export type Location = 'carte' | SiteId | 'externes';
+
+/** Identifiant d'étage (ex. « rdc », « mtp-e1 », « carte », « sites »). */
+export type FloorId = string;
+
+/** Identifiant d'espace. Les espaces de La Ciotat gardent leurs identifiants historiques. */
+export type RoomId = string;
+
+/** Nature fonctionnelle d'un espace : détermine son aménagement 3D et son panneau. */
+export type RoomKind =
   | 'accueil'
   | 'pause'
   | 'stock'
   | 'parking'
   | 'helpdesk'
+  | 'mco'
+  | 'exploitation'
+  | 'formation'
+  | 'csm'
   | 'rh'
+  | 'finance'
+  | 'commercial'
   | 'direction'
+  | 'recrutement'
+  | 'moyens'
+  | 'deplacements'
+  | 'reunion'
+  | 'external'
+  | 'building';
+
+export type ModuleId =
+  | 'supervision'
+  | 'pause'
+  | 'rh'
+  | 'stock'
+  | 'finance'
+  | 'vehicules'
+  | 'accueil'
+  | 'externes'
+  | 'integrations'
   | 'exploitation'
   | 'csm'
-  | 'ext-invivo'
-  | 'ext-primagaz'
-  | 'ext-monext';
-
-export type ModuleId = 'supervision' | 'pause' | 'rh' | 'stock' | 'finance' | 'vehicules' | 'accueil' | 'externes' | 'integrations' | 'exploitation' | 'csm';
+  | 'mco'
+  | 'formation'
+  | 'commercial'
+  | 'direction'
+  | 'recrutement'
+  | 'moyens'
+  | 'deplacements'
+  | 'reunion'
+  | 'carte';
 
 export interface Floor {
   id: FloorId;
+  location: Location;
   label: string;
   short: string;
 }
@@ -27,6 +66,8 @@ export interface Floor {
 export interface Room {
   id: RoomId;
   floor: FloorId;
+  location: Location;
+  kind: RoomKind;
   label: string;
   module: ModuleId;
   description: string;
@@ -44,6 +85,8 @@ export interface Room {
   labelAt?: [number, number];
   /** Site d'un client externe. */
   externalClientId?: 'invivo' | 'primagaz' | 'monext';
+  /** Bâtiment de la carte d'ensemble : site interne ciblé. */
+  targetSite?: SiteId;
 }
 
 export type AgentStatus =
@@ -77,7 +120,10 @@ export interface Agent {
   id: string;
   /** Pseudonyme fictif, jamais un nom réel. */
   name: string;
+  /** Pôle client du plateau Helpdesk. */
   clientId: string;
+  /** Site de rattachement (répartition de démonstration). */
+  site: SiteId;
   status: AgentStatus;
   statusSinceSec: number;
   /** Indice du poste sur le plateau Helpdesk. */

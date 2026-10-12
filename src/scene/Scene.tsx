@@ -32,6 +32,7 @@ export interface SceneProps {
   csmTrips: CsmTripView[];
   onTripClick: (trip: Trip) => void;
   reducedMotion: boolean;
+  onPersonClick: (personId: string) => void;
   onSelect: (id: RoomId) => void;
   onAgentClick: (agent: Agent) => void;
 }
@@ -55,25 +56,34 @@ function FloorTransition({ animate, children }: { animate: boolean; children: Re
 }
 
 export default function Scene(props: SceneProps) {
-  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, services, csmTrips, onTeamClick, onTechClick, onTripClick, reducedMotion, onSelect, onAgentClick } = props;
+  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, services, csmTrips, onTeamClick, onTechClick, onTripClick, onPersonClick, reducedMotion, onSelect, onAgentClick } = props;
   const [hovered, setHovered] = useState<RoomId | null>(null);
   const [hoveredPole, setHoveredPole] = useState<string | null>(null);
   const animate = !reducedMotion;
   const floorRooms = roomsOnFloor(floor);
+  // Dalle de l'étage : emprise des espaces + marge (l'étage des sites inclut les routes des CSM).
+  const slab = useMemo(() => {
+    const minX = Math.min(...floorRooms.map((r) => r.x - r.width / 2)) - 0.4;
+    const maxX = Math.max(...floorRooms.map((r) => r.x + r.width / 2)) + 0.4;
+    const minZ = Math.min(...floorRooms.map((r) => r.z - r.depth / 2)) - 0.4;
+    const maxZ = Math.max(...floorRooms.map((r) => r.z + r.depth / 2)) + (floor === 'sites' ? 3.3 : 0.4);
+    return { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, w: maxX - minX, d: maxZ - minZ };
+  }, [floorRooms, floor]);
+  const isOutdoor = floor === 'sites' || floor === 'carte';
 
   const focus = useMemo<CameraFocus>(() => {
     const room = selected ? roomById(selected) : null;
     // L'étage des sites inclut le siège SEATPI et les routes des CSM : vue recentrée vers l'avant.
     if (overview || !room || room.floor !== floor)
-      return floor === 'sites' ? { target: [0, 0, 1.4], distance: OVERVIEW_DISTANCE + 2, key: focusKey } : { target: [0, 0, 0], distance: OVERVIEW_DISTANCE, key: focusKey };
-    const pole = room.id === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
+      return { target: [slab.x, 0, slab.z], distance: Math.max(OVERVIEW_DISTANCE, Math.max(slab.w, slab.d) * 1.65), key: focusKey };
+    const pole = room.kind === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
     if (pole) {
       const distance = Math.max(pole.width, pole.depth) * 1.4 + 6.5;
       return { target: [room.x + pole.x, 0.3, room.z + pole.z], distance, key: focusKey };
     }
     const distance = Math.max(room.width, room.depth) * 1.4 + 7.5;
     return { target: [room.x, 0.3, room.z], distance, key: focusKey };
-  }, [selected, selectedPole, overview, floor, focusKey]);
+  }, [selected, selectedPole, overview, floor, focusKey, slab]);
 
   useEffect(() => {
     document.body.style.cursor = hovered || hoveredPole ? 'pointer' : '';
@@ -117,9 +127,9 @@ export default function Scene(props: SceneProps) {
 
       <FloorTransition key={floor} animate={animate}>
         {/* Dalle de l'étage */}
-        <mesh position={[0, -0.04, floor === 'sites' ? 1.4 : 0]} receiveShadow>
-          <boxGeometry args={[floor === 'sites' ? 12 : 11.4, 0.06, floor === 'rdc' ? 8.4 : floor === 'sites' ? 11.4 : 7.9]} />
-          <meshStandardMaterial color={floor === 'rdc' ? '#f4f6f9' : floor === 'sites' ? '#e6efe2' : '#eef2f8'} />
+        <mesh position={[slab.x, -0.04, slab.z]} receiveShadow>
+          <boxGeometry args={[slab.w, 0.06, slab.d]} />
+          <meshStandardMaterial color={isOutdoor ? '#e6efe2' : '#eef2f8'} />
         </mesh>
         {floorRooms.map((room) => (
           <RoomMesh
@@ -135,7 +145,7 @@ export default function Scene(props: SceneProps) {
             inventory={state.inventory}
             animate={animate}
             onAgentClick={onAgentClick}
-            selectedPole={selected === 'helpdesk' ? selectedPole : null}
+            selectedPole={room.kind === 'helpdesk' && selected === room.id ? selectedPole : null}
             hoveredPole={hoveredPole}
             poleBadges={poleBadges}
             onSelectPole={onSelectPole}
@@ -143,6 +153,7 @@ export default function Scene(props: SceneProps) {
             services={services}
             onTeamClick={onTeamClick}
             onTechClick={onTechClick}
+            onPersonClick={onPersonClick}
             onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}

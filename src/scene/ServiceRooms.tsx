@@ -12,6 +12,8 @@ export interface ServicePerson {
   /** Couleur du client suivi (CSM). */
   accent?: string;
   label?: string;
+  /** Site SEATPI de rattachement. */
+  site: string;
 }
 
 export interface ServicesSceneData {
@@ -20,7 +22,7 @@ export interface ServicesSceneData {
 }
 
 function toAgent(p: ServicePerson, desk: number): Agent {
-  return { id: p.id, name: p.name, clientId: '', status: p.state === 'occupé' ? 'En appel' : 'Disponible', statusSinceSec: 0, desk };
+  return { id: p.id, name: p.name, clientId: '', site: 'laciotat', status: p.state === 'occupé' ? 'En appel' : 'Disponible', statusSinceSec: 0, desk };
 }
 
 const EXPLOIT_DESKS: [number, number][] = [-1.2, 0.6].flatMap((z) => [-0.6, 0.6, 1.8].map((x) => [x, z] as [number, number]));

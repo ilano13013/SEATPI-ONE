@@ -60,7 +60,7 @@ function Headquarters() {
         </mesh>
       ))}
       <Html position={[0, 1.55, 0]} center className="room-label selected" zIndexRange={[12, 0]}>
-        <span>Siège SEATPI</span>
+        <span>Sites SEATPI</span>
       </Html>
     </group>
   );

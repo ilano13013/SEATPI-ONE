@@ -2,6 +2,7 @@
 // l'Exploitation (infrastructure, supervision) et le CSM (relation client).
 // Ils reçoivent les escalades du MCO N2 des clients. Données fictives.
 import type { Escalation, ExternalClientId, Ticket } from './types';
+import type { SiteId } from '../types';
 import type { ClientView } from './derive';
 import { addDays, startOfDay } from './calendar';
 import { externalClients } from './config';
@@ -16,20 +17,22 @@ export interface ServiceMember {
   present: boolean;
   onCall?: boolean;
   clientId?: ExternalClientId;
+  /** Site SEATPI de rattachement (répartition de démonstration). */
+  site: SiteId;
 }
 
 export const exploitationTeam: ServiceMember[] = [
-  { id: 'exp-01', name: 'Exploit. 01', skills: ['Serveurs Windows', 'Sauvegardes'], present: true },
-  { id: 'exp-02', name: 'Exploit. 02', skills: ['Linux', 'Ordonnancement'], present: true, onCall: true },
-  { id: 'exp-03', name: 'Exploit. 03', skills: ['Réseau', 'Pare-feu'], present: true },
-  { id: 'exp-04', name: 'Exploit. 04', skills: ['Virtualisation', 'Stockage'], present: true },
-  { id: 'exp-05', name: 'Exploit. 05', skills: ['Supervision', 'Bases de données'], present: false },
+  { id: 'exp-01', name: 'Exploit. 01', skills: ['Serveurs Windows', 'Sauvegardes'], present: true, site: 'laciotat' },
+  { id: 'exp-02', name: 'Exploit. 02', skills: ['Linux', 'Ordonnancement'], present: true, onCall: true, site: 'laciotat' },
+  { id: 'exp-03', name: 'Exploit. 03', skills: ['Réseau', 'Pare-feu'], present: true, site: 'montpellier' },
+  { id: 'exp-04', name: 'Exploit. 04', skills: ['Virtualisation', 'Stockage'], present: true, site: 'paris' },
+  { id: 'exp-05', name: 'Exploit. 05', skills: ['Supervision', 'Bases de données'], present: false, site: 'paris' },
 ];
 
 export const csmTeam: ServiceMember[] = [
-  { id: 'csm-01', name: 'CSM 01', skills: ['Gouvernance', 'Comités'], present: true, clientId: 'invivo' },
-  { id: 'csm-02', name: 'CSM 02', skills: ['Gouvernance', 'Avenants'], present: true, clientId: 'primagaz' },
-  { id: 'csm-03', name: 'CSM 03', skills: ['Gouvernance', 'Monétique'], present: true, clientId: 'monext' },
+  { id: 'csm-01', name: 'CSM 01', skills: ['Gouvernance', 'Comités'], present: true, clientId: 'invivo', site: 'laciotat' },
+  { id: 'csm-02', name: 'CSM 02', skills: ['Gouvernance', 'Avenants'], present: true, clientId: 'primagaz', site: 'montpellier' },
+  { id: 'csm-03', name: 'CSM 03', skills: ['Gouvernance', 'Monétique'], present: true, clientId: 'monext', site: 'paris' },
 ];
 
 /** Contrôles quotidiens fictifs suivis par l'Exploitation. */

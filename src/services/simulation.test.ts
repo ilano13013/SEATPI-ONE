@@ -55,9 +55,10 @@ describe('simulateTick', () => {
 describe('computeMetrics', () => {
   it('agrège les indicateurs du jeu initial', () => {
     const m = computeMetrics(createInitialState(0));
-    expect(m.agentsConnected).toBe(19);
-    expect(m.waitingTotal).toBe(8);
-    expect(m.onBreak).toBe(3);
+    // 32 agents sur les trois sites, dont un hors ligne.
+    expect(m.agentsConnected).toBe(31);
+    expect(m.waitingTotal).toBe(14);
+    expect(m.onBreak).toBe(4);
     expect(m.openTickets).toBe(7);
     expect(m.slaGlobal).toBeGreaterThan(90);
     expect(m.slaGlobal).toBeLessThan(100);

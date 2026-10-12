@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App } from './App';
+import { helpdeskPoles, rooms } from './data/layout';
 
 // jsdom ne fournit pas WebGL : on vérifie le parcours via le mode 2D accessible.
 vi.mock('./lib/env', () => ({ hasWebGL: () => false, prefersReducedMotion: () => true, isNarrowScreen: () => false }));
@@ -17,16 +18,20 @@ afterEach(() => {
 });
 
 const panel = () => within(screen.getByRole('complementary', { name: /./ }));
-const openRoom = (label: string) => fireEvent.click(within(document.querySelector('.twod')!).getByRole('button', { name: new RegExp(label) }));
+// Les espaces sont regroupés par site en 2D : on cible La Ciotat (site principal) par défaut.
+const openRoom = (label: string, site = 'La Ciotat') =>
+  fireEvent.click(within(screen.getByRole('region', { name: site })).getAllByRole('button', { name: new RegExp(label) })[0]);
 
 describe('App (mode démo)', () => {
   it('affiche la mention mode démo et bascule en 2D sans WebGL', () => {
     render(<App />);
     expect(screen.getByText('MODE DÉMO')).toBeTruthy();
     expect(screen.getByText(/WebGL n'est pas disponible/)).toBeTruthy();
-    // 7 pièces, 2 services internes (Exploitation, CSM) et 3 sites clients externes
-    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(12);
-    expect(document.querySelectorAll('.twod-grid.poles button')).toHaveLength(5);
+    // Tous les espaces des trois sites et des sites clients externes (hors carte d'ensemble).
+    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(rooms.filter((r) => r.floor !== 'carte').length);
+    expect(screen.getByRole('region', { name: 'Montpellier' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Paris' })).toBeTruthy();
+    expect(document.querySelectorAll('.twod-grid.poles button')).toHaveLength(helpdeskPoles.length);
   });
 
   it('ouvre le bon panneau au clic sur une pièce', () => {
@@ -51,7 +56,7 @@ describe('App (mode démo)', () => {
 
   it('ouvre un pôle client depuis le plateau', () => {
     render(<App />);
-    fireEvent.click(within(document.querySelector('.twod')!).getByRole('button', { name: /Pôle Sodiaal/ }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'La Ciotat' })).getByRole('button', { name: /Pôle Sodiaal/ }));
     expect(panel().getByRole('heading', { name: 'Plateau Helpdesk' })).toBeTruthy();
     expect((panel().getByLabelText('Pôle client') as HTMLSelectElement).value).toBe('sodiaal');
     expect(panel().getAllByRole('button', { name: /^Sodiaal ·/ })).toHaveLength(1);
@@ -115,7 +120,10 @@ describe('App (mode démo)', () => {
     expect(panel().getByRole('heading', { name: 'Escalades en cours' })).toBeTruthy();
     openRoom('Service CSM');
     expect(panel().getByRole('heading', { name: 'Service CSM' })).toBeTruthy();
-    expect(panel().getAllByText(/INVIVO|PRIMAGAZ|MONEXT/).length).toBeGreaterThanOrEqual(3);
+    // Chaque site affiche le compte suivi par son CSM.
+    expect(panel().getAllByText('INVIVO').length).toBeGreaterThan(0);
+    openRoom('Service CSM', 'Montpellier');
+    expect(panel().getAllByText('PRIMAGAZ').length).toBeGreaterThan(0);
   });
 
   it('liste les déplacements des managers CSM dans la vue globale', () => {
@@ -123,7 +131,20 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
     fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
     expect(screen.getByRole('heading', { name: 'Déplacements des managers CSM' })).toBeTruthy();
-    expect(screen.getAllByText(/Siège SEATPI → Siège (INVIVO|PRIMAGAZ|MONEXT)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/SEATPI (La Ciotat|Montpellier|Paris) → Siège (INVIVO|PRIMAGAZ|MONEXT)/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/En route|Chez le client|Retour/).length).toBeGreaterThan(0);
+  });
+
+  it('ouvre les espaces des sites de Montpellier et Paris avec leurs propres données', () => {
+    render(<App />);
+    openRoom('Plateau Helpdesk', 'Montpellier');
+    expect(panel().getByText('Montpellier')).toBeTruthy();
+    expect(panel().getAllByRole('button', { name: /^(LBR FR|Eurapharma) ·/ })).toHaveLength(2);
+    expect(panel().queryByText(/^Thelem ·/)).toBeNull();
+    openRoom('Commercial', 'Paris');
+    expect(panel().getByRole('heading', { name: 'Commercial' })).toBeTruthy();
+    expect(panel().getByText('Paris')).toBeTruthy();
+    // Pas de RH ni de Stock hors de La Ciotat.
+    expect(within(screen.getByRole('region', { name: 'Paris' })).queryByRole('button', { name: /Ressources humaines|Stock/ })).toBeNull();
   });
 });

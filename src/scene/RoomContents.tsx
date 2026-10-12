@@ -4,6 +4,9 @@ import { Avatar } from './Avatar';
 import { HelpdeskPoles, type PoleProps } from './HelpdeskPoles';
 import { ExternalSite, type SiteSceneData } from './ExternalSite';
 import { CsmRoom, ExploitationRoom, type ServicesSceneData } from './ServiceRooms';
+import { ClientMiniSite, DeptRoom, Person, SiteBuilding } from './DeptRooms';
+import { peopleIn } from '../org/people';
+import { siteById, sitePlans } from '../data/sites';
 import { Cabinet, Car, Chair, CoffeeMachine, Counter, Desk, Plant, RoundTable, Shelf, Sofa, Tree, WallScreen } from './furniture';
 
 export interface RoomContentProps extends PoleProps {
@@ -19,6 +22,8 @@ export interface RoomContentProps extends PoleProps {
   onTechClick?: (clientId: string, techId: string) => void;
   /** Personnel des services internes Exploitation et CSM. */
   services?: ServicesSceneData;
+  /** Clic sur une personne de l'encadrement (managers, responsable, PDG). */
+  onPersonClick?: (personId: string) => void;
 }
 
 const vehicleColors: Record<Vehicle['status'], string> = {
@@ -39,22 +44,54 @@ const pauseSeats: [number, number, number][] = [
   [0.6, 1.1, Math.PI],
 ];
 
-export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, services, ...poles }: RoomContentProps) {
-  if (room.externalClientId) {
-    const site = sites?.[room.externalClientId];
-    if (!site) return null;
-    const id = room.externalClientId;
-    return <ExternalSite site={site} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} />;
+export function RoomContents(props: RoomContentProps) {
+  const { room, animate, onPersonClick } = props;
+  const site = room.location === 'laciotat' || room.location === 'montpellier' || room.location === 'paris' ? room.location : null;
+  const people = site ? peopleIn(site, room.kind) : [];
+  // Encadrement présent dans l'espace, placé à l'avant de la pièce.
+  const persons = people.map((p, i) => (
+    <Person key={p.id} person={p} position={[room.width / 2 - 0.6 - i * 0.75, 0, room.depth / 2 - 0.95]} onClick={onPersonClick} />
+  ));
+  return (
+    <>
+      <Contents {...props} site={site} />
+      {persons}
+    </>
+  );
+}
+
+function Contents({ room, agents: allAgents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, services, onPersonClick: _p, site, ...poles }: RoomContentProps & { site: 'laciotat' | 'montpellier' | 'paris' | null }) {
+  // Chaque site n'affiche que ses propres agents.
+  const agents = site ? allAgents.filter((a) => a.site === site) : allAgents;
+  if (room.kind === 'building' && room.targetSite) {
+    const s = siteById(room.targetSite);
+    return <SiteBuilding levels={sitePlans[room.targetSite].length} color={s.color} main={s.main} />;
   }
-  switch (room.id) {
+  if (room.externalClientId) {
+    const ext = sites?.[room.externalClientId];
+    if (!ext) return null;
+    if (room.location === 'carte') return <ClientMiniSite accent={ext.accent} health={ext.health} animate={animate} />;
+    const id = room.externalClientId;
+    return <ExternalSite site={ext} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} />;
+  }
+  switch (room.kind) {
     case 'exploitation':
-      return <ExploitationRoom people={services?.exploitation ?? []} animate={animate} />;
+      return <ExploitationRoom people={(services?.exploitation ?? []).filter((p) => p.site === site)} animate={animate} />;
     case 'csm':
-      return <CsmRoom people={services?.csm ?? []} animate={animate} />;
+      return <CsmRoom people={(services?.csm ?? []).filter((p) => p.site === site)} animate={animate} />;
+    case 'mco':
+    case 'formation':
+    case 'finance':
+    case 'commercial':
+    case 'recrutement':
+    case 'moyens':
+    case 'deplacements':
+    case 'reunion':
+      return <DeptRoom kind={room.kind} />;
     case 'helpdesk':
       return (
         <>
-          <HelpdeskPoles agents={agents} animate={animate} onAgentClick={onAgentClick} {...poles} />
+          <HelpdeskPoles agents={agents} site={site ?? 'laciotat'} animate={animate} onAgentClick={onAgentClick} {...poles} />
           <WallScreen position={[0, 0, -3.52]} />
         </>
       );

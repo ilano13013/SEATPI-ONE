@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Agent, FloorId, RoomId } from './types';
 import { can, type Role } from './auth/roles';
-import { helpdeskPoles, roomById } from './data/layout';
+import { entryFloor, helpdeskPoles, plateauOf, poleByClient, polesOf, roomById, rooms } from './data/layout';
+import { internalSites } from './data/sites';
+import { personById } from './org/people';
 import { clientSummary } from './services/simulation';
 import { useDemoSimulation } from './services/useDemoSimulation';
 import { hasWebGL, isNarrowScreen, prefersReducedMotion } from './lib/env';
@@ -31,7 +33,8 @@ export function App() {
   const [reducedMotion] = useState(prefersReducedMotion);
   const [mode3d, setMode3d] = useState(webgl);
   const [role, setRole] = useState<Role>('teamLeader');
-  const [floor, setFloor] = useState<FloorId>('etage1');
+  // Arrivée sur la carte des trois sites SEATPI et des sites clients externes.
+  const [floor, setFloor] = useState<FloorId>('carte');
   const [selected, setSelected] = useState<RoomId | null>('helpdesk');
   const [overview, setOverview] = useState(true);
   const [focusKey, setFocusKey] = useState(0);
@@ -39,6 +42,7 @@ export function App() {
   const [panelOpen, setPanelOpen] = useState(() => !isNarrowScreen());
   const [focusAgentId, setFocusAgentId] = useState<string | null>(null);
   const [selectedPole, setSelectedPole] = useState<string | null>(null);
+  const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   // Vue principale : jumeau numérique 3D ou cockpit des clients externes.
   const [appView, setAppView] = useState<'jumeau' | 'externes'>('jumeau');
   const [extNav, setExtNav] = useState<ExternalNav>({ scope: 'global', tab: 'dashboard' });
@@ -53,6 +57,13 @@ export function App() {
   const selectRoom = useCallback(
     (id: RoomId) => {
       const target = roomById(id);
+      // Bâtiment de la carte : on entre dans le site, à l'étage du plateau Helpdesk.
+      if (target.kind === 'building' && target.targetSite) {
+        setFloor(entryFloor(target.targetSite));
+        setOverview(true);
+        setFocusKey((k) => k + 1);
+        return;
+      }
       setSelected(id);
       setSelectedPole(null);
       setFloor(target.floor);
@@ -77,6 +88,18 @@ export function App() {
   // Un déplacement CSM ouvre la vue globale, qui détaille tous les déplacements.
   const openTrip = useCallback((_trip: Trip) => openExternal({ scope: 'global', tab: 'dashboard' }), [openExternal]);
 
+  /** Clic sur une personne de l'encadrement : ouvre l'espace où elle travaille. */
+  const openPerson = useCallback(
+    (personId: string) => {
+      const person = personById(personId);
+      if (!person) return;
+      const room = rooms.find((r) => r.location === person.site && r.kind === person.roomKind);
+      if (room) selectRoom(room.id);
+      setFocusPersonId(personId);
+    },
+    [selectRoom],
+  );
+
   const openTech = useCallback(
     (clientId: string, techId: string) => openExternal({ scope: clientId as ExternalClientId, tab: 'techs', techId }),
     [openExternal],
@@ -85,10 +108,11 @@ export function App() {
   /** Sélectionne un pôle client du plateau Helpdesk (null = plateau entier). */
   const selectPole = useCallback(
     (clientId: string | null) => {
-      selectRoom('helpdesk');
+      const site = (clientId && poleByClient(clientId)?.site) || (selected ? roomById(selected).location : 'laciotat');
+      selectRoom(plateauOf(site === 'montpellier' || site === 'paris' ? site : 'laciotat').id);
       setSelectedPole(clientId);
     },
-    [selectRoom],
+    [selectRoom, selected],
   );
 
   const showOverview = useCallback(() => {
@@ -135,9 +159,26 @@ export function App() {
       exploitation: `${serviceSummary(Object.values(views), 'Exploitation', ext.state.now).open.length} escalade(s) en cours`,
       csm: `${serviceSummary(Object.values(views), 'CSM', ext.state.now).open.length} escalade(s) contractuelle(s)`,
       ...Object.fromEntries(
-        Object.values(views).map((v) => {
+        Object.values(views).flatMap((v) => {
           const sla = slaRate(v.tickets, periods(ext.state.now).week).rate;
-          return [`ext-${v.client.id}`, `${v.tickets.filter(isOpen).length} ouverts · SLA ${sla ?? '—'} % · ${v.health}`];
+          const text = `${v.tickets.filter(isOpen).length} ouverts · SLA ${sla ?? '—'} % · ${v.health}`;
+          return [[`ext-${v.client.id}`, text], [`carte-ext-${v.client.id}`, text]];
+        }),
+      ),
+      // Badges par site : plateaux Helpdesk, pause et bâtiments de la carte.
+      ...Object.fromEntries(
+        internalSites.flatMap((s) => {
+          const poles = new Set(polesOf(s.id).map((p) => p.clientId));
+          const waiting = state.queues.filter((q) => poles.has(q.clientId)).reduce((n, q) => n + q.waiting, 0);
+          const agents = state.agents.filter((a) => a.site === s.id);
+          const onBreak = agents.filter((a) => a.status === 'Pause' || a.status === 'Repas').length;
+          const plateau = plateauOf(s.id).id;
+          const pause = rooms.find((r) => r.location === s.id && r.kind === 'pause')!.id;
+          return [
+            [plateau, `${waiting} en attente · ${agents.filter((a) => a.status !== 'Hors ligne').length} agents connectés`],
+            [pause, `${onBreak} en pause / repas`],
+            [`site-${s.id}`, `${agents.length} agents Helpdesk · ${rooms.filter((r) => r.location === s.id).length} espaces`],
+          ];
         }),
       ),
     };
@@ -184,6 +225,7 @@ export function App() {
         const mine = exp.open.filter((r) => r.ownerId === m.id);
         return {
           id: m.id,
+          site: m.site,
           name: individual('exploitation') ? m.name : 'Exploitation',
           state: !m.present ? 'absent' : mine.length ? 'occupé' : 'disponible',
           tooltip: mine.length ? `Escalade ${mine[0].clientName} · ${mine[0].ticket.id}` : m.onCall ? 'Disponible · astreinte' : 'Disponible',
@@ -196,6 +238,7 @@ export function App() {
         const away = activeTripOf(ext.state.trips, m.id, ext.state.now);
         return {
           id: m.id,
+          site: m.site,
           name: individual('csm') ? m.name : 'CSM',
           state: away ? 'absent' : mine.length ? 'occupé' : 'disponible',
           tooltip: mine.length ? `${mine.length} escalade(s) ${client.name} en cours` : `Compte ${client.name}`,
@@ -302,6 +345,7 @@ export function App() {
           csmTrips={csmTrips}
           tripsIndividual={can(role, 'csm', 'individual')}
           onTripClick={openTrip}
+          onPersonClick={openPerson}
           mode3d={mode3d}
           floor={floor}
           selected={selected}
@@ -331,6 +375,7 @@ export function App() {
           onClose={() => setPanelOpen(false)}
           views={Object.values(views)}
           trips={ext.state.trips}
+          focusPersonId={focusPersonId}
           now={ext.state.now}
           onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })}
           onOpenClient={(clientId) => openExternal({ scope: clientId, tab: 'dashboard' })}

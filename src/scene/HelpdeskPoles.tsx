@@ -1,6 +1,7 @@
 import { Html } from '@react-three/drei';
 import type { Agent } from '../types';
-import { helpdeskPoles, poleDesks, type HelpdeskPole } from '../data/layout';
+import { polesOf, poleDesks, type HelpdeskPole } from '../data/layout';
+import type { SiteId } from '../types';
 import { OFF_FLOOR_STATUSES } from '../services/simulation';
 import { Avatar } from './Avatar';
 import { Chair, Desk } from './furniture';
@@ -96,16 +97,18 @@ function PoleOutline({ w, d, color }: { w: number; d: number; color: string }) {
   );
 }
 
-export function HelpdeskPoles({ agents, animate, onAgentClick, selectedPole, hoveredPole, poleBadges, onSelectPole, onHoverPole }: PoleProps & {
+export function HelpdeskPoles({ agents, site, animate, onAgentClick, selectedPole, hoveredPole, poleBadges, onSelectPole, onHoverPole }: PoleProps & {
+  site: SiteId;
   agents: Agent[];
   animate: boolean;
   onAgentClick?: (agent: Agent) => void;
 }) {
-  const back = helpdeskPoles.filter((p) => p.z < 0);
-  const front = helpdeskPoles.filter((p) => p.z > 0);
+  const poles = polesOf(site);
+  // Rangées de pôles (fond, milieu, avant) : cloisons entre rangées et entre pôles voisins.
+  const rows = [poles.filter((p) => p.z < 0), poles.filter((p) => p.z === 0), poles.filter((p) => p.z > 0)].filter((r) => r.length);
   return (
     <>
-      {helpdeskPoles.map((pole) => (
+      {poles.map((pole) => (
         <Pole
           key={pole.clientId}
           pole={pole}
@@ -119,9 +122,8 @@ export function HelpdeskPoles({ agents, animate, onAgentClick, selectedPole, hov
           onHover={(h) => onHoverPole(pole.clientId, h)}
         />
       ))}
-      {/* Cloisons : entre les rangées, puis entre les pôles d'une même rangée. */}
-      <Partition position={[0, 0, 0]} length={6.7} alongX />
-      {[back, front].flatMap((row) =>
+      {rows.length > 1 && <Partition position={[0, 0, 0]} length={6.7} alongX />}
+      {rows.flatMap((row) =>
         row.slice(1).map((pole) => (
           <Partition key={pole.clientId} position={[pole.x - pole.width / 2, 0, pole.z]} length={pole.depth - 0.3} alongX={false} />
         )),

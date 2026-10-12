@@ -155,7 +155,7 @@ export function ExternalSite({ site, animate, onTeamClick, onTechClick }: Props)
               const tech = shown[i];
               const agent: Agent | null =
                 tech && tech.state !== 'congé'
-                  ? { id: tech.id, name: tech.name, clientId: site.clientId, status: tech.state === 'occupé' ? 'En appel' : 'Disponible', statusSinceSec: 0, desk: i }
+                  ? { id: tech.id, name: tech.name, clientId: site.clientId, site: 'laciotat', status: tech.state === 'occupé' ? 'En appel' : 'Disponible', statusSinceSec: 0, desk: i }
                   : null;
               return (
                 <group key={i}>
