@@ -5,6 +5,8 @@ import { ANSWER_DEFINITION, aggregate, clientSla, compare, filterRows, lastMonth
 import { SlaStateBadge as StateBadge } from '../SlaStateBadge';
 import { clientRecord, clientRegistry, POLE_GROUP_LABEL, type PoleGroup } from '../../config/itsm';
 import { monthLabel } from '../../finance/budget';
+import { internalSites } from '../../data/sites';
+import type { SiteId } from '../../types';
 
 interface Props {
   rows: QlikRow[];
@@ -25,18 +27,19 @@ export function TelephonyCockpit({ rows, now, objectives, demoObjectives, onOpen
   const [pole, setPole] = useState<PoleGroup | ''>('');
   const [client, setClient] = useState('');
   const [queue, setQueue] = useState('');
+  const [site, setSite] = useState<SiteId | ''>('');
   const [period, setPeriod] = useState<PeriodChoice>('dernier');
   const periodMonths = period === 'mois' ? months.slice(-1) : period === 'dernier' ? months.slice(-2, -1) : period === '3m' ? months.slice(-4, -1) : months;
-  const f: QlikFilters = { pole, client, queue, months: periodMonths };
-  const filtered = useMemo(() => filterRows(rows, f), [rows, pole, client, queue, period]); // eslint-disable-line react-hooks/exhaustive-deps
+  const f: QlikFilters = { pole, client, queue, site, months: periodMonths };
+  const filtered = useMemo(() => filterRows(rows, f), [rows, pole, client, queue, site, period]); // eslint-disable-line react-hooks/exhaustive-deps
   const global = aggregate(filtered);
   const telClients = clientRegistry.filter((c) => clientRecord(c.id)?.pole && (!pole || clientRecord(c.id)?.pole === pole));
-  const perClient = telClients.map((c) => ({ c, s: clientSla(rows, c.id, periodMonths), obj: objectives[c.id] ?? null }));
+  const perClient = telClients.map((c) => ({ c, s: clientSla(rows, c.id, periodMonths, site), obj: objectives[c.id] ?? null }));
   const history = months.map((m) => ({ m, agg: aggregate(filterRows(rows, { ...f, months: [m] })) }));
   const lastClosed = months[months.length - 2];
   // Évaluation du dernier mois clos : clients évaluables (objectif renseigné et SLA calculable) séparés des autres.
   const evaluation = telClients.map((c) => {
-    const rate = clientSla(rows, c.id, [lastClosed]).agg.rate;
+    const rate = clientSla(rows, c.id, [lastClosed], site).agg.rate;
     return { c, cmp: compare(rate, objectives[c.id]), state: slaState(rate, objectives[c.id]) };
   });
   const alerts = evaluation.filter((a) => a.state === 'non conforme');
@@ -86,9 +89,17 @@ export function TelephonyCockpit({ rows, now, objectives, demoObjectives, onOpen
             </option>
           ))}
         </select>
+        <select aria-label="Site" value={site} onChange={(e) => (setSite(e.target.value as SiteId | ''), setQueue(''))}>
+          <option value="">Tous les sites (consolidé)</option>
+          {internalSites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
         <select aria-label="File d’attente" value={queue} onChange={(e) => setQueue(e.target.value)}>
           <option value="">Toutes les files</option>
-          {QLIK_QUEUES.filter((q) => !pole || poleOfQueue(q) === pole).map((q) => (
+          {QLIK_QUEUES.filter((q) => (!pole || poleOfQueue(q) === pole) && (!site || q.site === site)).map((q) => (
             <option key={q.id} value={q.id}>
               {q.name}
             </option>
@@ -102,9 +113,10 @@ export function TelephonyCockpit({ rows, now, objectives, demoObjectives, onOpen
         </select>
       </div>
 
+      {site && !QLIK_QUEUES.some((q) => q.site === site) && <p className="hint">Aucune file téléphonique n’est affectée à {internalSites.find((x) => x.id === site)?.name} pour le moment (le Pôle Multi est commun aux trois sites ; aucune donnée n’est inventée).</p>}
       <div className="xc-kpis">
         <div className="xc-kpi" aria-label="SLA décroché global">
-          <small>SLA décroché global (périmètre filtré)</small>
+          <small>SLA décroché {site ? internalSites.find((x) => x.id === site)?.name : 'consolidé'} (périmètre filtré)</small>
           <strong>{global.rate === null ? 'Indisponible' : pct(global.rate)}</strong>
           <em>{global.unavailable ?? `${global.answeredInTarget.toLocaleString('fr-FR')} décrochés dans le délai / ${global.offered.toLocaleString('fr-FR')} présentés`}</em>
         </div>

@@ -28,11 +28,14 @@ export interface ChecklistFilters {
   manager: string;
   /** Semaine (AAAA-MM-JJ du lundi) pour les CRA ; '' = toutes. */
   week: string;
+  /** Site d'affectation ('' = tous les sites). Le pôle d'appartenance reste distinct (équipe). */
+  site?: string;
 }
 
-export const NO_FILTERS: ChecklistFilters = { team: '', manager: '', week: '' };
+export const NO_FILTERS: ChecklistFilters = { team: '', manager: '', week: '', site: '' };
 
-const inScope = (c: Collaborator | undefined, f: ChecklistFilters, scope: Set<string> | null) => !!c && (!scope || scope.has(c.id)) && (!f.team || c.teamId === f.team) && (!f.manager || c.managerId === f.manager);
+const inScope = (c: Collaborator | undefined, f: ChecklistFilters, scope: Set<string> | null) =>
+  !!c && (!scope || scope.has(c.id)) && (!f.team || c.teamId === f.team) && (!f.manager || c.managerId === f.manager) && (!f.site || c.site === f.site);
 
 export interface CraItem {
   key: string;

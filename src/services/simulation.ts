@@ -1,5 +1,6 @@
-import type { Agent, AgentStatus, DemoState, Metrics, Queue, TicketSummary } from '../types';
+import type { Agent, AgentStatus, DemoState, Metrics, Queue, SiteId, TicketSummary } from '../types';
 import type { Rng } from './random';
+import { helpdeskPoles } from '../data/layout';
 
 export const BREAK_STATUSES: AgentStatus[] = ['Pause', 'Repas'];
 export const OFF_FLOOR_STATUSES: AgentStatus[] = [...BREAK_STATUSES, 'Formation', 'Hors ligne'];
@@ -102,12 +103,19 @@ export interface ClientSummary {
   agentsConnected: number;
   onBreak: number;
   openTickets: number;
+  /** Nombre de files et d'agents rattachés (0 = aucune affectation sur ce site). */
+  queues: number;
+  agents: number;
 }
 
-/** Indicateurs d'un pôle client (SLA pondéré par le volume traité). */
-export function clientSummary(state: DemoState, clientId: string): ClientSummary {
-  const queues = state.queues.filter((q) => q.clientId === clientId);
-  const agents = state.agents.filter((a) => a.clientId === clientId);
+/**
+ * Indicateurs d'un pôle (SLA pondéré par le volume traité). Sans site : vue consolidée
+ * (le Pôle Multi additionne ses sites une seule fois) ; avec un site : données de ce site.
+ */
+export function clientSummary(state: DemoState, clientId: string, site?: SiteId): ClientSummary {
+  const queues = state.queues.filter((q) => q.clientId === clientId && (!site || q.site === site));
+  const agents = state.agents.filter((a) => a.clientId === clientId && (!site || a.site === site));
+  const agentIds = new Set(agents.map((a) => a.id));
   const handled = queues.reduce((s, q) => s + q.handledToday, 0);
   const weighted = (key: 'sla' | 'slaTarget') =>
     handled === 0 ? 0 : Math.round((queues.reduce((s, q) => s + q[key] * q.handledToday, 0) / handled) * 10) / 10;
@@ -117,6 +125,8 @@ export function clientSummary(state: DemoState, clientId: string): ClientSummary
     slaTarget: weighted('slaTarget'),
     agentsConnected: agents.filter((a) => a.status !== 'Hors ligne').length,
     onBreak: agents.filter((a) => BREAK_STATUSES.includes(a.status)).length,
-    openTickets: state.tickets.filter((t) => t.clientId === clientId && t.status !== 'Résolu').length,
+    openTickets: state.tickets.filter((t) => t.clientId === clientId && t.status !== 'Résolu' && (!site || (helpdeskPoles.filter((p) => p.clientId === clientId).length > 1 ? t.assigneeId !== null && agentIds.has(t.assigneeId) : helpdeskPoles.some((p) => p.clientId === clientId && p.site === site)))).length,
+    queues: queues.length,
+    agents: agents.length,
   };
 }

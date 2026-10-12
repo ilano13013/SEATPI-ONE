@@ -45,7 +45,7 @@ export interface ClientRecord {
   allocationToConfirm: boolean;
 }
 
-const MULTI = 'Pôle Multi — La Ciotat et Montpellier';
+const MULTI = 'Pôle Multi — commun à La Ciotat, Montpellier et Paris';
 const DEDIE = (n: string) => `Pôle Dédié — équipe ${n} (La Ciotat)`;
 
 export const clientRegistry: ClientRecord[] = [
@@ -123,7 +123,8 @@ const MULTI_CLIENTS = ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr',
 /**
  * Clients traités par chaque pôle du plateau (clé = identifiant du pôle).
  * Pôle Dédié : une équipe par client (THELEM, IRD, ORTEC, SODIAAL, PRIMAGAZ) à La Ciotat.
- * Pôle Multi : La Ciotat (`multi`) et Montpellier (`multi-mtp`), avec les mêmes clients.
+ * Pôle Multi : un seul pôle (`multi`), commun à La Ciotat, Montpellier et Paris ; le site
+ * d'affectation est porté par chaque collaborateur et chaque file, jamais par le pôle.
  */
 export const POLE_CLIENTS: Record<string, string[]> = {
   thelem: ['thelem'],
@@ -132,11 +133,10 @@ export const POLE_CLIENTS: Record<string, string[]> = {
   sodiaal: ['sodiaal'],
   primagaz: ['primagaz'],
   multi: MULTI_CLIENTS,
-  'multi-mtp': MULTI_CLIENTS,
 };
 
 /** Zones de pôle (identifiants) de chaque pôle du plateau. */
-export const POLE_ZONES: Record<PoleGroup, string[]> = { dedie: ['thelem', 'ird', 'ortec', 'primagaz', 'sodiaal'], multi: ['multi', 'multi-mtp'] };
+export const POLE_ZONES: Record<PoleGroup, string[]> = { dedie: ['thelem', 'ird', 'ortec', 'primagaz', 'sodiaal'], multi: ['multi'] };
 export const poleGroupOfZone = (zone: string): PoleGroup | null => (Object.keys(POLE_ZONES) as PoleGroup[]).find((g) => POLE_ZONES[g].includes(zone)) ?? null;
 
 /** Clients distincts traités en N1 sur les plateaux, avec les pôles qui les prennent en charge. */

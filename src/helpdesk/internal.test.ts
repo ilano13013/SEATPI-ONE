@@ -36,7 +36,7 @@ describe('tickets multi-ITSM des plateaux internes', () => {
       }
     }
     // Pôle Multi (La Ciotat + Montpellier) : tous ses clients sont traités par les agents des deux équipes.
-    const multi = new Set(agents.filter((a) => a.clientId === 'multi' || a.clientId === 'multi-mtp').map((a) => a.id));
+    const multi = new Set(agents.filter((a) => a.clientId === 'multi').map((a) => a.id));
     const multiTickets = ['dmb', 'transgourmet', 'snr', 'nocibe', 'teract', 'invivo', 'eurapharma'].flatMap((id) => state.tickets[id]);
     expect(multiTickets.filter((t) => t.assigneeId).every((t) => multi.has(t.assigneeId!))).toBe(true);
     expect(new Set(multiTickets.map((t) => agents.find((a) => a.id === t.assigneeId)?.site).filter(Boolean))).toEqual(new Set(['laciotat', 'montpellier']));

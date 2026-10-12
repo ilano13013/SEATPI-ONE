@@ -68,3 +68,18 @@ describe('états SLA et données manquantes', () => {
     expect(a.unavailable).toMatch(/Ortec · Support N2/);
   });
 });
+
+describe('Pôle Multi commun aux trois sites', () => {
+  const rows = demoExtraction(new Date(2026, 9, 12).getTime());
+  const months = lastMonths(new Date(2026, 9, 12).getTime()).slice(-4, -1);
+  it('vue consolidée = somme des sites, sans double comptage', () => {
+    const all = aggregate(filterRows(rows, { pole: 'multi', client: '', queue: '', months }));
+    const bySite = (['laciotat', 'montpellier', 'paris'] as const).map((site) => aggregate(filterRows(rows, { pole: 'multi', site, client: '', queue: '', months })));
+    expect(bySite.reduce((n, a) => n + a.offered, 0)).toBe(all.offered);
+    expect(bySite.reduce((n, a) => n + a.answeredInTarget, 0)).toBe(all.answeredInTarget);
+  });
+  it('un seul Pôle Multi ; Paris sans file inventée', () => {
+    expect(new Set(QLIK_QUEUES.filter((q) => q.zone.startsWith('multi')).map((q) => q.zone))).toEqual(new Set(['multi']));
+    expect(filterRows(rows, { pole: '', site: 'paris', client: '', queue: '', months })).toHaveLength(0);
+  });
+});

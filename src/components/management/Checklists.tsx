@@ -7,6 +7,7 @@ import type { ManagementStore } from '../../management/useManagement';
 import { craChecklist, FOLLOW_STATUSES, leaveChecklist, NO_FILTERS, type ChecklistFilters, type FollowStatus } from '../../management/checklists';
 import { personById } from '../../org/people';
 import { orgPeople } from '../../org/people';
+import { internalSites } from '../../data/sites';
 
 interface Common {
   store: ManagementStore;
@@ -46,6 +47,14 @@ function Filters({ store, scope, value, onChange, withWeek }: { store: Managemen
         {teams.map(([id, label]) => (
           <option key={id} value={id}>
             {label}
+          </option>
+        ))}
+      </select>
+      <select aria-label="Site" value={value.site ?? ''} onChange={(e) => onChange({ ...value, site: e.target.value })}>
+        <option value="">Tous les sites</option>
+        {internalSites.map((x) => (
+          <option key={x.id} value={x.id}>
+            {x.name}
           </option>
         ))}
       </select>

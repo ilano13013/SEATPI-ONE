@@ -1,7 +1,8 @@
 // Données 100 % fictives. Aucun nom, matricule ou identifiant réel de salarié.
 import type { Agent, AgentStatus, DemoState, Queue, SiteId } from '../types';
 
-// Chaque client correspond à un pôle du plateau Helpdesk.
+// Chaque entrée correspond à un pôle du plateau Helpdesk. Le Pôle Multi (« multi ») est un seul
+// pôle commun à La Ciotat, Montpellier et Paris : le site est porté par chaque agent et chaque file.
 const clients = [
   { id: 'thelem', name: 'Thelem' },
   { id: 'ird', name: 'IRD' },
@@ -9,23 +10,21 @@ const clients = [
   { id: 'multi', name: 'Multi' },
   { id: 'sodiaal', name: 'Sodiaal' },
   { id: 'primagaz', name: 'PRIMAGAZ' },
-  // Seconde équipe du Pôle Multi, à Montpellier.
-  { id: 'multi-mtp', name: 'Multi (Montpellier)' },
 ];
 
 const queues: Queue[] = [
-  { id: 'q-thelem-n1', clientId: 'thelem', name: 'Helpdesk N1', waiting: 3, longestWaitSec: 142, handledToday: 186, abandonedToday: 7, sla: 92, slaTarget: 95 },
-  { id: 'q-thelem-n2', clientId: 'thelem', name: 'Helpdesk N2', waiting: 1, longestWaitSec: 48, handledToday: 64, abandonedToday: 2, sla: 95, slaTarget: 95 },
-  { id: 'q-ird-n1', clientId: 'ird', name: 'Support N1', waiting: 1, longestWaitSec: 35, handledToday: 121, abandonedToday: 3, sla: 96, slaTarget: 95 },
-  { id: 'q-ortec-n1', clientId: 'ortec', name: 'Support N1', waiting: 2, longestWaitSec: 210, handledToday: 98, abandonedToday: 6, sla: 89, slaTarget: 92 },
-  { id: 'q-ortec-n2', clientId: 'ortec', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },
-  { id: 'q-multi-hl', clientId: 'multi', name: 'Hotline multi-clients', waiting: 1, longestWaitSec: 67, handledToday: 54, abandonedToday: 2, sla: 94, slaTarget: 95 },
-  { id: 'q-sodiaal-n1', clientId: 'sodiaal', name: 'Support utilisateurs', waiting: 0, longestWaitSec: 0, handledToday: 77, abandonedToday: 1, sla: 98, slaTarget: 90 },
-  { id: 'q-primagaz-n1', clientId: 'primagaz', name: 'Helpdesk N1', waiting: 1, longestWaitSec: 58, handledToday: 64, abandonedToday: 2, sla: 93, slaTarget: 95 },
-  { id: 'q-multi-mtp-hl', clientId: 'multi-mtp', name: 'Hotline multi-clients', waiting: 2, longestWaitSec: 95, handledToday: 88, abandonedToday: 3, sla: 93, slaTarget: 95 },
+  { id: 'q-thelem-n1', clientId: 'thelem', site: 'laciotat', name: 'Helpdesk N1', waiting: 3, longestWaitSec: 142, handledToday: 186, abandonedToday: 7, sla: 92, slaTarget: 95 },
+  { id: 'q-thelem-n2', clientId: 'thelem', site: 'laciotat', name: 'Helpdesk N2', waiting: 1, longestWaitSec: 48, handledToday: 64, abandonedToday: 2, sla: 95, slaTarget: 95 },
+  { id: 'q-ird-n1', clientId: 'ird', site: 'laciotat', name: 'Support N1', waiting: 1, longestWaitSec: 35, handledToday: 121, abandonedToday: 3, sla: 96, slaTarget: 95 },
+  { id: 'q-ortec-n1', clientId: 'ortec', site: 'laciotat', name: 'Support N1', waiting: 2, longestWaitSec: 210, handledToday: 98, abandonedToday: 6, sla: 89, slaTarget: 92 },
+  { id: 'q-ortec-n2', clientId: 'ortec', site: 'laciotat', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },
+  { id: 'q-multi-hl', clientId: 'multi', site: 'laciotat', name: 'Hotline multi-clients', waiting: 1, longestWaitSec: 67, handledToday: 54, abandonedToday: 2, sla: 94, slaTarget: 95 },
+  { id: 'q-sodiaal-n1', clientId: 'sodiaal', site: 'laciotat', name: 'Support utilisateurs', waiting: 0, longestWaitSec: 0, handledToday: 77, abandonedToday: 1, sla: 98, slaTarget: 90 },
+  { id: 'q-primagaz-n1', clientId: 'primagaz', site: 'laciotat', name: 'Helpdesk N1', waiting: 1, longestWaitSec: 58, handledToday: 64, abandonedToday: 2, sla: 93, slaTarget: 95 },
+  { id: 'q-multi-mtp-hl', clientId: 'multi', site: 'montpellier', name: 'Hotline multi-clients', waiting: 2, longestWaitSec: 95, handledToday: 88, abandonedToday: 3, sla: 93, slaTarget: 95 },
 ];
 
-const agentSeed: [string, string, AgentStatus, number][] = [
+const agentSeed: [string, string, AgentStatus, number, SiteId?][] = [
   ['Agent A01', 'thelem', 'En appel', 372],
   ['Agent A02', 'thelem', 'Disponible', 64],
   ['Agent A03', 'thelem', 'Post-appel', 41],
@@ -46,25 +45,24 @@ const agentSeed: [string, string, AgentStatus, number][] = [
   ['Agent E02', 'sodiaal', 'Disponible', 230],
   ['Agent E03', 'sodiaal', 'Post-appel', 20],
   ['Agent E04', 'sodiaal', 'En appel', 140],
-  ['Agent F01', 'multi-mtp', 'En appel', 210],
-  ['Agent F02', 'multi-mtp', 'Disponible', 35],
-  ['Agent F03', 'multi-mtp', 'Pause', 260],
-  ['Agent F04', 'multi-mtp', 'En appel', 95],
-  ['Agent F05', 'multi-mtp', 'Post-appel', 25],
-  ['Agent F06', 'multi-mtp', 'Disponible', 140],
+  ['Agent F01', 'multi', 'En appel', 210, 'montpellier'],
+  ['Agent F02', 'multi', 'Disponible', 35, 'montpellier'],
+  ['Agent F03', 'multi', 'Pause', 260, 'montpellier'],
+  ['Agent F04', 'multi', 'En appel', 95, 'montpellier'],
+  ['Agent F05', 'multi', 'Post-appel', 25, 'montpellier'],
+  ['Agent F06', 'multi', 'Disponible', 140, 'montpellier'],
   // Équipe PRIMAGAZ du Pôle Dédié (ajoutée en fin de liste : identifiants existants inchangés).
   ['Agent H01', 'primagaz', 'En appel', 120],
   ['Agent H02', 'primagaz', 'Disponible', 30],
 ];
 
-const POLE_SITE: Record<string, SiteId> = { 'multi-mtp': 'montpellier' };
-
 const desksUsed = new Map<string, number>();
-const agents: Agent[] = agentSeed.map(([name, clientId, status, statusSinceSec], i) => {
-  // Poste attribué dans l'ordre au sein du pôle.
-  const desk = desksUsed.get(clientId) ?? 0;
-  desksUsed.set(clientId, desk + 1);
-  return { id: `ag-${String(i + 1).padStart(2, '0')}`, name, clientId, site: POLE_SITE[clientId] ?? 'laciotat', status, statusSinceSec, desk };
+const agents: Agent[] = agentSeed.map(([name, clientId, status, statusSinceSec, site = 'laciotat'], i) => {
+  // Poste attribué dans l'ordre au sein du pôle, sur le plateau du site d'affectation.
+  const key = `${clientId}@${site}`;
+  const desk = desksUsed.get(key) ?? 0;
+  desksUsed.set(key, desk + 1);
+  return { id: `ag-${String(i + 1).padStart(2, '0')}`, name, clientId, site, status, statusSinceSec, desk };
 });
 
 export function createInitialState(now = Date.now()): DemoState {

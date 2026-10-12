@@ -113,7 +113,10 @@ export interface Client {
 
 export interface Queue {
   id: string;
+  /** Pôle (zone) du plateau : équipe dédiée ou Pôle Multi. */
   clientId: string;
+  /** Site d'affectation de la file (le Pôle Multi est commun aux trois sites). */
+  site: SiteId;
   name: string;
   waiting: number;
   longestWaitSec: number;
@@ -128,9 +131,9 @@ export interface Agent {
   id: string;
   /** Pseudonyme fictif, jamais un nom réel. */
   name: string;
-  /** Pôle client du plateau Helpdesk. */
+  /** Pôle d'appartenance sur le plateau Helpdesk (équipe dédiée ou « multi » pour le Pôle Multi). */
   clientId: string;
-  /** Site de rattachement (répartition de démonstration). */
+  /** Site d'affectation, distinct du pôle (répartition de démonstration). */
   site: SiteId;
   status: AgentStatus;
   statusSinceSec: number;

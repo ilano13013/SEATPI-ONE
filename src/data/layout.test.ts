@@ -28,7 +28,7 @@ describe('plan du bâtiment', () => {
   it('dispose d’un poste distinct par agent dans son pôle', () => {
     const { agents } = createInitialState(0);
     for (const pole of helpdeskPoles) {
-      const members = agents.filter((a) => a.clientId === pole.clientId);
+      const members = agents.filter((a) => a.clientId === pole.clientId && a.site === pole.site);
       expect(members.length, pole.label).toBeLessThanOrEqual(poleDesks(pole).length);
       expect(new Set(members.map((a) => a.desk)).size).toBe(members.length);
     }
@@ -42,14 +42,20 @@ describe('pôles des plateaux Helpdesk', () => {
     expect(polesOf('laciotat').map((p) => p.label)).toEqual(['Dédié · Thelem', 'Dédié · IRD', 'Dédié · Ortec', 'Dédié · PRIMAGAZ', 'Pôle Multi', 'Dédié · Sodiaal']);
     // Deux pôles distincts : Pôle Dédié (une équipe par client) et Pôle Multi.
     expect(helpdeskPoles.filter((p) => p.group === 'dedie').map((p) => p.clientId)).toEqual(POLE_ZONES.dedie.filter((z) => z !== 'sodiaal').concat('sodiaal'));
-    expect(helpdeskPoles.filter((p) => p.group === 'multi').map((p) => p.clientId)).toEqual(['multi', 'multi-mtp']);
-    // Le Pôle Multi est présent à La Ciotat et à Montpellier ; aucun pôle client à Paris.
-    expect(polesOf('montpellier').map((p) => p.clientId)).toEqual(['multi-mtp']);
-    expect(polesOf('paris')).toEqual([]);
+    // Un seul Pôle Multi, implanté sur les trois sites (même identifiant, même libellé).
+    expect(new Set(helpdeskPoles.filter((p) => p.group === 'multi').map((p) => p.clientId))).toEqual(new Set(['multi']));
+    expect(helpdeskPoles.filter((p) => p.group === 'multi').map((p) => p.site)).toEqual(['laciotat', 'montpellier', 'paris']);
+    expect(new Set(helpdeskPoles.filter((p) => p.group === 'multi').map((p) => p.label))).toEqual(new Set(['Pôle Multi']));
+    expect(polesOf('montpellier').map((p) => p.clientId)).toEqual(['multi']);
+    expect(polesOf('paris').map((p) => p.clientId)).toEqual(['multi']);
+    // Aucun agent ni file inventé pour Paris.
+    const st = createInitialState(0);
+    expect(st.agents.filter((a) => a.site === 'paris')).toHaveLength(0);
+    expect(st.queues.filter((q) => q.site === 'paris')).toHaveLength(0);
   });
 
   it('chaque plateau est entièrement couvert par ses pôles, sans chevauchement', () => {
-    for (const site of internalSites.filter((s) => s.id !== 'paris')) {
+    for (const site of internalSites) {
       const room = plateauOf(site.id);
       const poles = polesOf(site.id);
       expect(poles.length, site.name).toBeGreaterThan(0);
@@ -71,7 +77,8 @@ describe('pôles des plateaux Helpdesk', () => {
   });
 
   it('les agents d’un pôle sont sur le site du pôle', () => {
-    for (const a of createInitialState(0).agents) expect(poleByClient(a.clientId)!.site).toBe(a.site);
+    // Pôle d'appartenance et site d'affectation sont distincts : chaque agent a une implantation de son pôle sur son site.
+    for (const a of createInitialState(0).agents) expect(poleByClient(a.clientId, a.site)!.site).toBe(a.site);
   });
 });
 

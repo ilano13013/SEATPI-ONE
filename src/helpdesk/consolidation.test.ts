@@ -60,3 +60,26 @@ describe('consolidation Helpdesk', () => {
     expect(weeklyEvolution(all, NOW)).toHaveLength(6);
   });
 });
+
+describe('Pôle Multi commun aux trois sites', () => {
+  const sites = ['laciotat', 'montpellier', 'paris'] as const;
+  it('filtre Site indépendant : chaque ticket N1 affecté relève d’un seul site', () => {
+    const bySite = sites.map((site) => applyFilters(all, { ...EMPTY_FILTERS, site }, NOW));
+    const ids = bySite.flatMap((l) => l.map((t) => t.id));
+    expect(new Set(ids).size).toBe(ids.length); // aucun ticket compté sur deux sites
+    expect(bySite[2]).toHaveLength(0); // Paris : aucun agent affecté, aucun ticket inventé
+    for (const l of bySite) expect(l.every((t) => t.scope === 'interne')).toBe(true);
+  });
+  it('consolidation sans doublon : sites + tickets sans site = vue consolidée', () => {
+    const multi = applyFilters(all, { ...EMPTY_FILTERS, pole: 'multi' }, NOW);
+    const sited = sites.reduce((n, site) => n + applyFilters(all, { ...EMPTY_FILTERS, pole: 'multi', site }, NOW).length, 0);
+    const unsited = multi.filter((t) => t.seatpiSite === null).length;
+    expect(sited + unsited).toBe(multi.length);
+    expect(applyFilters(all, { ...EMPTY_FILTERS, pole: 'multi', site: 'montpellier' }, NOW).length).toBeGreaterThan(0);
+  });
+  it('une seule équipe « Pôle Multi » chez les collaborateurs, sites d’affectation distincts', () => {
+    const multi = collabs.filter((c) => c.teamLabel === 'Pôle Multi');
+    expect(new Set(multi.map((c) => c.teamId))).toEqual(new Set(['pole-multi']));
+    expect(new Set(multi.map((c) => c.site))).toEqual(new Set(['laciotat', 'montpellier']));
+  });
+});

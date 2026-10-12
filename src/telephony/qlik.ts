@@ -15,6 +15,7 @@
 // - si les volumes nécessaires manquent, le calcul est déclaré indisponible.
 import { createRng } from '../services/random';
 import { poleGroupOfZone, POLE_CLIENTS, type PoleGroup } from '../config/itsm';
+import type { SiteId } from '../types';
 
 export const QLIK_SOURCE_SHEET = 'Qlik SLA décrocher';
 export const QLIK_OTHER_SHEET = 'CC pilot SLA mensuel';
@@ -28,6 +29,8 @@ export interface QlikQueue {
   zone: string;
   /** Client unique de la file, ou null pour une file partagée (le SLA par client est alors indisponible). */
   clientId: string | null;
+  /** Site d'affectation de la file (le Pôle Multi, commun aux trois sites, a une hotline par site doté d'une équipe). */
+  site: SiteId;
 }
 
 export interface QlikRow {
@@ -41,15 +44,16 @@ export interface QlikRow {
 
 /** Files suivies (identiques aux files du plateau). */
 export const QLIK_QUEUES: QlikQueue[] = [
-  { id: 'q-thelem-n1', name: 'Thelem · Helpdesk N1', zone: 'thelem', clientId: 'thelem' },
-  { id: 'q-thelem-n2', name: 'Thelem · Helpdesk N2', zone: 'thelem', clientId: 'thelem' },
-  { id: 'q-ird-n1', name: 'IRD · Support N1', zone: 'ird', clientId: 'ird' },
-  { id: 'q-ortec-n1', name: 'Ortec · Support N1', zone: 'ortec', clientId: 'ortec' },
-  { id: 'q-ortec-n2', name: 'Ortec · Support N2', zone: 'ortec', clientId: 'ortec' },
-  { id: 'q-primagaz-n1', name: 'PRIMAGAZ · Helpdesk N1', zone: 'primagaz', clientId: 'primagaz' },
-  { id: 'q-sodiaal-n1', name: 'Sodiaal · Support utilisateurs', zone: 'sodiaal', clientId: 'sodiaal' },
-  { id: 'q-multi-hl', name: 'Pôle Multi · Hotline multi-clients (La Ciotat)', zone: 'multi', clientId: null },
-  { id: 'q-multi-mtp-hl', name: 'Pôle Multi · Hotline multi-clients (Montpellier)', zone: 'multi-mtp', clientId: null },
+  { id: 'q-thelem-n1', name: 'Thelem · Helpdesk N1', zone: 'thelem', clientId: 'thelem', site: 'laciotat' },
+  { id: 'q-thelem-n2', name: 'Thelem · Helpdesk N2', zone: 'thelem', clientId: 'thelem', site: 'laciotat' },
+  { id: 'q-ird-n1', name: 'IRD · Support N1', zone: 'ird', clientId: 'ird', site: 'laciotat' },
+  { id: 'q-ortec-n1', name: 'Ortec · Support N1', zone: 'ortec', clientId: 'ortec', site: 'laciotat' },
+  { id: 'q-ortec-n2', name: 'Ortec · Support N2', zone: 'ortec', clientId: 'ortec', site: 'laciotat' },
+  { id: 'q-primagaz-n1', name: 'PRIMAGAZ · Helpdesk N1', zone: 'primagaz', clientId: 'primagaz', site: 'laciotat' },
+  { id: 'q-sodiaal-n1', name: 'Sodiaal · Support utilisateurs', zone: 'sodiaal', clientId: 'sodiaal', site: 'laciotat' },
+  // Un seul Pôle Multi : une hotline par site doté d'une équipe (aucune file à Paris pour le moment).
+  { id: 'q-multi-hl', name: 'Pôle Multi · Hotline multi-clients — La Ciotat', zone: 'multi', clientId: null, site: 'laciotat' },
+  { id: 'q-multi-mtp-hl', name: 'Pôle Multi · Hotline multi-clients — Montpellier', zone: 'multi', clientId: null, site: 'montpellier' },
 ];
 
 export const poleOfQueue = (q: QlikQueue): PoleGroup | null => poleGroupOfZone(q.zone);
@@ -118,6 +122,8 @@ export function aggregate(rows: QlikRow[]): Aggregate {
 
 export interface QlikFilters {
   pole: PoleGroup | '';
+  /** Site d'affectation des files ('' = tous les sites, vue consolidée). */
+  site?: SiteId | '';
   client: string;
   queue: string;
   /** Mois inclus (AAAA-MM). */
@@ -125,7 +131,7 @@ export interface QlikFilters {
 }
 
 export function filterRows(rows: QlikRow[], f: QlikFilters): QlikRow[] {
-  const queues = QLIK_QUEUES.filter((q) => (!f.pole || poleOfQueue(q) === f.pole) && (!f.queue || q.id === f.queue) && (!f.client || q.clientId === f.client || (q.clientId === null && (POLE_CLIENTS[q.zone] ?? []).includes(f.client)))).map((q) => q.id);
+  const queues = QLIK_QUEUES.filter((q) => (!f.pole || poleOfQueue(q) === f.pole) && (!f.site || q.site === f.site) && (!f.queue || q.id === f.queue) && (!f.client || q.clientId === f.client || (q.clientId === null && (POLE_CLIENTS[q.zone] ?? []).includes(f.client)))).map((q) => q.id);
   return rows.filter((r) => queues.includes(r.queueId) && (!f.months.length || f.months.includes(r.month)));
 }
 
@@ -135,11 +141,11 @@ export interface ClientSla {
 }
 
 /** SLA par client, uniquement lorsque toutes les files du client lui sont dédiées. */
-export function clientSla(rows: QlikRow[], clientId: string, months: string[]): ClientSla {
-  const shared = QLIK_QUEUES.some((q) => q.clientId === null && (POLE_CLIENTS[q.zone] ?? []).includes(clientId));
-  const own = QLIK_QUEUES.filter((q) => q.clientId === clientId).map((q) => q.id);
+export function clientSla(rows: QlikRow[], clientId: string, months: string[], site?: SiteId | ''): ClientSla {
+  const shared = QLIK_QUEUES.some((q) => q.clientId === null && (!site || q.site === site) && (POLE_CLIENTS[q.zone] ?? []).includes(clientId));
+  const own = QLIK_QUEUES.filter((q) => q.clientId === clientId && (!site || q.site === site)).map((q) => q.id);
   if (shared || !own.length)
-    return { clientId, agg: { offered: 0, answeredInTarget: 0, missing: [], rate: null, unavailable: shared ? 'File partagée multi-clients : le SLA par client n’est pas disponible dans l’extraction.' : 'Aucune file associée.' } };
+    return { clientId, agg: { offered: 0, answeredInTarget: 0, missing: [], rate: null, unavailable: shared ? 'File partagée multi-clients : le SLA par client n’est pas disponible dans l’extraction.' : site ? 'Aucune file de ce client sur ce site.' : 'Aucune file associée.' } };
   return { clientId, agg: aggregate(rows.filter((r) => own.includes(r.queueId) && months.includes(r.month))) };
 }
 

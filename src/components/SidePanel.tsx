@@ -46,15 +46,20 @@ interface Props {
 
 const isSite = (l: Room['location']): l is SiteId => l === 'laciotat' || l === 'montpellier' || l === 'paris';
 
-/** Restreint les données du plateau aux pôles hébergés sur le site. */
+/**
+ * Restreint les données du plateau au site : pôles implantés, files et agents affectés au site.
+ * Le Pôle Multi est commun aux trois sites : seules ses données rattachées au site sont gardées
+ * (tickets selon le site de l'agent assigné), sans rien inventer pour un site sans affectation.
+ */
 function siteState(state: DemoState, site: SiteId): DemoState {
   const clients = new Set(polesOf(site).map((p) => p.clientId));
+  const agentSite = new Map(state.agents.map((a) => [a.id, a.site]));
   return {
     ...state,
     clients: state.clients.filter((c) => clients.has(c.id)),
-    queues: state.queues.filter((q) => clients.has(q.clientId)),
+    queues: state.queues.filter((q) => q.site === site && clients.has(q.clientId)),
     agents: state.agents.filter((a) => a.site === site),
-    tickets: state.tickets.filter((t) => clients.has(t.clientId)),
+    tickets: state.tickets.filter((t) => clients.has(t.clientId) && (t.clientId !== 'multi' || (t.assigneeId !== null && agentSite.get(t.assigneeId) === site))),
   };
 }
 
@@ -106,9 +111,7 @@ export function SidePanel(p: Props) {
           )}
           {!generic && <ModuleLinks room={room} role={role} onOpenModule={onOpenModule} />}
           {generic && site && <DepartmentPanel room={room} site={site} role={role} onOpenModule={onOpenModule} />}
-          {room.kind === 'helpdesk' && site && polesOf(site).length === 0 && (
-            <p className="itsm-missing">Aucun pôle client affecté à ce plateau — affectation à configurer. Le Pôle Multi est réparti entre La Ciotat et Montpellier.</p>
-          )}
+          {room.kind === 'helpdesk' && site && polesOf(site).length === 0 && <p className="itsm-missing">Aucun pôle client affecté à ce plateau — affectation à configurer.</p>}
           {room.kind === 'helpdesk' && (!site || polesOf(site).length > 0) && <HelpdeskPanel {...props} selectedPole={selectedPole} onSelectPole={onSelectPole} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
           {room.kind === 'pause' && <PausePanel {...props} />}
           {room.kind === 'rh' && <RhPanel {...props} rh={p.rh} />}

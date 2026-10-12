@@ -1,7 +1,8 @@
 // Consolidation Helpdesk : tickets des plateaux internes (N1) et des sites clients
 // externes INVIVO, PRIMAGAZ, MONEXT (N2) dans un référentiel unique.
 // Fonctions pures : la vue tableau et la vue Kanban s'appuient sur le même jeu filtré.
-import type { Agent } from '../types';
+import type { Agent, SiteId } from '../types';
+import { helpdeskPoles } from '../data/layout';
 import type { ItsmTool, Priority, Technician, Ticket, TicketStatus } from '../external/types';
 import { isOpen, periods, reopenedIn, resolvedIn, createdIn, type Period } from '../external/metrics';
 import { clientRecord, type PoleGroup } from '../config/itsm';
@@ -21,6 +22,11 @@ export interface HdTicket extends Ticket {
   /** Manager responsable de l'équipe qui traite le ticket. */
   managerId: string | null;
   assigneeName: string | null;
+  /**
+   * Site rattaché : site de l'agent affecté ; à défaut, site unique du pôle (Pôle Dédié). Null pour
+   * un ticket du Pôle Multi non affecté (pôle commun aux trois sites) et pour les tickets N2.
+   */
+  seatpiSite: SiteId | null;
 }
 
 export function consolidate(internal: Ticket[], external: Ticket[], collaborators: Collaborator[], techs: Technician[]): HdTicket[] {
@@ -39,10 +45,17 @@ export function consolidate(internal: Ticket[], external: Ticket[], collaborator
       teamLabel: team ? `${team.name} · ${team.service}` : t.teamId,
       managerId: assignee?.managerId ?? teamManager,
       assigneeName: name(t.assigneeId),
+      seatpiSite: scope === 'externe' ? null : (assignee?.site ?? siteOfPole(poleOfTeam(t.teamId))),
     };
   };
   return [...internal.map((t) => tag(t, 'interne')), ...external.map((t) => tag(t, 'externe'))];
 }
+
+/** Site d'un pôle implanté sur un seul site ; null s'il est commun à plusieurs sites (Pôle Multi). */
+const siteOfPole = (pole: string): SiteId | null => {
+  const sites = [...new Set(helpdeskPoles.filter((p) => p.clientId === pole).map((p) => p.site))];
+  return sites.length === 1 ? sites[0] : null;
+};
 
 /** Pôle du plateau d'une équipe N1 interne. */
 const poleOfTeam = (teamId: string) => internalTicketClients.find((c) => `int-${c.clientId}` === teamId)?.poleIds[0] ?? '';
@@ -64,9 +77,11 @@ export interface HdFilters {
   tool: ItsmTool | '';
   /** Recherche par numéro (SEATPI ou source) ou par titre. */
   q: string;
+  /** Site d'affectation ('' = tous les sites, vue consolidée sans doublon). */
+  site: SiteId | '';
 }
 
-export const EMPTY_FILTERS: HdFilters = { pole: '', client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '', q: '' };
+export const EMPTY_FILTERS: HdFilters = { pole: '', client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '', q: '', site: '' };
 
 const matches = (t: HdTicket, q: string) => {
   const n = q.trim().toLowerCase();
@@ -89,6 +104,7 @@ export function applyFilters(list: HdTicket[], f: HdFilters, now: number): HdTic
       (!f.status || t.status === f.status) &&
       (!f.tool || t.source.tool === f.tool) &&
       matches(t, f.q ?? '') &&
+      (!f.site || t.seatpiSite === f.site) &&
       (!p || inPeriod(t, p)),
   );
 }

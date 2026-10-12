@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { Group } from 'three';
-import type { Agent, DemoState, FloorId, RoomId } from '../types';
+import type { Agent, DemoState, FloorId, RoomId, SiteId } from '../types';
 import { poleByClient, roomById, roomsOnFloor } from '../data/layout';
 import { CameraRig, type CameraFocus } from './CameraRig';
 import { RoomMesh } from './RoomMesh';
@@ -23,7 +23,7 @@ export interface SceneProps {
   /** Pôle client sélectionné sur le plateau Helpdesk. */
   selectedPole: string | null;
   poleBadges: Partial<Record<string, string>>;
-  onSelectPole: (clientId: string) => void;
+  onSelectPole: (clientId: string, site?: SiteId) => void;
   sites: Record<string, SiteSceneData>;
   services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
@@ -76,7 +76,7 @@ export default function Scene(props: SceneProps) {
     // L'étage des sites inclut le siège SEATPI et les routes des CSM : vue recentrée vers l'avant.
     if (overview || !room || room.floor !== floor)
       return { target: [slab.x, 0, slab.z], distance: Math.max(OVERVIEW_DISTANCE, Math.max(slab.w, slab.d) * 1.65), key: focusKey };
-    const pole = room.kind === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
+    const pole = room.kind === 'helpdesk' && selectedPole ? poleByClient(selectedPole, room.location === 'laciotat' || room.location === 'montpellier' || room.location === 'paris' ? room.location : null) : undefined;
     if (pole) {
       const distance = Math.max(pole.width, pole.depth) * 1.4 + 6.5;
       return { target: [room.x + pole.x, 0.3, room.z + pole.z], distance, key: focusKey };

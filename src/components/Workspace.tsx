@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { ChevronRight, Maximize2 } from 'lucide-react';
-import type { Agent, DemoState, FloorId, RoomId } from '../types';
+import type { Agent, DemoState, FloorId, RoomId, SiteId } from '../types';
 import type { SiteSceneData } from '../scene/ExternalSite';
 import type { ServicesSceneData } from '../scene/ServiceRooms';
 import type { CsmTripView } from '../scene/CsmTravel';
@@ -23,7 +23,7 @@ interface Props {
   badges: Partial<Record<RoomId, string>>;
   selectedPole: string | null;
   poleBadges: Partial<Record<string, string>>;
-  onSelectPole: (clientId: string) => void;
+  onSelectPole: (clientId: string, site?: SiteId) => void;
   sites: Record<string, SiteSceneData>;
   services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
@@ -126,10 +126,10 @@ export function Workspace(props: Props) {
                       <h4>Plateau Helpdesk — pôles clients</h4>
                       <div className="twod-grid poles">
                         {polesOf(l.id).map((p) => (
-                          <button key={p.clientId} className={poleActive(p.clientId) ? 'active' : ''} aria-pressed={poleActive(p.clientId)} onClick={() => onSelectPole(p.clientId)} style={{ borderLeftColor: p.color }}>
+                          <button key={p.id} className={poleActive(p.clientId) && plateauSite === p.site ? 'active' : ''} aria-pressed={poleActive(p.clientId) && plateauSite === p.site} onClick={() => onSelectPole(p.clientId, p.site)} style={{ borderLeftColor: p.color }}>
                             <span>
                               <b>{p.label}</b>
-                              <small>{poleBadges[p.clientId]}</small>
+                              <small>{poleBadges[p.id]}</small>
                             </span>
                             <ChevronRight size={16} />
                           </button>
@@ -169,7 +169,7 @@ export function Workspace(props: Props) {
         {plateauSite &&
           selectedRoom?.floor === floor &&
           polesOf(plateauSite).map((p) => (
-            <button className={`pole${poleActive(p.clientId) ? ' active' : ''}`} key={p.clientId} onClick={() => onSelectPole(p.clientId)}>
+            <button className={`pole${poleActive(p.clientId) ? ' active' : ''}`} key={p.id} onClick={() => onSelectPole(p.clientId, p.site)}>
               {p.label}
             </button>
           ))}

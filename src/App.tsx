@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import type { Agent, FloorId, RoomId } from './types';
+import type { Agent, FloorId, RoomId, SiteId } from './types';
 import { can, type Role } from './auth/roles';
 import { entryFloor, helpdeskPoles, plateauOf, poleByClient, polesOf, roomById, rooms } from './data/layout';
 import { internalSites } from './data/sites';
@@ -278,8 +278,11 @@ export function App() {
 
   /** Sélectionne un pôle client du plateau Helpdesk (null = plateau entier). */
   const selectPole = useCallback(
-    (clientId: string | null) => {
-      const site = (clientId && poleByClient(clientId)?.site) || (selected ? roomById(selected).location : 'laciotat');
+    (clientId: string | null, poleSite?: SiteId) => {
+      // Le Pôle Multi est implanté sur les trois sites : on reste sur le plateau courant s'il l'héberge.
+      const current = selected ? roomById(selected).location : 'laciotat';
+      const here = current === 'laciotat' || current === 'montpellier' || current === 'paris' ? current : null;
+      const site = poleSite ?? (clientId && here && polesOf(here).some((p) => p.clientId === clientId) ? here : (clientId && poleByClient(clientId)?.site) || current);
       selectRoom(plateauOf(site === 'montpellier' || site === 'paris' ? site : 'laciotat').id);
       setSelectedPole(clientId);
     },
@@ -349,8 +352,7 @@ export function App() {
       // Badges par site : plateaux Helpdesk, pause et bâtiments de la carte.
       ...Object.fromEntries(
         internalSites.flatMap((s) => {
-          const poles = new Set(polesOf(s.id).map((p) => p.clientId));
-          const waiting = state.queues.filter((q) => poles.has(q.clientId)).reduce((n, q) => n + q.waiting, 0);
+          const waiting = state.queues.filter((q) => q.site === s.id).reduce((n, q) => n + q.waiting, 0);
           const agents = state.agents.filter((a) => a.site === s.id);
           const onBreak = agents.filter((a) => a.status === 'Pause' || a.status === 'Repas').length;
           const plateau = plateauOf(s.id).id;
@@ -469,9 +471,10 @@ export function App() {
   );
 
   const poleBadges = useMemo(() => {
+    // Badge par implantation (pôle @ site) : données rattachées au site uniquement.
     const entries = helpdeskPoles.map((p) => {
-      const s = clientSummary(state, p.clientId);
-      return [p.clientId, `${s.waiting} en attente · SLA ${s.sla.toLocaleString('fr-FR')} %`] as const;
+      const s = clientSummary(state, p.clientId, p.site);
+      return [p.id, s.agents === 0 && s.queues === 0 ? 'aucune affectation sur ce site' : `${s.waiting} en attente · SLA ${s.sla.toLocaleString('fr-FR')} %`] as const;
     });
     return Object.fromEntries(entries) as Partial<Record<string, string>>;
   }, [state]);

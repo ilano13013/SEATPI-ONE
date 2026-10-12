@@ -12,7 +12,7 @@ import { dateKey } from '../../external/calendar';
 import { clientRecord, ITSM_NOT_SET, itsmOf, n1Clients, POLE_GROUP_LABEL } from '../../config/itsm';
 import { externalClients } from '../../external/config';
 import { poleByClient } from '../../data/layout';
-import { siteById } from '../../data/sites';
+import { internalSites, siteById } from '../../data/sites';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
@@ -100,16 +100,18 @@ export function HelpdeskCockpit(props: Props) {
       agents.filter((a) => {
         const group = poleByClient(a.clientId)?.group;
         if (filters.pole === 'n2') return false;
+        if (filters.site && a.site !== filters.site) return false;
         if (filters.pole && group !== filters.pole) return false;
         if (filters.client) return a.clientId === filters.client || (group === 'multi' && clientRecord(filters.client)?.pole === 'multi');
         return true;
       }),
-    [agents, filters.pole, filters.client],
+    [agents, filters.pole, filters.client, filters.site],
   );
-  const staffTechs = useMemo(() => techsN2.filter((t) => (!filters.pole || filters.pole === 'n2') && (!filters.client || t.clientId === filters.client)), [techsN2, filters.pole, filters.client]);
+  // Les techniciens N2 travaillent chez les clients : hors périmètre quand un site SEATPI est choisi.
+  const staffTechs = useMemo(() => techsN2.filter((t) => !filters.site && (!filters.pole || filters.pole === 'n2') && (!filters.client || t.clientId === filters.client)), [techsN2, filters.pole, filters.client, filters.site]);
   const staff = useMemo(() => staffing(staffAgents, staffTechs, leaveDates, today(now), busy), [staffAgents, staffTechs, leaveDates, now, busy]);
   const staffSites = [...new Set(staffAgents.map((a) => siteById(a.site).name))];
-  const staffScope = `${filters.pole ? (filters.pole === 'n2' ? 'MCO N2 (sites clients)' : `Pôle ${POLE_GROUP_LABEL[filters.pole]}`) : 'Tous les pôles'}${filters.client ? ` · ${clientRecord(filters.client)?.name ?? filters.client}` : ''} · N1 : ${staffSites.length ? staffSites.join(', ') : 'aucun site'} · N2 : ${staffTechs.length} technicien(s) chez les clients · aujourd’hui`;
+  const staffScope = `${filters.site ? `Site : ${siteById(filters.site).name} · ` : 'Tous les sites (consolidé) · '}${filters.pole ? (filters.pole === 'n2' ? 'MCO N2 (sites clients)' : `Pôle ${POLE_GROUP_LABEL[filters.pole]}`) : 'Tous les pôles'}${filters.client ? ` · ${clientRecord(filters.client)?.name ?? filters.client}` : ''} · N1 : ${staffSites.length ? staffSites.join(', ') : 'aucun site'} · N2 : ${staffTechs.length} technicien(s) chez les clients · aujourd’hui`;
   const objectives = useMemo(() => teamObjectives(tickets, targets, now), [tickets, targets, now]);
   const evolution = useMemo(() => weeklyEvolution(filtered, now), [filtered, now]);
   const opened = openId ? tickets.find((t) => t.id === openId) : undefined;
@@ -268,6 +270,14 @@ export function HelpdeskCockpit(props: Props) {
           <option value="dedie">Pôle Dédié (N1)</option>
           <option value="n2">MCO N2 — sites clients</option>
         </select>
+        <select aria-label="Site" value={filters.site} onChange={(e) => set({ site: e.target.value as HdFilters['site'] })}>
+          <option value="">Tous les sites (consolidé)</option>
+          {internalSites.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
         <select aria-label="Client" value={filters.client} onChange={(e) => set({ client: e.target.value })}>
           <option value="">Tous les clients</option>
           {SCOPE_CLIENTS.filter((c) => !filters.pole || (filters.pole === 'n2' ? externalClients.some((x) => x.id === c) : clientRecord(c)?.pole === filters.pole)).map((c) => (
@@ -406,7 +416,9 @@ export function HelpdeskCockpit(props: Props) {
             </ul>
           </details>
           <h3>Tickets</h3>
-          <p className="hint">Périmètre : tickets N1 des plateaux (3 sites) et tickets N2 des sites clients, selon les filtres actifs. La carte des sites n’affiche que les files du plateau sélectionné.</p>
+          <p className="hint">
+            Périmètre : {filters.site ? `tickets rattachés au site ${siteById(filters.site).name} (site de l’agent affecté ; Pôle Dédié : La Ciotat). Les tickets N2 et les tickets du Pôle Multi non affectés ne sont comptés que dans la vue consolidée.` : 'tickets N1 des plateaux (3 sites) et tickets N2 des sites clients, comptés une seule fois.'} La carte des sites n’affiche que les files du plateau sélectionné.
+          </p>
           <div className="xc-kpis">
             {(Object.keys(COUNTER_LABELS) as CounterKey[]).map((key) => (
               <button key={key} className={`xc-kpi ${key === 'horsSla' || key === 'critiques' || key === 'bloques' ? (k[key].length ? 'bad' : 'ok') : key === 'procheSla' || key === 'sansAffectation' ? (k[key].length ? 'warn' : 'ok') : ''}`} onClick={() => drillTo(key)}>
@@ -602,6 +614,7 @@ const PERIOD_LABEL: Record<HdFilters['period'], string> = { tout: 'Toute périod
 function activeFilterChips(f: HdFilters, o: { techName: (id: string) => string }): { key: keyof HdFilters; label: string }[] {
   const chips: { key: keyof HdFilters; label: string }[] = [];
   if (f.pole) chips.push({ key: 'pole', label: f.pole === 'n2' ? 'MCO N2 — sites clients' : `Pôle ${POLE_GROUP_LABEL[f.pole]}` });
+  if (f.site) chips.push({ key: 'site', label: `Site : ${siteById(f.site).name}` });
   if (f.client) chips.push({ key: 'client', label: `Client : ${clientRecord(f.client)?.name ?? f.client}` });
   if (f.team) chips.push({ key: 'team', label: `Équipe : ${ticketTeams.find((t) => t.id === f.team)?.name ?? f.team}` });
   if (f.manager) chips.push({ key: 'manager', label: `Manager : ${orgPeople.find((p) => p.id === f.manager)?.name ?? f.manager}` });

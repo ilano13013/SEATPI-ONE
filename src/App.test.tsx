@@ -216,12 +216,17 @@ describe('App (mode démo)', () => {
     render(<App />);
     openRoom('Plateau Helpdesk', 'Montpellier');
     expect(panel().getByText('Montpellier')).toBeTruthy();
-    // Montpellier : seconde équipe du Pôle Multi.
-    expect(panel().getAllByRole('button', { name: /^Multi \(Montpellier\) ·/ })).toHaveLength(1);
+    // Montpellier : le même Pôle Multi (une seule option), avec la file et les agents affectés à Montpellier.
+    const poleOptions = () => [...(panel().getByLabelText('Pôle client') as HTMLSelectElement).options].map((o) => o.textContent);
+    expect(poleOptions().filter((o) => /Multi/.test(o ?? ''))).toEqual(['Pôle Multi']);
+    expect(panel().getAllByRole('button', { name: /^Multi ·/ })).toHaveLength(1);
+    expect(panel().getByRole('tab', { name: 'Agents (6)' })).toBeTruthy();
     expect(panel().queryByText(/^Thelem ·/)).toBeNull();
-    // Paris : plateau sans pôle client affecté.
+    // Paris : le même Pôle Multi apparaît, sans agent ni file inventés.
     openRoom('Plateau Helpdesk', 'Paris');
-    expect(panel().getByText(/Aucun pôle client affecté/)).toBeTruthy();
+    expect(poleOptions().filter((o) => /Multi/.test(o ?? ''))).toEqual(['Pôle Multi']);
+    expect(panel().getByRole('tab', { name: 'Agents (0)' })).toBeTruthy();
+    expect(panel().getByText(/Aucun collaborateur ni file affecté à ce site/)).toBeTruthy();
     openRoom('Commercial', 'Paris');
     expect(panel().getByRole('heading', { name: 'Commercial' })).toBeTruthy();
     expect(panel().getAllByText('Paris').length).toBeGreaterThan(0);
@@ -230,6 +235,33 @@ describe('App (mode démo)', () => {
     expect(panel().queryByText(/Accès (restreint|refusé)/)).toBeNull();
     // Pas de RH ni de Stock hors de La Ciotat.
     expect(within(screen.getByRole('region', { name: 'Paris' })).queryByRole('button', { name: /Ressources humaines|Stock/ })).toBeNull();
+  });
+
+  it('Pôle Multi : une seule option dans les filtres, filtre Site indépendant', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
+    const hd = within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' }));
+    const opts = (label: string, scope = hd) => [...(scope.getByRole('combobox', { name: label }) as HTMLSelectElement).options].map((o) => o.textContent ?? '');
+    expect(opts('Pôle').filter((o) => /Multi/.test(o))).toHaveLength(1);
+    expect(opts('Site')).toEqual(['Tous les sites (consolidé)', 'La Ciotat', 'Montpellier', 'Paris']);
+    fireEvent.click(hd.getByRole('tab', { name: /Tableau/ }));
+    const count = () => Number(hd.getByRole('tab', { name: /Tableau/ }).textContent?.match(/\((\d+)\)/)?.[1]);
+    fireEvent.change(hd.getByRole('combobox', { name: 'Pôle' }), { target: { value: 'multi' } });
+    const total = count();
+    const perSite = ['laciotat', 'montpellier', 'paris'].map((site) => {
+      fireEvent.change(hd.getByRole('combobox', { name: 'Site' }), { target: { value: site } });
+      return count();
+    });
+    expect(perSite[2]).toBe(0);
+    expect(perSite[0] + perSite[1]).toBeLessThanOrEqual(total);
+    // Checklists : une seule équipe « Pôle Multi » et un filtre Site.
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management/ }));
+    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: 'Checklist CRA' }));
+    const ck = within(mg.getByRole('region', { name: 'Checklist CRA' }));
+    expect(opts('Équipe', ck).filter((o) => o === 'Pôle Multi')).toHaveLength(1);
+    expect(opts('Site', ck)).toContain('Paris');
   });
 
   it('affiche la cartographie ITSM unique et signale G2S comme non renseigné', () => {

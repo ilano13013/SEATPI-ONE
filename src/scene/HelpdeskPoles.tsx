@@ -10,7 +10,7 @@ export interface PoleProps {
   selectedPole: string | null;
   hoveredPole: string | null;
   poleBadges: Partial<Record<string, string>>;
-  onSelectPole: (clientId: string) => void;
+  onSelectPole: (clientId: string, site?: SiteId) => void;
   onHoverPole: (clientId: string, hovered: boolean) => void;
 }
 
@@ -59,7 +59,7 @@ function Pole({ pole, agents, animate, onAgentClick, selected, hovered, badge, o
       </mesh>
       {active && <PoleOutline w={w} d={d} color={selected ? '#2563eb' : '#60a5fa'} />}
       {poleDesks(pole).map(([x, z], i) => {
-        const agent = agents.find((a) => a.clientId === pole.clientId && a.desk === i);
+        const agent = agents.find((a) => a.clientId === pole.clientId && a.site === pole.site && a.desk === i);
         const present = agent && !OFF_FLOOR_STATUSES.includes(agent.status);
         return (
           <group key={i}>
@@ -110,22 +110,22 @@ export function HelpdeskPoles({ agents, site, animate, onAgentClick, selectedPol
     <>
       {poles.map((pole) => (
         <Pole
-          key={pole.clientId}
+          key={pole.id}
           pole={pole}
           agents={agents}
           animate={animate}
           onAgentClick={onAgentClick}
           selected={selectedPole === pole.clientId}
           hovered={hoveredPole === pole.clientId}
-          badge={poleBadges[pole.clientId]}
-          onSelect={() => onSelectPole(pole.clientId)}
+          badge={poleBadges[pole.id]}
+          onSelect={() => onSelectPole(pole.clientId, pole.site)}
           onHover={(h) => onHoverPole(pole.clientId, h)}
         />
       ))}
       {rows.length > 1 && <Partition position={[0, 0, 0]} length={6.7} alongX />}
       {rows.flatMap((row) =>
         row.slice(1).map((pole) => (
-          <Partition key={pole.clientId} position={[pole.x - pole.width / 2, 0, pole.z]} length={pole.depth - 0.3} alongX={false} />
+          <Partition key={pole.id} position={[pole.x - pole.width / 2, 0, pole.z]} length={pole.depth - 0.3} alongX={false} />
         )),
       )}
     </>

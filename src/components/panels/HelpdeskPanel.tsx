@@ -74,6 +74,9 @@ export function HelpdeskPanel({ state, role, selectedPole, onSelectPole, focusAg
         </select>
       </label>
       {scope && <p className="hint">Rôle Agent : périmètre limité à votre pôle ({clientName(scope)}).</p>}
+      {queues.length === 0 && agents.length === 0 && (
+        <p className="hint">Aucun collaborateur ni file affecté à ce site pour le moment. Le Pôle Multi est commun à La Ciotat, Montpellier et Paris : ses données consolidées sont dans le cockpit Helpdesk.</p>
+      )}
       {clientId && <PoleSummary state={state} clientId={clientId} />}
       <PoleItsm poleIds={clientId ? [clientId] : state.clients.map((c) => c.id)} />
 

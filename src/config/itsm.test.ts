@@ -43,11 +43,11 @@ describe('cartographie ITSM de référence', () => {
     expect(pole('thelem')).not.toBe(pole('transgourmet'));
   });
 
-  it('le Pôle Multi (La Ciotat et Montpellier) traite les 11 clients fournis', () => {
+  it('le Pôle Multi (un seul pôle, commun aux trois sites) traite les 11 clients fournis', () => {
     const expected = ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr', 'dmb', 'nocibe', 'teract', 'g2s', 'eurapharma'];
     expect(POLE_CLIENTS.multi).toEqual(expected);
-    expect(POLE_CLIENTS['multi-mtp']).toEqual(expected);
-    expect(n1Clients.find((c) => c.clientId === 'invivo')!.poleIds).toEqual(['multi', 'multi-mtp']);
+    expect(Object.keys(POLE_CLIENTS).filter((k) => k.startsWith('multi'))).toEqual(['multi']);
+    expect(n1Clients.find((c) => c.clientId === 'invivo')!.poleIds).toEqual(['multi']);
   });
 
   it('un client n’apparaît qu’une fois dans la cartographie', () => {

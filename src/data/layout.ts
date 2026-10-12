@@ -99,7 +99,9 @@ export function roomsOnFloor(floor: FloorId): Room[] {
  * (6,9 × 7,2) : trois pôles au fond, deux pôles devant.
  */
 export interface HelpdeskPole {
-  /** Identifiant de la zone de pôle (équipe dédiée ou équipe du Pôle Multi). */
+  /** Identifiant unique de l'implantation (pôle @ site). */
+  id: string;
+  /** Pôle d'appartenance : équipe dédiée ou « multi » (un seul Pôle Multi, commun aux trois sites). */
   clientId: string;
   /** Pôle du plateau : Pôle Dédié (une équipe par client) ou Pôle Multi. */
   group: PoleGroup;
@@ -121,7 +123,7 @@ const ROW_DEPTH = 3.6;
 const BACK_W = 6.9 / 4;
 const FRONT_W = 6.9 / 2;
 
-export const helpdeskPoles: HelpdeskPole[] = [
+export const helpdeskPoles: HelpdeskPole[] = ([
   // Rangée du fond : équipes du Pôle Dédié.
   { clientId: 'thelem', group: 'dedie', site: 'laciotat', label: 'Dédié · Thelem', x: -1.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.42, 0.42] },
   { clientId: 'ird', group: 'dedie', site: 'laciotat', label: 'Dédié · IRD', x: -0.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.42, 0.42] },
@@ -130,17 +132,19 @@ export const helpdeskPoles: HelpdeskPole[] = [
   // Rangée de devant : Pôle Multi et équipe SODIAAL du Pôle Dédié.
   { clientId: 'multi', group: 'multi', site: 'laciotat', label: 'Pôle Multi', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
   { clientId: 'sodiaal', group: 'dedie', site: 'laciotat', label: 'Dédié · Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
-  // Montpellier : seconde équipe du Pôle Multi (mêmes clients). Paris : aucun pôle client affecté.
-  { clientId: 'multi-mtp', group: 'multi', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
-];
+  // Le même Pôle Multi est implanté à Montpellier et à Paris (aucun agent affecté à Paris pour le moment).
+  { clientId: 'multi', group: 'multi', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
+  { clientId: 'multi', group: 'multi', site: 'paris', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
+] as Omit<HelpdeskPole, 'id'>[]).map((p) => ({ ...p, id: `${p.clientId}@${p.site}` }));
 
 export const polesOf = (site: SiteId) => helpdeskPoles.filter((p) => p.site === site);
 
 /** Rangées de postes (positions z relatives au pôle). */
 const DESK_ROWS = [-0.9, 0.7];
 
-export function poleByClient(clientId: string): HelpdeskPole | undefined {
-  return helpdeskPoles.find((p) => p.clientId === clientId);
+/** Implantation d'un pôle ; avec un site, celle de ce site (le Pôle Multi est présent sur les trois sites). */
+export function poleByClient(clientId: string, site?: SiteId | null): HelpdeskPole | undefined {
+  return helpdeskPoles.find((p) => p.clientId === clientId && (!site || p.site === site)) ?? helpdeskPoles.find((p) => p.clientId === clientId);
 }
 
 /** Positions des postes d'un pôle, relatives au centre du pôle. */
