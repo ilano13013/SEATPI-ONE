@@ -388,8 +388,9 @@ describe('App (mode démo)', () => {
     fireEvent.click(fin.getByRole('radio', { name: /Budget MCO N2/ }));
     expect(fin.getByText(/Budget & Rentabilité — MCO N2/)).toBeTruthy();
     expect(result()).not.toBe(hd);
+    expect(result()).toBe('0 €');
     expect(fin.queryByRole('tab', { name: 'Budget déplacements' })).toBeNull();
-    expect(fin.getByText(/aucun client n’est rattaché à ce budget/)).toBeTruthy();
+    expect(fin.getByText(/vide pour le moment\. Aucun coût ni aucun client/)).toBeTruthy();
     fireEvent.click(fin.getByRole('tab', { name: /Revenus/ }));
     expect(fin.queryAllByText(/CTR-/).length).toBe(0);
     // Côté Helpdesk N1 : revenus de tous les clients, y compris les contrats N2.

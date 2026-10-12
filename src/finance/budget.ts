@@ -24,15 +24,22 @@ const pct = (num: number, den: number) => (den ? Math.round((num / den) * 1000) 
 
 /**
  * Deux entités budgétaires séparées, jamais additionnées :
- * - Helpdesk N1 : agents des plateaux, encadrement Helpdesk et, pour le moment, les revenus de TOUS les clients ;
- * - MCO N2 : techniciens chez les clients et manager MCO (coûts) ; aucun client rattaché pour le moment.
+ * - Helpdesk N1 : pour le moment, TOUS les coûts (plateaux, techniciens N2, encadrement) et les revenus de TOUS les clients ;
+ * - MCO N2 : budget distinct, VIDE pour le moment (à construire après le Helpdesk N1).
  * Le rattachement des revenus d'un client se règle dans Administration → Clients (CRM).
  */
 export type Entity = 'helpdesk' | 'mco';
 export const ENTITIES: Entity[] = ['helpdesk', 'mco'];
 export const ENTITY_LABEL: Record<Entity, string> = { helpdesk: 'Helpdesk N1', mco: 'MCO N2' };
 
-export const entityOfCost = (e: Pick<CostEntry, 'population' | 'personId'>): Entity => (e.population === 'Technicien N2' || e.personId === 'mgr-mco' ? 'mco' : 'helpdesk');
+/**
+ * Budget MCO N2 vide pour le moment : tous les coûts (y compris techniciens N2 et manager MCO)
+ * sont portés par le Helpdesk N1. Passer à `true` pour affecter les coûts N2 au budget MCO.
+ */
+export const MCO_BUDGET_ACTIVE = false;
+
+export const entityOfCost = (e: Pick<CostEntry, 'population' | 'personId'>): Entity =>
+  MCO_BUDGET_ACTIVE && (e.population === 'Technicien N2' || e.personId === 'mgr-mco') ? 'mco' : 'helpdesk';
 /** Les revenus suivent le budget de rattachement du client (pour le moment : tous au Helpdesk N1). */
 export const entityOfPrestation = (p: Pick<Prestation, 'clientId'>): Entity => clientBudget(p.clientId);
 

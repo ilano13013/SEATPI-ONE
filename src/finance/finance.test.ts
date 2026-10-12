@@ -142,13 +142,15 @@ describe('budgets distincts Helpdesk N1 / MCO N2', () => {
     expect(hd.costs.length + mco.costs.length).toBe(f.costs.length);
     expect(hd.prestations.length + mco.prestations.length).toBe(f.prestations.length);
     expect(hd.adjustments.length + mco.adjustments.length).toBe(f.adjustments.length);
-    expect(mco.costs.every((c) => c.population === 'Technicien N2' || c.personId === 'mgr-mco')).toBe(true);
-    expect(hd.costs.some((c) => c.population === 'Technicien N2')).toBe(false);
+    // Budget MCO N2 vide pour le moment : tous les coûts (y compris techniciens N2) au Helpdesk N1.
+    expect(mco.costs).toHaveLength(0);
+    expect(mco.adjustments).toHaveLength(0);
+    expect(hd.costs.some((c) => c.population === 'Technicien N2')).toBe(true);
+    expect(hd.costs.some((c) => c.personId === 'resp-helpdesk')).toBe(true);
     // Pour le moment, tous les clients (y compris les contrats N2) relèvent du budget Helpdesk N1.
     expect(mco.prestations).toHaveLength(0);
     expect(hd.prestations.length).toBe(f.prestations.length);
     expect(hd.prestations.some((p) => p.contractId === 'CTR-PRI-01')).toBe(true);
-    expect(hd.costs.some((c) => c.personId === 'resp-helpdesk')).toBe(true);
   });
 
   it('le rattachement d’un client au budget MCO déplace ses revenus (modifiable sans code)', () => {

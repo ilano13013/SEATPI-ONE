@@ -125,7 +125,8 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
         return (
           <div key={e}>
             <h3>Budget {ENTITY_LABEL[e]} — entité financière distincte</h3>
-            {t.landing.revenue === 0 && <p className="hint">Aucun client rattaché à ce budget pour le moment : il ne porte que des coûts (revenus clients portés par le Helpdesk N1).</p>}
+            {t.landing.revenue === 0 && t.landing.cost === 0 && <p className="hint">Budget vide pour le moment : coûts et revenus sont portés par le Helpdesk N1.</p>}
+            {t.landing.revenue === 0 && t.landing.cost > 0 && <p className="hint">Aucun client rattaché à ce budget pour le moment : il ne porte que des coûts.</p>}
             <div className="xc-kpis">
               <button className="xc-kpi" onClick={() => onOpen('finance', `rentabilite@${e}`)}>
                 <small>Résultat analytique (mois clos)</small>

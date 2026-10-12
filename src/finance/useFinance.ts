@@ -100,14 +100,14 @@ function seedAdjustments(year: number, current: string): CostAdjustment[] {
   for (const [i, m] of monthsOf(year).entries()) {
     if ((i + 1) % 3 === 0) {
       add('helpdesk', m, 'Prime', 'Primes trimestrielles sur objectifs N1 (fictif)', 2000);
-      add('mco', m, 'Prime', 'Primes trimestrielles sur objectifs N2 (fictif)', 1200);
+      add('helpdesk', m, 'Prime', 'Primes trimestrielles sur objectifs N2 (fictif)', 1200);
     }
     const hs = m <= current ? 600 + ((i * 337) % 900) : 800;
     add('helpdesk', m, 'Heures supplémentaires', m <= current ? 'Heures supplémentaires N1 réalisées (fictif)' : 'Heures supplémentaires N1 prévues (fictif)', Math.round(hs * 0.6));
-    add('mco', m, 'Heures supplémentaires', m <= current ? 'Astreintes et heures supplémentaires N2 réalisées (fictif)' : 'Astreintes et heures supplémentaires N2 prévues (fictif)', Math.round(hs * 0.4));
+    add('helpdesk', m, 'Heures supplémentaires', m <= current ? 'Astreintes et heures supplémentaires N2 réalisées (fictif)' : 'Astreintes et heures supplémentaires N2 prévues (fictif)', Math.round(hs * 0.4));
   }
   add('helpdesk', `${year}-08`, 'Remplacement', 'Intérim — remplacement congés d’été plateau (fictif)', 3000);
-  add('mco', `${year}-08`, 'Remplacement', 'Renfort N2 — congés d’été chez les clients (fictif)', 1800);
+  add('helpdesk', `${year}-08`, 'Remplacement', 'Renfort N2 — congés d’été chez les clients (fictif)', 1800);
   return list;
 }
 
