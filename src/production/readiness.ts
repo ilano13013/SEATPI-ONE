@@ -28,6 +28,24 @@ export interface ReadinessItem {
   lastCheck: string | null;
   /** Preuve de vérification, obligatoire pour « Validé ». */
   evidence?: string;
+  /** Échéance (AAAA-MM-JJ) fixée par le responsable ; absente = « À renseigner » (jamais inventée). */
+  dueDate?: string;
+}
+
+/** Fonctions responsables suivies par chaque profil simulé (« Mes actions »). */
+export const ROLE_OWNERS: Record<string, string[]> = {
+  admin: ['DSI', 'RSSI'],
+  responsable: ['Responsable Helpdesk', 'Formation'],
+  teamLeader: ['Responsable Helpdesk'],
+  finance: ['DAF'],
+  rh: ['DRH', 'DPO'],
+  direction: ['Direction'],
+  agent: [],
+};
+
+export function setDueDate(items: ReadinessItem[], id: string, due: string): { ok: boolean; message: string; items: ReadinessItem[] } {
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) return { ok: false, message: 'Date attendue au format AAAA-MM-JJ.', items };
+  return { ok: true, message: `${id} : échéance ${due || 'retirée'}.`, items: items.map((i) => (i.id === id ? { ...i, dueDate: due || undefined } : i)) };
 }
 
 export const READINESS_ITEMS: ReadinessItem[] = [

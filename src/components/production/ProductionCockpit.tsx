@@ -1,7 +1,7 @@
 // ADMINISTRATION → PRÉPARATION À LA PRODUCTION.
 import { useMemo, useState } from 'react';
 import { ArrowLeft, FileDown, Printer } from 'lucide-react';
-import { DOMAINS, READINESS_ITEMS, reportMarkdown, setStatus, STATUSES, summarize, type Domain, type ReadinessItem, type ReadinessStatus } from '../../production/readiness';
+import { DOMAINS, READINESS_ITEMS, reportMarkdown, ROLE_OWNERS, setDueDate, setStatus, STATUSES, summarize, type Domain, type ReadinessItem, type ReadinessStatus } from '../../production/readiness';
 import { activeData, PRODUCTION_PREREQUISITES } from '../../data/provider';
 import { can, type Role } from '../../auth/roles';
 import { Modal, Toast, downloadText } from '../external/common';
@@ -17,7 +17,12 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
   const [toast, setToast] = useState<{ ok: boolean; message: string } | null>(null);
   const s = useMemo(() => summarize(items), [items]);
   const editable = can(role, 'integrations', 'configure');
-  const list = items.filter((i) => (!domain || i.domain === domain) && (!status || i.status === status));
+  const [owner, setOwner] = useState('');
+  const [mine, setMine] = useState(false);
+  const [dueOnly, setDueOnly] = useState(false);
+  const owners = [...new Set(items.map((i) => i.owner))].sort();
+  const myOwners = ROLE_OWNERS[role] ?? [];
+  const list = items.filter((i) => (!domain || i.domain === domain) && (!status || i.status === status) && (!owner || i.owner === owner) && (!mine || myOwners.includes(i.owner)) && (!dueOnly || !!i.dueDate));
   const today = new Date().toISOString().slice(0, 10);
 
   const change = (id: string, next: ReadinessStatus) => {
@@ -76,7 +81,7 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
         <div className="xc-kpi">
           <small>Taux de préparation</small>
           <strong>{s.rate.toLocaleString('fr-FR')} %</strong>
-          <em>avancement de la liste — pas une certification de sécurité</em>
+          <em>avancement de la checklist — pas une certification de sécurité ni une validation réelle de mise en production</em>
         </div>
         <div className={`xc-kpi ${s.go ? 'ok' : 'bad'}`}>
           <small>Décision</small>
@@ -110,6 +115,18 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
             <option key={st}>{st}</option>
           ))}
         </select>
+        <select aria-label="Responsable" value={owner} onChange={(e) => setOwner(e.target.value)}>
+          <option value="">Tous les responsables</option>
+          {owners.map((o) => (
+            <option key={o}>{o}</option>
+          ))}
+        </select>
+        <label className="ck-check">
+          <input type="checkbox" checked={mine} disabled={!myOwners.length} onChange={(e) => setMine(e.target.checked)} /> Mes actions{myOwners.length ? ` (${myOwners.join(', ')})` : ' (aucune pour ce profil)'}
+        </label>
+        <label className="ck-check">
+          <input type="checkbox" checked={dueOnly} onChange={(e) => setDueOnly(e.target.checked)} /> Avec échéance
+        </label>
         <span className="hint">{list.length} élément(s)</span>
       </div>
       <div className="xc-tablewrap">
@@ -122,8 +139,10 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
               <th>Priorité</th>
               <th>Statut</th>
               <th>Responsable</th>
+              <th>Échéance</th>
               <th>Dépendances</th>
               <th>Dernière vérification</th>
+              <th>Preuve</th>
             </tr>
           </thead>
           <tbody>
@@ -139,8 +158,10 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
                   <span className={`badge ${TONE[i.status]}`}>{i.status}</span>
                 </td>
                 <td>{i.owner}</td>
+                <td>{i.dueDate ? new Date(`${i.dueDate}T12:00:00`).toLocaleDateString('fr-FR') : <em className="nr">À renseigner</em>}</td>
                 <td>{i.dependencies.join(', ') || '—'}</td>
-                <td>{i.lastCheck ?? '—'}</td>
+                <td>{i.lastCheck ? new Date(`${i.lastCheck}T12:00:00`).toLocaleDateString('fr-FR') : '—'}</td>
+                <td>{i.evidence ? <span title={i.evidence}>Fournie</span> : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -159,6 +180,23 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
                 <dd>{i.why}</dd>
                 <dt>Responsable</dt>
                 <dd>{i.owner}</dd>
+                <dt>Échéance</dt>
+                <dd>
+                  {editable ? (
+                    <input
+                      type="date"
+                      aria-label="Échéance"
+                      value={i.dueDate ?? ''}
+                      onChange={(e) => {
+                        const r = setDueDate(items, i.id, e.target.value);
+                        setToast(r);
+                        if (r.ok) onItems(r.items);
+                      }}
+                    />
+                  ) : (
+                    (i.dueDate ?? <em className="nr">À renseigner</em>)
+                  )}
+                </dd>
                 <dt>Action</dt>
                 <dd>{i.action}</dd>
                 <dt>Priorité</dt>
@@ -188,7 +226,7 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
                   </div>
                 </>
               ) : (
-                <p className="restricted">Mise à jour réservée aux rôles Responsable Helpdesk et Admin (maquette).</p>
+                <p className="restricted">Lecture seule : droit « Administration » sur « Connexions & API, préparation production » manquant pour votre profil (contrôle simulé).</p>
               )}
             </Modal>
           );
