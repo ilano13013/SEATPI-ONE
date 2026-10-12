@@ -608,3 +608,6 @@ details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }
 .xc-dims .dim.critique::before { content: '✗'; color: #b91c1c; }
 .xc-dims .dim.indisponible::before { content: '?'; color: #64748b; }
 .xc-dims .dim span { color: #475569; }
+.fin-summary { font-size: 13px; margin: 6px 0; }
+.fin-months tr.m-encours td { background: #f5f9ff; }
+.fin-months tr.m-prevision td { color: #5b6b80; font-style: italic; }

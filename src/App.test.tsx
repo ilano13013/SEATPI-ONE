@@ -220,7 +220,7 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'finance' } });
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Budget & Rentabilité/ }));
     const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
-    expect(fin.getByText(/distinct du résultat comptable/)).toBeTruthy();
+    expect(fin.getAllByText(/distinct du résultat comptable/).length).toBeGreaterThan(0);
     fireEvent.click(fin.getByRole('tab', { name: 'Budget déplacements' }));
     fireEvent.change(fin.getByLabelText('Objet du déplacement'), { target: { value: 'Séminaire client' } });
     fireEvent.change(fin.getByLabelText('Montant estimé'), { target: { value: '999999' } });
@@ -386,6 +386,21 @@ describe('App (mode démo)', () => {
     fireEvent.click(crm.getByRole('button', { name: /Confirmer/ }));
     expect(crm.getByRole('button', { name: 'Modifier Budget de rattachement de G2S' }).textContent).toMatch(/MCO N2/);
     expect(crm.getByRole('status').textContent).toMatch(/Enregistré/);
+  });
+
+  it('budgets : libellés, totaux et historiques propres au budget sélectionné ; mois non clos « non arrêtés »', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Budget & Rentabilité/ }));
+    const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
+    fireEvent.click(fin.getByRole('tab', { name: 'Rentabilité' }));
+    expect(fin.getByText('Résultat analytique Helpdesk N1 — mois clos')).toBeTruthy();
+    expect(fin.queryByText(/Résultat analytique MCO N2/)).toBeNull();
+    expect(fin.getAllByText('Non arrêté').length).toBeGreaterThan(0);
+    fireEvent.click(within(fin.getByRole('radiogroup', { name: 'Budget' })).getByRole('radio', { name: /MCO N2/ }));
+    fireEvent.click(fin.getByRole('tab', { name: 'Historique et validations' }));
+    expect(fin.queryByText(/Historique du plafond déplacements/)).toBeNull();
+    expect(fin.getByText('Journal des modifications — budget MCO N2')).toBeTruthy();
   });
 
   it('SLA décroché (QlikView) : global par volumes, objectifs non renseignés, puis objectifs de démonstration et écarts', () => {

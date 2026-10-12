@@ -74,6 +74,7 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
   const travel = travelBalance(state.travel);
   const recruit = recruitmentBalance(state.recruitment);
   const pending = state.prestations.filter((p) => p.status === 'À valider');
+  const entityLog = state.log.filter((l) => l.entity === entity);
 
   if (!can(role, 'finance')) {
     return (
@@ -107,6 +108,12 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
           </button>
         ))}
       </div>
+      <p className="fin-summary">
+        <b>{isHelpdesk ? 'Budget Helpdesk N1' : 'Budget MCO N2'}</b> —{' '}
+        {isHelpdesk ? 'porte pour le moment tous les coûts et tous les revenus clients.' : 'vide pour le moment : aucun coût ni client rattaché.'} Résultat analytique, distinct du résultat comptable.
+      </p>
+      <details className="defs">
+        <summary>Détails du périmètre et des règles</summary>
       <p className="fin-warning">
         {isHelpdesk
           ? 'Budget du Helpdesk N1 : pour le moment, il porte tous les coûts (agents des plateaux, techniciens N2, encadrement) et les revenus de tous les clients (contrats N1 et contrats N2 INVIVO, PRIMAGAZ, MONEXT). Le budget MCO N2 est distinct et vide pour le moment.'
@@ -114,6 +121,8 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
         Résultat analytique (revenus des prestations − coûts opérationnels), distinct du résultat comptable de l’entreprise.
         {isHelpdesk ? ' Les enveloppes déplacements et recrutement du Helpdesk sont suivies séparément et ne sont pas additionnées au résultat.' : ' Aucune enveloppe déplacements ni recrutement n’est rattachée au MCO dans la démonstration.'}
       </p>
+        <p className="hint">Mois clos : revenus validés uniquement. Mois en cours et futurs : résultat « non arrêté » (les prévisions combinent validé, à valider et prévisionnel, sans double comptage).</p>
+      </details>
 
       <div className="xc-tabs">
         <Tabs
@@ -172,7 +181,7 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
         </>
       )}
 
-      {tab === 'rentabilite' && <Profitability store={store} rows={rows} />}
+      {tab === 'rentabilite' && <Profitability store={store} rows={rows} entity={entity} />}
       {tab === 'couts' && <Costs store={store} role={role} run={run} editable={editable} entity={entity} />}
       {tab === 'revenus' && <Revenues store={store} role={role} run={run} editable={editable} />}
       {tab === 'deplacements' && <Travel store={store} role={role} run={run} editable={editable} />}
@@ -195,18 +204,25 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
         <>
           <h3>Validations en attente</h3>
           {pending.length === 0 ? <p className="hint">Aucune prestation à valider.</p> : <p>{pending.length} prestation(s) à valider — onglet Revenus.</p>}
-          <h3>Historique du plafond déplacements</h3>
-          <ul className="xc-mini">
-            {state.travel.ceilingHistory.map((h, i) => (
-              <li key={i}>
-                {fmtDateTime(h.at)} — {h.by} : {eur(h.from)} → {eur(h.to)} · « {h.reason} »
-              </li>
-            ))}
-          </ul>
-          <h3>Journal des modifications</h3>
+          {isHelpdesk ? (
+            <>
+              <h3>Historique du plafond déplacements (enveloppe Helpdesk N1)</h3>
+              <ul className="xc-mini">
+                {state.travel.ceilingHistory.length === 0 && <li className="hint">Aucune révision du plafond.</li>}
+                {state.travel.ceilingHistory.map((h, i) => (
+                  <li key={i}>
+                    {fmtDateTime(h.at)} — {h.by} : {eur(h.from)} → {eur(h.to)} · « {h.reason} »
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="hint">Aucune enveloppe (déplacements, recrutement) n’est rattachée au budget MCO N2 : pas d’historique de plafond.</p>
+          )}
+          <h3>Journal des modifications — budget {ENTITY_LABEL[entity]}</h3>
           <ol className="xc-history mg-history">
-            {state.log.length === 0 && <li className="hint">Aucune modification depuis le chargement de la démonstration.</li>}
-            {state.log.map((l, i) => (
+            {entityLog.length === 0 && <li className="hint">Aucune modification de ce budget depuis le chargement de la démonstration.</li>}
+            {entityLog.map((l, i) => (
               <li key={i}>
                 <time>{fmtDateTime(l.at)}</time> <b>{l.action}</b> — {l.detail} · {l.by}
               </li>
@@ -239,7 +255,7 @@ function Kpi({ label, value, hint, cls, onClick }: { label: string; value: strin
 function MonthTable({ rows, projected }: { rows: ReturnType<typeof monthResult>[]; projected?: boolean }) {
   return (
     <div className="xc-tablewrap">
-      <table className="xc-table compact">
+      <table className="xc-table compact fin-months">
         <thead>
           <tr>
             <th>Mois</th>
@@ -253,25 +269,33 @@ function MonthTable({ rows, projected }: { rows: ReturnType<typeof monthResult>[
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.month}>
-              <td>{monthLabel(r.month)}</td>
-              <td>{r.closed ? 'Clos' : r.current ? 'En cours' : 'Prévision'}</td>
-              <td>{eur(r.revenue.validated)}</td>
-              <td>{r.revenue.pending ? eur(r.revenue.pending) : '—'}</td>
-              <td>{r.revenue.forecast ? eur(r.revenue.forecast) : '—'}</td>
-              <td>{eur(r.cost)}</td>
-              <td className={(projected ? r.projectedResult : r.result) < 0 ? 'xc-warn' : ''}>{eur(projected ? r.projectedResult : r.result)}</td>
-              <td>{pctTxt(projected ? r.projectedMargin : r.margin)}</td>
-            </tr>
-          ))}
+          {rows.map((r) => {
+            const status = r.closed ? 'Clos' : r.current ? 'En cours' : 'Prévision';
+            // Un mois non clos n'est jamais présenté comme une perte : résultat « non arrêté ».
+            const settled = r.closed || projected;
+            const result = projected ? r.projectedResult : r.result;
+            return (
+              <tr key={r.month} className={`m-${r.closed ? 'clos' : r.current ? 'encours' : 'prevision'}`}>
+                <td>{monthLabel(r.month)}</td>
+                <td>
+                  <span className={`badge ${r.closed ? 'ok' : r.current ? 'info' : 'muted'}`}>{status}</span>
+                </td>
+                <td>{eur(r.revenue.validated)}</td>
+                <td>{r.revenue.pending ? eur(r.revenue.pending) : '—'}</td>
+                <td>{r.revenue.forecast ? eur(r.revenue.forecast) : '—'}</td>
+                <td>{eur(r.cost)}</td>
+                <td className={settled && result < 0 ? 'xc-warn' : ''}>{settled ? `${eur(result)}${!r.closed ? ' (prévision)' : ''}` : <em className="nr">Non arrêté</em>}</td>
+                <td>{settled ? pctTxt(projected ? r.projectedMargin : r.margin) : '—'}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-function Profitability({ store, rows }: { store: FinanceStore; rows: ReturnType<typeof monthResult>[] }) {
+function Profitability({ store, rows, entity }: { store: FinanceStore; rows: ReturnType<typeof monthResult>[]; entity: Entity }) {
   const { state } = store;
   const closedMonths = rows.filter((r) => r.closed).map((r) => r.month);
   const { rows: clients, unallocated } = clientBreakdown(state.costs, state.prestations, closedMonths);
@@ -318,7 +342,7 @@ function Profitability({ store, rows }: { store: FinanceStore; rows: ReturnType<
               <td>—</td>
             </tr>
             <tr className="total">
-              <td>Résultat analytique {ENTITY_LABEL[store.state.costs.some((c) => c.population === 'Technicien N2') ? 'mco' : 'helpdesk']}</td>
+              <td>Résultat analytique {ENTITY_LABEL[entity]} — mois clos</td>
               <td>{eur(totals.revenue)}</td>
               <td>{eur(totals.cost)}</td>
               <td>{eur(totals.result)}</td>

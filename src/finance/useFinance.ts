@@ -31,13 +31,18 @@ import {
   type TravelBudget,
   type TravelCommitment,
   type Entity,
+  entityOfCost,
+  entityOfPrestation,
 } from './budget';
+import { clientBudget } from '../config/itsm';
 
 export interface FinanceLogEntry {
   at: number;
   by: string;
   action: string;
   detail: string;
+  /** Budget concerné (les historiques sont filtrés par budget). */
+  entity: Entity;
 }
 
 export interface FinanceState {
@@ -180,7 +185,8 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     setState(next);
   };
   const who = (role: Role) => `${roleLabels[role]} (démonstration)`;
-  const logged = (s: FinanceState, role: Role, action: string, detail: string): FinanceState => ({ ...s, log: [{ at: Date.now(), by: who(role), action, detail }, ...s.log].slice(0, 300) });
+  // Par défaut : Helpdesk N1 (enveloppes déplacements et recrutement rattachées au Helpdesk).
+  const logged = (s: FinanceState, role: Role, action: string, detail: string, entity: Entity = 'helpdesk'): FinanceState => ({ ...s, log: [{ at: Date.now(), by: who(role), action, detail, entity }, ...s.log].slice(0, 300) });
   const denied: FinanceResult = { ok: false, message: 'Votre rôle ne permet pas de modifier les données financières (maquette).' };
 
   const setCost = useCallback((personId: string, patch: Partial<Pick<CostEntry, 'monthlyCost' | 'allocation'>>, role: Role): FinanceResult => {
@@ -191,7 +197,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     if (patch.allocation !== undefined && (patch.allocation < 0 || patch.allocation > 1)) return { ok: false, message: 'Affectation entre 0 et 100 %.' };
     if (patch.monthlyCost !== undefined && patch.monthlyCost < 0) return { ok: false, message: 'Coût invalide.' };
     const detail = patch.monthlyCost !== undefined ? `${e.name} : coût employeur ${eur(e.monthlyCost)} → ${eur(patch.monthlyCost)}` : `${e.name} : affectation ${Math.round(e.allocation * 100)} % → ${Math.round((patch.allocation ?? 0) * 100)} %`;
-    apply(logged({ ...s, costs: s.costs.map((c) => (c.personId === personId ? { ...c, ...patch } : c)) }, role, 'Coût agent modifié', detail));
+    apply(logged({ ...s, costs: s.costs.map((c) => (c.personId === personId ? { ...c, ...patch } : c)) }, role, 'Coût agent modifié', detail, entityOfCost(e)));
     return { ok: true, message: detail };
   }, []);
 
@@ -200,7 +206,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     if (!(adj.amount > 0) || !adj.label.trim()) return { ok: false, message: 'Libellé et montant positif obligatoires.' };
     const s = ref.current;
     const id = `AJ-${String(s.adjustments.length + 1).padStart(3, '0')}`;
-    apply(logged({ ...s, adjustments: [...s.adjustments, { ...adj, id }] }, role, 'Ajustement de coût', `${adj.kind} ${adj.month} : ${adj.label} (${eur(adj.amount)})`));
+    apply(logged({ ...s, adjustments: [...s.adjustments, { ...adj, id }] }, role, 'Ajustement de coût', `${adj.kind} ${adj.month} : ${adj.label} (${eur(adj.amount)})`, adj.entity));
     return { ok: true, message: `${adj.kind} ajouté(e) : ${eur(adj.amount)}.` };
   }, []);
 
@@ -212,7 +218,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     if ((patch.quantity ?? 0) < 0 || (patch.unitPrice ?? 0) < 0) return { ok: false, message: 'Valeurs négatives interdites.' };
     if (patch.status === 'Validée' && p.month > s.currentMonth) return { ok: false, message: 'Une prestation future ne peut pas être validée.' };
     const detail = patch.status ? `${p.id} ${p.clientName} ${p.month} : ${p.status} → ${patch.status}` : `${p.id} ${p.clientName} ${p.month} : montant modifié`;
-    apply(logged({ ...s, prestations: s.prestations.map((x) => (x.id === id ? { ...x, ...patch } : x)) }, role, patch.status ? 'Validation de prestation' : 'Prestation modifiée', detail));
+    apply(logged({ ...s, prestations: s.prestations.map((x) => (x.id === id ? { ...x, ...patch } : x)) }, role, patch.status ? 'Validation de prestation' : 'Prestation modifiée', detail, entityOfPrestation(p)));
     return { ok: true, message: detail };
   }, []);
 
@@ -222,7 +228,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     const s = ref.current;
     const a = s.adjustments.find((x) => x.id === id);
     if (!a) return { ok: false, message: 'Ajustement introuvable.' };
-    apply(logged({ ...s, adjustments: s.adjustments.map((x) => (x.id === id ? { ...x, amount } : x)) }, role, 'Ajustement de coût modifié', `${a.kind} ${a.month} : ${eur(a.amount)} → ${eur(amount)}`));
+    apply(logged({ ...s, adjustments: s.adjustments.map((x) => (x.id === id ? { ...x, amount } : x)) }, role, 'Ajustement de coût modifié', `${a.kind} ${a.month} : ${eur(a.amount)} → ${eur(amount)}`, a.entity));
     return { ok: true, message: 'Ajustement mis à jour.' };
   }, []);
 
@@ -242,7 +248,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     const s = ref.current;
     const touched = s.prestations.filter((p) => p.contractId === contractId && p.type === 'Forfait' && (p.status === 'Prévisionnelle' || p.status === 'À valider'));
     if (!touched.length) return { ok: false, message: 'Aucune prestation à venir pour ce contrat.' };
-    apply(logged({ ...s, prestations: s.prestations.map((p) => (touched.includes(p) ? { ...p, unitPrice: amount } : p)) }, role, 'Forfait contractuel modifié', `${contractId} : ${eur(amount)} / mois sur ${touched.length} mois à venir`));
+    apply(logged({ ...s, prestations: s.prestations.map((p) => (touched.includes(p) ? { ...p, unitPrice: amount } : p)) }, role, 'Forfait contractuel modifié', `${contractId} : ${eur(amount)} / mois sur ${touched.length} mois à venir`, entityOfPrestation(touched[0])));
     return { ok: true, message: `Forfait appliqué à ${touched.length} mois à venir.` };
   }, []);
 
@@ -252,7 +258,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     const s = ref.current;
     const id = `PRS-${String(s.prestations.length + 1).padStart(4, '0')}`;
     const status: PrestationStatus = p.month > s.currentMonth ? 'Prévisionnelle' : 'À valider';
-    apply(logged({ ...s, prestations: [...s.prestations, { ...p, id, status }] }, role, 'Prestation ajoutée', `${id} ${p.clientName} ${p.month} (${p.type})`));
+    apply(logged({ ...s, prestations: [...s.prestations, { ...p, id, status }] }, role, 'Prestation ajoutée', `${id} ${p.clientName} ${p.month} (${p.type})`, clientBudget(p.clientId)));
     return { ok: true, message: `Prestation ${id} ajoutée (${status}).` };
   }, []);
 
@@ -298,7 +304,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
       const r = requestTravel(s.travel, { label: `${t.purpose} — ${t.to}`, amount: tripCost(t), date: new Date(t.departAt).toISOString().slice(0, 10), tripId: t.id }, 'Planification CSM (simulation)', Date.now());
       // En cas de blocage, la décision garde la trace du déplacement concerné.
       const budget = r.ok ? r.budget : { ...r.budget, decisions: r.budget.decisions.map((d, i) => (i === 0 ? { ...d, label: `${t.purpose} — ${t.to} [${t.id}]` } : d)) };
-      s = { ...s, travel: budget, log: [{ at: Date.now(), by: 'Planification CSM (simulation)', action: 'Demande de déplacement', detail: r.message }, ...s.log] };
+      s = { ...s, travel: budget, log: [{ at: Date.now(), by: 'Planification CSM (simulation)', action: 'Demande de déplacement', detail: r.message, entity: 'helpdesk' }, ...s.log] };
       changed = true;
     }
     if (changed) apply(s);
