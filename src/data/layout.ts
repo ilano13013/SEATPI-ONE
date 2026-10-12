@@ -25,7 +25,42 @@ export function roomsOnFloor(floor: FloorId): Room[] {
   return rooms.filter((r) => r.floor === floor);
 }
 
-/** Positions des postes du plateau Helpdesk, relatives au centre de la pièce. */
-export const helpdeskDesks: [number, number][] = [-2.6, -1.0, 0.6, 2.2].flatMap((z) =>
-  [-2.4, -0.8, 0.8, 2.4].map((x) => [x, z] as [number, number]),
-);
+/**
+ * Pôles clients du plateau Helpdesk. Coordonnées relatives au centre du plateau
+ * (6,9 × 7,2) : trois pôles au fond, deux pôles devant.
+ */
+export interface HelpdeskPole {
+  clientId: string;
+  label: string;
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  color: string;
+  /** Colonnes de postes (positions x relatives au pôle). */
+  columns: number[];
+}
+
+const ROW_DEPTH = 3.6;
+const BACK_W = 6.9 / 3;
+const FRONT_W = 6.9 / 2;
+
+export const helpdeskPoles: HelpdeskPole[] = [
+  { clientId: 'thelem', label: 'Pôle Thelem', x: -BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.55, 0.55] },
+  { clientId: 'ird', label: 'Pôle IRD', x: 0, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.55, 0.55] },
+  { clientId: 'ortec', label: 'Pôle Ortec', x: BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#f8d5b8', columns: [-0.55, 0.55] },
+  { clientId: 'multi', label: 'Pôle Multi dédié', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
+  { clientId: 'sodiaal', label: 'Pôle Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
+];
+
+/** Rangées de postes (positions z relatives au pôle). */
+const DESK_ROWS = [-0.9, 0.7];
+
+export function poleByClient(clientId: string): HelpdeskPole | undefined {
+  return helpdeskPoles.find((p) => p.clientId === clientId);
+}
+
+/** Positions des postes d'un pôle, relatives au centre du pôle. */
+export function poleDesks(pole: HelpdeskPole): [number, number][] {
+  return DESK_ROWS.flatMap((z) => pole.columns.map((x) => [x, z] as [number, number]));
+}

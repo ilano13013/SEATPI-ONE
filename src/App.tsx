@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Agent, FloorId, RoomId } from './types';
 import type { Role } from './auth/roles';
-import { roomById } from './data/layout';
+import { helpdeskPoles, roomById } from './data/layout';
+import { clientSummary } from './services/simulation';
 import { useDemoSimulation } from './services/useDemoSimulation';
 import { hasWebGL, isNarrowScreen, prefersReducedMotion } from './lib/env';
 import { Header } from './components/Header';
@@ -24,14 +25,25 @@ export function App() {
   // Sur mobile, le panneau recouvre la scène : il s'ouvre au premier clic.
   const [panelOpen, setPanelOpen] = useState(() => !isNarrowScreen());
   const [focusAgentId, setFocusAgentId] = useState<string | null>(null);
+  const [selectedPole, setSelectedPole] = useState<string | null>(null);
 
   const selectRoom = useCallback((id: RoomId) => {
     setSelected(id);
+    setSelectedPole(null);
     setFloor(roomById(id).floor);
     setOverview(false);
     setFocusKey((k) => k + 1);
     setPanelOpen(true);
   }, []);
+
+  /** Sélectionne un pôle client du plateau Helpdesk (null = plateau entier). */
+  const selectPole = useCallback(
+    (clientId: string | null) => {
+      selectRoom('helpdesk');
+      setSelectedPole(clientId);
+    },
+    [selectRoom],
+  );
 
   const showOverview = useCallback(() => {
     setOverview(true);
@@ -46,10 +58,10 @@ export function App() {
 
   const focusAgent = useCallback(
     (agent: Agent) => {
-      selectRoom('helpdesk');
+      selectPole(agent.clientId);
       setFocusAgentId(agent.id);
     },
-    [selectRoom],
+    [selectPole],
   );
 
   useEffect(() => {
@@ -76,6 +88,14 @@ export function App() {
     };
   }, [state, metrics]);
 
+  const poleBadges = useMemo(() => {
+    const entries = helpdeskPoles.map((p) => {
+      const s = clientSummary(state, p.clientId);
+      return [p.clientId, `${s.waiting} en attente · SLA ${s.sla.toLocaleString('fr-FR')} %`] as const;
+    });
+    return Object.fromEntries(entries) as Partial<Record<string, string>>;
+  }, [state]);
+
   const room = selected ? roomById(selected) : null;
 
   return (
@@ -93,6 +113,9 @@ export function App() {
           overview={overview}
           state={state}
           badges={badges}
+          selectedPole={selectedPole}
+          poleBadges={poleBadges}
+          onSelectPole={selectPole}
           reducedMotion={reducedMotion}
           onFloor={changeFloor}
           onOverview={showOverview}
@@ -101,7 +124,16 @@ export function App() {
         />
       </main>
       {panelOpen && room && (
-        <SidePanel room={room} state={state} role={role} focusAgentId={focusAgentId} onFocusAgent={setFocusAgentId} onClose={() => setPanelOpen(false)} />
+        <SidePanel
+          room={room}
+          state={state}
+          role={role}
+          selectedPole={selectedPole}
+          onSelectPole={selectPole}
+          focusAgentId={focusAgentId}
+          onFocusAgent={setFocusAgentId}
+          onClose={() => setPanelOpen(false)}
+        />
       )}
     </div>
   );

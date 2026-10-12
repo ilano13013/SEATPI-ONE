@@ -44,7 +44,7 @@ export function can(role: Role, module: ModuleId, action: Action = 'view'): bool
 }
 
 /** Périmètre client d'un agent dans la démo (son équipe uniquement). */
-export const DEMO_AGENT_SCOPE = 'hstv';
+export const DEMO_AGENT_SCOPE = 'thelem';
 
 export function clientScope(role: Role): string | null {
   return role === 'agent' ? DEMO_AGENT_SCOPE : null;

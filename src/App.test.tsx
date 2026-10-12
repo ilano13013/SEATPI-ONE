@@ -24,7 +24,8 @@ describe('App (mode démo)', () => {
     render(<App />);
     expect(screen.getByText('MODE DÉMO')).toBeTruthy();
     expect(screen.getByText(/WebGL n'est pas disponible/)).toBeTruthy();
-    expect(document.querySelectorAll('.twod-grid button')).toHaveLength(7);
+    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(7);
+    expect(document.querySelectorAll('.twod-grid.poles button')).toHaveLength(5);
   });
 
   it('ouvre le bon panneau au clic sur une pièce', () => {
@@ -36,15 +37,27 @@ describe('App (mode démo)', () => {
     expect(panel().getByRole('heading', { name: 'Parc automobile' })).toBeTruthy();
   });
 
-  it('filtre les files du plateau Helpdesk par client', () => {
+  it('filtre les files du plateau Helpdesk par pôle client', () => {
     render(<App />);
-    expect(panel().getAllByRole('button', { name: /Support N1|Facturation|Assistance|Support N2|Hotline/ })).toHaveLength(7);
-    fireEvent.change(panel().getByLabelText('Client'), { target: { value: 'dmb' } });
-    const rows = panel().getAllByRole('button', { name: /DMB ·/ });
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi dédié|Sodiaal) ·/ })).toHaveLength(7);
+    fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'ortec' } });
+    const rows = panel().getAllByRole('button', { name: /^Ortec ·/ });
     expect(rows).toHaveLength(2);
-    expect(panel().queryByText(/HSTV ·/)).toBeNull();
+    expect(panel().queryByText(/^Thelem ·/)).toBeNull();
     fireEvent.click(rows[0]);
     expect(panel().getByText('Objectif SLA')).toBeTruthy();
+  });
+
+  it('ouvre un pôle client depuis le plateau', () => {
+    render(<App />);
+    fireEvent.click(within(document.querySelector('.twod')!).getByRole('button', { name: /Pôle Sodiaal/ }));
+    expect(panel().getByRole('heading', { name: 'Plateau Helpdesk' })).toBeTruthy();
+    expect((panel().getByLabelText('Pôle client') as HTMLSelectElement).value).toBe('sodiaal');
+    expect(panel().getAllByRole('button', { name: /^Sodiaal ·/ })).toHaveLength(1);
+    expect(panel().getByText('Agents connectés')).toBeTruthy();
+    // Revenir au plateau entier
+    fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'all' } });
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi dédié|Sodiaal) ·/ })).toHaveLength(7);
   });
 
   it('adapte les vues au rôle simulé', () => {

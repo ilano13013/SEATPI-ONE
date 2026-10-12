@@ -22,7 +22,7 @@ describe('matrice de droits (maquette)', () => {
   });
 
   it("limite l'agent au périmètre de son équipe", () => {
-    expect(clientScope('agent')).toBe('hstv');
+    expect(clientScope('agent')).toBe('thelem');
     expect(clientScope('teamLeader')).toBeNull();
   });
 });

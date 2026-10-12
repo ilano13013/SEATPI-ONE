@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { ChevronRight, Maximize2 } from 'lucide-react';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
-import { floors, rooms, roomsOnFloor } from '../data/layout';
+import { floors, helpdeskPoles, rooms, roomsOnFloor } from '../data/layout';
 import { allStatuses, statusColors } from '../lib/status';
 
 const Scene = lazy(() => import('../scene/Scene'));
@@ -14,6 +14,9 @@ interface Props {
   overview: boolean;
   state: DemoState;
   badges: Partial<Record<RoomId, string>>;
+  selectedPole: string | null;
+  poleBadges: Partial<Record<string, string>>;
+  onSelectPole: (clientId: string) => void;
   reducedMotion: boolean;
   onFloor: (floor: FloorId) => void;
   onOverview: () => void;
@@ -22,7 +25,8 @@ interface Props {
 }
 
 export function Workspace(props: Props) {
-  const { mode3d, floor, selected, badges, onFloor, onOverview, onSelect } = props;
+  const { mode3d, floor, selected, badges, selectedPole, poleBadges, onFloor, onOverview, onSelect, onSelectPole } = props;
+  const poleActive = (id: string) => selected === 'helpdesk' && selectedPole === id;
   return (
     <section className="workspace" aria-label="Entreprise virtuelle">
       <div className="scenehead">
@@ -66,6 +70,22 @@ export function Workspace(props: Props) {
                   </button>
                 ))}
               </div>
+              {f.id === 'etage1' && (
+                <>
+                  <h4>Plateau Helpdesk — pôles clients</h4>
+                  <div className="twod-grid poles">
+                    {helpdeskPoles.map((p) => (
+                      <button key={p.clientId} className={poleActive(p.clientId) ? 'active' : ''} aria-pressed={poleActive(p.clientId)} onClick={() => onSelectPole(p.clientId)} style={{ borderLeftColor: p.color }}>
+                        <span>
+                          <b>{p.label}</b>
+                          <small>{poleBadges[p.clientId]}</small>
+                        </span>
+                        <ChevronRight size={16} />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -84,10 +104,16 @@ export function Workspace(props: Props) {
 
       <div className="scenefooter">
         {(mode3d ? roomsOnFloor(floor) : rooms).map((r) => (
-          <button className={selected === r.id ? 'active' : ''} key={r.id} onClick={() => onSelect(r.id)}>
+          <button className={selected === r.id && !(r.id === 'helpdesk' && selectedPole) ? 'active' : ''} key={r.id} onClick={() => onSelect(r.id)}>
             {r.label}
           </button>
         ))}
+        {selected === 'helpdesk' &&
+          helpdeskPoles.map((p) => (
+            <button className={`pole${poleActive(p.clientId) ? ' active' : ''}`} key={p.clientId} onClick={() => onSelectPole(p.clientId)}>
+              {p.label}
+            </button>
+          ))}
       </div>
     </section>
   );

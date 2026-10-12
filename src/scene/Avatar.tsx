@@ -23,7 +23,7 @@ export function Avatar({ agent, position, rotation = 0, seated = true, animate, 
   const ref = useRef<Group>(null);
   const [hover, setHover] = useState(false);
   const color = statusColors[agent.status];
-  const phase = agent.desk * 1.7;
+  const phase = Number(agent.id.replace(/\D/g, '')) * 1.7;
   const baseY = seated ? 0.12 : 0;
 
   useFrame(({ clock }) => {

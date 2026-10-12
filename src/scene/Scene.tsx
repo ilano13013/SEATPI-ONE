@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { Group } from 'three';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
-import { roomById, roomsOnFloor } from '../data/layout';
+import { poleByClient, roomById, roomsOnFloor } from '../data/layout';
 import { CameraRig, type CameraFocus } from './CameraRig';
 import { RoomMesh } from './RoomMesh';
 
@@ -16,6 +16,10 @@ export interface SceneProps {
   overview: boolean;
   state: DemoState;
   badges: Partial<Record<RoomId, string>>;
+  /** Pôle client sélectionné sur le plateau Helpdesk. */
+  selectedPole: string | null;
+  poleBadges: Partial<Record<string, string>>;
+  onSelectPole: (clientId: string) => void;
   reducedMotion: boolean;
   onSelect: (id: RoomId) => void;
   onAgentClick: (agent: Agent) => void;
@@ -39,31 +43,41 @@ function FloorTransition({ animate, children }: { animate: boolean; children: Re
   );
 }
 
-export default function Scene({ floor, selected, focusKey, overview, state, badges, reducedMotion, onSelect, onAgentClick }: SceneProps) {
+export default function Scene(props: SceneProps) {
+  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, reducedMotion, onSelect, onAgentClick } = props;
   const [hovered, setHovered] = useState<RoomId | null>(null);
+  const [hoveredPole, setHoveredPole] = useState<string | null>(null);
   const animate = !reducedMotion;
   const floorRooms = roomsOnFloor(floor);
 
   const focus = useMemo<CameraFocus>(() => {
     const room = selected ? roomById(selected) : null;
     if (overview || !room || room.floor !== floor) return { target: [0, 0, 0], distance: OVERVIEW_DISTANCE, key: focusKey };
+    const pole = room.id === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
+    if (pole) {
+      const distance = Math.max(pole.width, pole.depth) * 1.4 + 6.5;
+      return { target: [room.x + pole.x, 0.3, room.z + pole.z], distance, key: focusKey };
+    }
     const distance = Math.max(room.width, room.depth) * 1.4 + 7.5;
     return { target: [room.x, 0.3, room.z], distance, key: focusKey };
-  }, [selected, overview, floor, focusKey]);
+  }, [selected, selectedPole, overview, floor, focusKey]);
 
   useEffect(() => {
-    document.body.style.cursor = hovered ? 'pointer' : '';
+    document.body.style.cursor = hovered || hoveredPole ? 'pointer' : '';
     return () => {
       document.body.style.cursor = '';
     };
-  }, [hovered]);
+  }, [hovered, hoveredPole]);
 
   return (
     <Canvas
       shadows
       dpr={[1, 2]}
       camera={{ position: [10.5, 13, 11.8], fov: 38 }}
-      onPointerMissed={() => setHovered(null)}
+      onPointerMissed={() => {
+        setHovered(null);
+        setHoveredPole(null);
+      }}
       aria-label="Bâtiment 3D de l'entreprise virtuelle"
     >
       <color attach="background" args={['#eaf0f8']} />
@@ -108,6 +122,11 @@ export default function Scene({ floor, selected, focusKey, overview, state, badg
             inventory={state.inventory}
             animate={animate}
             onAgentClick={onAgentClick}
+            selectedPole={selected === 'helpdesk' ? selectedPole : null}
+            hoveredPole={hoveredPole}
+            poleBadges={poleBadges}
+            onSelectPole={onSelectPole}
+            onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}
       </FloorTransition>

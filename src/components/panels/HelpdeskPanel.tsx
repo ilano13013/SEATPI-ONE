@@ -3,6 +3,7 @@ import type { AgentStatus, DemoState, TicketPriority } from '../../types';
 import { can, clientScope, type Role } from '../../auth/roles';
 import { formatDuration, formatMinutes, slaTone } from '../../lib/format';
 import { allStatuses, statusColors } from '../../lib/status';
+import { clientSummary } from '../../services/simulation';
 import { Badge, Chips, Detail, Empty, Row, Tabs } from '../ui';
 
 type Tab = 'files' | 'agents' | 'tickets';
@@ -12,15 +13,17 @@ const STATUS_FILTERS = ['Tous', ...allStatuses] as const;
 interface Props {
   state: DemoState;
   role: Role;
+  /** Pôle client sélectionné (dans la scène ou ici) ; null = plateau entier. */
+  selectedPole: string | null;
+  onSelectPole: (clientId: string | null) => void;
   focusAgentId: string | null;
   onFocusAgent: (id: string | null) => void;
 }
 
-export function HelpdeskPanel({ state, role, focusAgentId, onFocusAgent }: Props) {
+export function HelpdeskPanel({ state, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent }: Props) {
   const scope = clientScope(role);
   const individual = can(role, 'supervision', 'individual');
   const [tab, setTab] = useState<Tab>(focusAgentId ? 'agents' : 'files');
-  const [clientFilter, setClientFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>('Tous');
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>('Toutes');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -30,7 +33,7 @@ export function HelpdeskPanel({ state, role, focusAgentId, onFocusAgent }: Props
     if (focusAgentId) setTab('agents');
   }, [focusAgentId]);
 
-  const clientId = scope ?? (clientFilter === 'all' ? null : clientFilter);
+  const clientId = scope ?? selectedPole;
   const inClient = (id: string) => !clientId || id === clientId;
   const clientName = (id: string) => state.clients.find((c) => c.id === id)?.name ?? id;
   const agentName = (id: string | null) => (id ? (state.agents.find((a) => a.id === id)?.name ?? '—') : 'Non assigné');
@@ -52,19 +55,20 @@ export function HelpdeskPanel({ state, role, focusAgentId, onFocusAgent }: Props
   return (
     <>
       <label className="field block">
-        <span>Client</span>
-        <select value={scope ?? clientFilter} disabled={!!scope} onChange={(e) => setClientFilter(e.target.value)}>
-          {!scope && <option value="all">Tous les clients</option>}
+        <span>Pôle client</span>
+        <select value={clientId ?? 'all'} disabled={!!scope} onChange={(e) => onSelectPole(e.target.value === 'all' ? null : e.target.value)}>
+          {!scope && <option value="all">Tout le plateau</option>}
           {state.clients
             .filter((c) => !scope || c.id === scope)
             .map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                Pôle {c.name}
               </option>
             ))}
         </select>
       </label>
-      {scope && <p className="hint">Rôle Agent : périmètre limité à votre équipe ({clientName(scope)}).</p>}
+      {scope && <p className="hint">Rôle Agent : périmètre limité à votre pôle ({clientName(scope)}).</p>}
+      {clientId && <PoleSummary state={state} clientId={clientId} />}
 
       <Tabs
         value={tab}
@@ -132,7 +136,7 @@ export function HelpdeskPanel({ state, role, focusAgentId, onFocusAgent }: Props
                           ['Client', clientName(a.clientId)],
                           ['État', a.status],
                           ['Depuis', formatDuration(a.statusSinceSec)],
-                          ['Poste', `Plateau · n° ${a.desk + 1}`],
+                          ['Poste', `Pôle ${clientName(a.clientId)} · n° ${a.desk + 1}`],
                           ['Tickets assignés', state.tickets.filter((t) => t.assigneeId === a.id && t.status !== 'Résolu').length],
                         ]}
                       />
@@ -186,6 +190,31 @@ export function HelpdeskPanel({ state, role, focusAgentId, onFocusAgent }: Props
         </>
       )}
     </>
+  );
+}
+
+function PoleSummary({ state, clientId }: { state: DemoState; clientId: string }) {
+  const s = clientSummary(state, clientId);
+  return (
+    <div className="kpis">
+      <div>
+        <small>En attente</small>
+        <strong>{s.waiting}</strong>
+      </div>
+      <div>
+        <small>SLA / objectif</small>
+        <strong className={`tone-${slaTone(s.sla, s.slaTarget)}`}>{s.sla.toLocaleString('fr-FR')} %</strong>
+        <small>Objectif {s.slaTarget.toLocaleString('fr-FR')} %</small>
+      </div>
+      <div>
+        <small>Agents connectés</small>
+        <strong>{s.agentsConnected}</strong>
+      </div>
+      <div>
+        <small>Tickets ouverts</small>
+        <strong>{s.openTickets}</strong>
+      </div>
+    </div>
   );
 }
 

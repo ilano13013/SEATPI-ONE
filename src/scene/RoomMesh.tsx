@@ -34,6 +34,8 @@ export function RoomMesh({ selected, hovered, badge, onSelect, onHover, ...conte
   const { room, animate } = content;
   const lift = useRef<Group>(null);
   const { width: w, depth: d } = room;
+  // Un pôle sélectionné porte son propre contour : le plateau reste discret.
+  const outlined = selected && !content.selectedPole;
 
   useFrame((_, dt) => {
     if (!lift.current) return;
@@ -68,7 +70,7 @@ export function RoomMesh({ selected, hovered, badge, onSelect, onHover, ...conte
           )}
           <RoomContents {...content} />
         </group>
-        {(selected || hovered) && <Outline w={w} d={d} color={selected ? '#2563eb' : '#60a5fa'} />}
+        {(outlined || hovered) && <Outline w={w} d={d} color={outlined ? '#2563eb' : '#60a5fa'} />}
       </group>
       <Html position={[0, WALL_H + 0.45, room.outdoor ? 0 : -d / 2 + 0.2]} center className={`room-label${selected ? ' selected' : ''}`} zIndexRange={[10, 0]}>
         <span>{room.label}</span>

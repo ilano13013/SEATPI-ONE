@@ -9,8 +9,8 @@ describe('connecteurs', () => {
     const queues = await connector.listQueues();
     expect(queues.data).toHaveLength(state.queues.length);
     expect(queues.freshness).toEqual({ asOf: 1234, source: 'demo' });
-    const tickets = await connector.listTickets({ clientId: 'dmb' });
-    expect(tickets.data.every((t) => t.clientId === 'dmb')).toBe(true);
+    const tickets = await connector.listTickets({ clientId: 'ortec' });
+    expect(tickets.data.every((t) => t.clientId === 'ortec')).toBe(true);
   });
 
   it('les connecteurs réels refusent tout appel tant qu’ils ne sont pas validés', async () => {

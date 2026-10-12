@@ -10,12 +10,14 @@ interface Props {
   room: Room;
   state: DemoState;
   role: Role;
+  selectedPole: string | null;
+  onSelectPole: (clientId: string | null) => void;
   focusAgentId: string | null;
   onFocusAgent: (id: string | null) => void;
   onClose: () => void;
 }
 
-export function SidePanel({ room, state, role, focusAgentId, onFocusAgent, onClose }: Props) {
+export function SidePanel({ room, state, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose }: Props) {
   const allowed = can(role, room.module);
   const props = { state, role };
   return (
@@ -37,7 +39,7 @@ export function SidePanel({ room, state, role, focusAgentId, onFocusAgent, onClo
       ) : (
         // `key` : réinitialise les filtres locaux quand on change de pièce ou de rôle.
         <div key={`${room.id}-${role}`}>
-          {room.id === 'helpdesk' && <HelpdeskPanel {...props} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
+          {room.id === 'helpdesk' && <HelpdeskPanel {...props} selectedPole={selectedPole} onSelectPole={onSelectPole} focusAgentId={focusAgentId} onFocusAgent={onFocusAgent} />}
           {room.id === 'pause' && <PausePanel {...props} />}
           {room.id === 'rh' && <RhPanel {...props} />}
           {room.id === 'stock' && <StockPanel {...props} />}

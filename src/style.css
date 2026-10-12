@@ -79,6 +79,7 @@ h1 span { color: var(--brand); }
 .legend i { width: 8px; height: 8px; border-radius: 50%; }
 .scenefooter { position: absolute; bottom: 15px; left: 15px; right: 15px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; }
 .scenefooter button { border: 1px solid #dce6f2; background: #ffffffed; color: #546a84; border-radius: 20px; padding: 7px 10px; font-size: 10px; font-weight: 700; }
+.scenefooter button.pole { border-style: dashed; }
 .scenefooter button.active { background: #2e72e6; color: white; border-color: #2e72e6; }
 
 /* Étiquettes et infobulles de la scène (drei <Html>) */
@@ -86,12 +87,18 @@ h1 span { color: var(--brand); }
 .room-label span { background: #ffffffeb; color: #243752; border: 1px solid #d6e1ee; border-radius: 8px; padding: 4px 8px; font-size: 11px; font-weight: 800; box-shadow: 0 2px 8px #14253e14; }
 .room-label.selected span { background: #2e72e6; color: white; border-color: #2e72e6; }
 .room-label em { font-style: normal; font-size: 10px; font-weight: 700; background: var(--navy); color: white; border-radius: 6px; padding: 3px 7px; }
+.pole-label { pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 3px; white-space: nowrap; }
+.pole-label span { background: #14253ecc; color: white; border-radius: 6px; padding: 3px 7px; font-size: 10px; font-weight: 800; }
+.pole-label.selected span { background: #2e72e6; }
+.pole-label em { font-style: normal; font-size: 10px; font-weight: 700; background: white; color: var(--navy); border: 1px solid #d6e1ee; border-radius: 6px; padding: 2px 6px; }
 .scene-tip { pointer-events: none; background: var(--navy); color: white; border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 2px; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 14px #14253e33; }
 .scene-tip span { color: #b9c8de; font-size: 10px; }
 
 /* Mode 2D */
 .twod { position: absolute; inset: 0; padding: 78px 20px 64px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .twod-floor h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #647d9b; margin: 0 0 8px; }
+.twod-floor h4 { font-size: 11px; color: #647d9b; margin: 12px 0 8px; font-weight: 700; }
+.twod-grid.poles button { padding: 12px 14px; }
 .twod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .twod-grid button { background: white; border: 1px solid #d9e4f0; border-left: 6px solid; border-radius: 12px; padding: 16px 14px; display: flex; justify-content: space-between; align-items: center; text-align: left; gap: 8px; }
 .twod-grid button span { display: flex; flex-direction: column; gap: 4px; }

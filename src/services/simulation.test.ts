@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../data/demoData';
 import { allStatuses } from '../lib/status';
 import { createRng } from './random';
-import { computeMetrics, simulateTick } from './simulation';
+import { clientSummary, computeMetrics, simulateTick } from './simulation';
 
 function run(seed: number, ticks: number) {
   const rng = createRng(seed);
@@ -41,7 +41,7 @@ describe('simulateTick', () => {
     }
     for (const a of state.agents) expect(allStatuses).toContain(a.status);
     // Un agent hors ligne ne se reconnecte pas tout seul dans la démo.
-    expect(state.agents.find((a) => a.id === 'ag-15')?.status).toBe('Hors ligne');
+    expect(state.agents.find((a) => a.name === 'Agent D05')?.status).toBe('Hors ligne');
   });
 
   it('fait évoluer les états des agents', () => {
@@ -55,11 +55,24 @@ describe('simulateTick', () => {
 describe('computeMetrics', () => {
   it('agrège les indicateurs du jeu initial', () => {
     const m = computeMetrics(createInitialState(0));
-    expect(m.agentsConnected).toBe(15);
+    expect(m.agentsConnected).toBe(19);
     expect(m.waitingTotal).toBe(8);
     expect(m.onBreak).toBe(3);
     expect(m.openTickets).toBe(7);
     expect(m.slaGlobal).toBeGreaterThan(90);
     expect(m.slaGlobal).toBeLessThan(100);
+  });
+});
+
+describe('clientSummary', () => {
+  it('résume un pôle client', () => {
+    const s = clientSummary(createInitialState(0), 'thelem');
+    expect(s.waiting).toBe(4);
+    expect(s.agentsConnected).toBe(4);
+    expect(s.onBreak).toBe(1);
+    expect(s.openTickets).toBe(2);
+    // SLA pondéré : (92 × 186 + 95 × 64) / 250
+    expect(s.sla).toBe(92.8);
+    expect(s.slaTarget).toBe(95);
   });
 });

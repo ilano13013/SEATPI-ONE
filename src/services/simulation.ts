@@ -94,3 +94,29 @@ export function computeMetrics(state: DemoState): Metrics {
     openTickets: state.tickets.filter((t) => t.status !== 'Résolu').length,
   };
 }
+
+export interface ClientSummary {
+  waiting: number;
+  sla: number;
+  slaTarget: number;
+  agentsConnected: number;
+  onBreak: number;
+  openTickets: number;
+}
+
+/** Indicateurs d'un pôle client (SLA pondéré par le volume traité). */
+export function clientSummary(state: DemoState, clientId: string): ClientSummary {
+  const queues = state.queues.filter((q) => q.clientId === clientId);
+  const agents = state.agents.filter((a) => a.clientId === clientId);
+  const handled = queues.reduce((s, q) => s + q.handledToday, 0);
+  const weighted = (key: 'sla' | 'slaTarget') =>
+    handled === 0 ? 0 : Math.round((queues.reduce((s, q) => s + q[key] * q.handledToday, 0) / handled) * 10) / 10;
+  return {
+    waiting: queues.reduce((s, q) => s + q.waiting, 0),
+    sla: weighted('sla'),
+    slaTarget: weighted('slaTarget'),
+    agentsConnected: agents.filter((a) => a.status !== 'Hors ligne').length,
+    onBreak: agents.filter((a) => BREAK_STATUSES.includes(a.status)).length,
+    openTickets: state.tickets.filter((t) => t.clientId === clientId && t.status !== 'Résolu').length,
+  };
+}

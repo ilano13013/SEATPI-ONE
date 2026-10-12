@@ -1,10 +1,10 @@
 import type { Agent, InventoryItem, Room, Vehicle } from '../types';
-import { helpdeskDesks } from '../data/layout';
-import { BREAK_STATUSES, OFF_FLOOR_STATUSES } from '../services/simulation';
+import { BREAK_STATUSES } from '../services/simulation';
 import { Avatar } from './Avatar';
+import { HelpdeskPoles, type PoleProps } from './HelpdeskPoles';
 import { Cabinet, Car, Chair, CoffeeMachine, Counter, Desk, Plant, RoundTable, Shelf, Sofa, Tree, WallScreen } from './furniture';
 
-export interface RoomContentProps {
+export interface RoomContentProps extends PoleProps {
   room: Room;
   agents: Agent[];
   vehicles: Vehicle[];
@@ -31,25 +31,13 @@ const pauseSeats: [number, number, number][] = [
   [0.6, 1.1, Math.PI],
 ];
 
-export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick }: RoomContentProps) {
+export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, ...poles }: RoomContentProps) {
   switch (room.id) {
     case 'helpdesk':
       return (
         <>
-          {helpdeskDesks.map(([x, z], i) => {
-            const agent = agents.find((a) => a.desk === i);
-            const present = agent && !OFF_FLOOR_STATUSES.includes(agent.status);
-            return (
-              <group key={i}>
-                <Desk position={[x, 0, z]} />
-                <Chair position={[x, 0, z + 0.42]} color={present ? '#47608f' : '#9aa7b8'} />
-                {present && <Avatar agent={agent} position={[x, 0, z + 0.4]} rotation={Math.PI} animate={animate} onClick={onAgentClick} />}
-              </group>
-            );
-          })}
+          <HelpdeskPoles agents={agents} animate={animate} onAgentClick={onAgentClick} {...poles} />
           <WallScreen position={[0, 0, -3.52]} />
-          <Plant position={[-3.1, 0, 3.2]} />
-          <Plant position={[3.1, 0, 3.2]} scale={0.8} />
         </>
       );
     case 'pause': {

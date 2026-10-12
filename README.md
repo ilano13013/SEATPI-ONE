@@ -20,6 +20,7 @@ Ouvrir l'URL indiquée par Vite.
 
 **Entreprise virtuelle 3D**
 - Bâtiment isométrique sur deux étages (rez-de-chaussée : accueil, salle de pause, stock informatique, parc automobile ; étage 1 : plateau Helpdesk, RH, direction & budgets), soit 7 pièces cliquables.
+- Plateau Helpdesk affiché en entier et découpé en **pôles clients cliquables** : Pôle Thelem, Pôle IRD, Pôle Ortec, Pôle Multi dédié, Pôle Sodiaal (moquette colorée, cloisons basses, postes et avatars par pôle). Un clic sur le plateau ouvre la vue globale ; un clic sur un pôle centre la caméra sur ce pôle et filtre le panneau (files, agents, tickets, synthèse SLA). Les pôles sont aussi accessibles depuis la barre du bas, le sélecteur du panneau et le mode 2D.
 - Sélecteur d'étage avec transition, bouton « Vue d'ensemble », caméra orbitale (rotation, zoom borné, panoramique) et animation douce de focus sur la pièce sélectionnée. Toute interaction de l'utilisateur interrompt l'animation.
 - Mobilier stylisé, cloisons vitrées, éclairage et ombres, avatars colorés selon l'état de travail, légende des états, surbrillance et indicateur au survol, info-bulle sur les avatars.
 - Les avatars de la salle de pause sont une **métaphore d'état**, pas une localisation.
@@ -27,7 +28,7 @@ Ouvrir l'URL indiquée par Vite.
 
 **Interface métier**
 - Indicateurs globaux : agents connectés, appels en attente, SLA pondéré vs objectif, pauses, tickets ouverts.
-- Plateau Helpdesk : files par client (attente, plus longue attente, SLA vs objectif), agents (filtre par état, fiche au clic), tickets fictifs (filtre par priorité, détail au clic), filtre client.
+- Plateau Helpdesk : sélecteur de pôle client, synthèse du pôle (attente, SLA vs objectif, agents connectés, tickets), files par pôle (attente, plus longue attente, SLA vs objectif), agents (filtre par état, fiche au clic), tickets fictifs (filtre par priorité, détail au clic).
 - Salle de pause, RH (agrégé), stock (alertes, filtre par catégorie), parc automobile, budgets, accueil.
 - Mode 2D accessible au clavier donnant accès aux mêmes panneaux. `Échap` ferme le panneau.
 
