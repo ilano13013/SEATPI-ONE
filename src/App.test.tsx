@@ -215,4 +215,21 @@ describe('App (mode démo)', () => {
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Valider' }));
     expect(validated()).toBe(v0 + 1);
   });
+
+  it('budget déplacements : demande au-delà du plafond bloquée et journalisée ; plafond réservé à la direction', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'finance' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Budget & Rentabilité/ }));
+    const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
+    expect(fin.getByText(/pas le résultat comptable/)).toBeTruthy();
+    fireEvent.click(fin.getByRole('tab', { name: 'Budget déplacements' }));
+    fireEvent.change(fin.getByLabelText('Objet du déplacement'), { target: { value: 'Séminaire client' } });
+    fireEvent.change(fin.getByLabelText('Montant estimé'), { target: { value: '999999' } });
+    fireEvent.click(fin.getByRole('button', { name: /Soumettre/ }));
+    expect(fin.getAllByText(/Bloquée/).length).toBeGreaterThan(0);
+    expect(fin.getByText(/réservée à une personne habilitée/)).toBeTruthy();
+    // Recrutement : règle d'imputation à confirmer.
+    fireEvent.click(fin.getByRole('tab', { name: 'Budget recrutement' }));
+    expect(fin.getAllByText(/RÈGLE D’IMPUTATION À CONFIRMER/).length).toBeGreaterThan(0);
+  });
 });

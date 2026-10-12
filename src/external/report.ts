@@ -20,7 +20,9 @@ export function workedHours(tech: Technician, p: Period, client: ExternalClient)
 }
 
 export interface Finance {
+  /** Heures déclarées : servent uniquement à ventiler les coûts, jamais à produire du revenu. */
   hours: number;
+  /** Prestation contractuelle de la période (forfait du registre des prestations, proratisé). */
   revenue: number;
   cost: number;
   margin: number;
@@ -28,21 +30,23 @@ export interface Finance {
   budget: number;
 }
 
-/** Finances de la période : heures × tarif contractuel / coût interne ; budget mensuel proratisé. */
+/**
+ * Finances indicatives de la période (valeurs fictives) :
+ * - revenu = forfait contractuel proratisé (registre des prestations) — ni les heures ni les tickets résolus ne créent de revenu ;
+ * - coût = heures déclarées × coût interne horaire (ventilation des coûts).
+ */
 export function finance(techs: Technician[], p: Period, client: ExternalClient): Finance {
   let hours = 0;
-  let revenue = 0;
   let cost = 0;
   for (const t of techs) {
     const h = workedHours(t, p, client);
-    const c = contractById(t.contractId);
     hours += h;
-    revenue += h * c.hourlyRate;
-    cost += h * c.costRate;
+    cost += h * contractById(t.contractId).costRate;
   }
   const contractIds = [...new Set(teamsOf(client.id).map((t) => t.contractId))];
   const weekDays = Math.max(1, (startOfDay(p.end) - startOfDay(p.start)) / 86_400_000) || 1;
   const budget = contractIds.reduce((s, id) => s + contractById(id).monthlyBudget, 0) * (12 / 365) * Math.min(7, weekDays);
+  const revenue = budget;
   return {
     hours: Math.round(hours * 10) / 10,
     revenue: Math.round(revenue),

@@ -39,9 +39,12 @@ import type { ModuleLink } from './components/panels/DepartmentPanel';
 import type { ExternalState } from './external/useExternal';
 import { externalClients, externalTeams } from './external/config';
 import type { Technician } from './external/types';
+import { useFinance } from './finance/useFinance';
+import { FinanceCockpit, type FinanceTab } from './components/finance/FinanceCockpit';
+import { PdgCockpit } from './components/pdg/PdgCockpit';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'itsm']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'finance', 'pdg', 'itsm']);
 
 /** Lien d'un espace 3D vers un module applicatif. */
 const MODULE_VIEW: Record<ModuleLink, AppView> = {
@@ -92,6 +95,11 @@ export function App() {
   const internal = useInternalTickets(sim.running);
   const mgmt = useManagement(state.agents, ext.state.techs);
   const [persona, setPersona] = useState('resp-helpdesk');
+  const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
+  const [finTab, setFinTab] = useState<FinanceTab>('global');
+  const { syncTrips } = fin;
+  // Chaque déplacement CSM planifié est soumis à l'enveloppe déplacements (blocage si plafond atteint).
+  useEffect(() => syncTrips(ext.state.trips), [ext.state.trips, syncTrips]);
 
   // Les décisions du management (congés, CRA) se répercutent sur les techniciens N2 des sites clients.
   const extState = useMemo<ExternalState>(() => {
@@ -461,6 +469,24 @@ export function App() {
             onBack={backToMap}
           />
         )}
+        {appView === 'finance' && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} onBack={backToMap} />}
+        {appView === 'pdg' && (
+          <PdgCockpit
+            sim={state}
+            views={Object.values(views)}
+            tickets={hdTickets}
+            mgmt={mgmt.state}
+            fin={fin.state}
+            now={ext.state.now}
+            role={role}
+            onBack={backToMap}
+            onOpen={(v, sub) => {
+              if (v === 'finance' && sub) setFinTab(sub as FinanceTab);
+              if (v === 'externes') openExternal({ scope: 'global', tab: 'dashboard' });
+              else setAppView(v);
+            }}
+          />
+        )}
         {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} />}
         {appView === 'exploitation' && (
           <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />
@@ -508,7 +534,10 @@ export function App() {
           focusPersonId={focusPersonId}
           onOpenPerson={openPersonCockpit}
           availableModules={AVAILABLE_LINKS}
-          onOpenModule={(m) => setAppView(MODULE_VIEW[m])}
+          onOpenModule={(m) => {
+            if (m === 'deplacements' || m === 'recrutement' || m === 'finance') setFinTab(m === 'finance' ? 'global' : m);
+            setAppView(MODULE_VIEW[m]);
+          }}
           now={ext.state.now}
           onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })}
           onOpenClient={(clientId) => openExternal({ scope: clientId, tab: 'dashboard' })}
