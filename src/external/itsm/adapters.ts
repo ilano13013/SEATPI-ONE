@@ -556,6 +556,14 @@ export const serviceManagerAdapter = flatAdapter(
   { mode: 'lecture seule', canAssign: false, transitions: 'aucune', note: 'Connecteur prévu en lecture seule.' },
 );
 
+export const serviceNowAdapter = flatAdapter(
+  'ServiceNow',
+  'API REST ServiceNow (Table API, format générique)',
+  { Nouveau: 'New', Affecté: 'Assigned', 'En cours': 'In Progress', 'En attente': 'On Hold - Awaiting Caller', Bloqué: 'On Hold - Awaiting Vendor', Escaladé: 'In Progress - Escalated', Résolu: 'Resolved', Clôturé: 'Closed', Réouvert: 'Reopened' },
+  { P1: '1 - Critical', P2: '2 - High', P3: '3 - Moderate', P4: '4 - Low' },
+  { mode: 'lecture-écriture', canAssign: true, transitions: 'libre', note: 'Hypothèse de démonstration (droits non accordés ; états et motifs « On Hold » de chaque instance à confirmer).' },
+);
+
 export const zendeskAdapter = flatAdapter(
   'Zendesk',
   'API Zendesk Support (format générique)',
@@ -579,6 +587,7 @@ export const adapters: Record<ItsmTool, ItsmAdapter<any>> = {
   'Service Manager': serviceManagerAdapter,
   Jira: jiraAdapter,
   Zendesk: zendeskAdapter,
+  ServiceNow: serviceNowAdapter,
   Autre: genericAdapter,
 };
 

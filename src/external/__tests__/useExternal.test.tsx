@@ -14,16 +14,16 @@ describe('écritures simulées vers les outils sources', () => {
     expect(result.current.state.tickets.invivo.find((x) => x.id === t.id)!.status).toBe('En cours');
   });
 
-  it('PRIMAGAZ sans ITSM : aucun ticket et création refusée', () => {
+  it('PRIMAGAZ sur ServiceNow : tickets issus de ServiceNow, statuts source conservés', () => {
     const { result } = renderHook(() => useExternal(false));
-    expect(result.current.state.tickets.primagaz).toHaveLength(0);
-    expect(result.current.state.connectors.primagaz.status).toBe('non configuré');
-    let r = { ok: true, message: '' };
+    const list = result.current.state.tickets.primagaz;
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.every((t) => t.source.tool === 'ServiceNow' && /^INC\d{7}$/.test(t.source.id))).toBe(true);
+    let r = { ok: false, message: '' };
     act(() => {
       r = result.current.createTicket('primagaz', { title: 'Test', description: '', category: '', priority: 'P3', site: '' }, 'responsable');
     });
-    expect(r.ok).toBe(false);
-    expect(r.message).toMatch(/ITSM NON RENSEIGNÉ/);
+    expect(r.ok).toBe(true);
   });
 
   it('crée un ticket dans la source simulée et le propage au référentiel', () => {

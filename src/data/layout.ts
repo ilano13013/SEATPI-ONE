@@ -1,4 +1,5 @@
 import type { Floor, FloorId, Location, Room, RoomId, SiteId } from '../types';
+import type { PoleGroup } from '../config/itsm';
 import { buildSiteFloorsAndRooms, internalSites, sitePlans } from './sites';
 
 const site = buildSiteFloorsAndRooms();
@@ -98,7 +99,10 @@ export function roomsOnFloor(floor: FloorId): Room[] {
  * (6,9 × 7,2) : trois pôles au fond, deux pôles devant.
  */
 export interface HelpdeskPole {
+  /** Identifiant de la zone de pôle (équipe dédiée ou équipe du Pôle Multi). */
   clientId: string;
+  /** Pôle du plateau : Pôle Dédié (une équipe par client) ou Pôle Multi. */
+  group: PoleGroup;
   /** Site du plateau qui héberge le pôle (répartition de démonstration). */
   site: SiteId;
   label: string;
@@ -114,17 +118,20 @@ export interface HelpdeskPole {
 }
 
 const ROW_DEPTH = 3.6;
-const BACK_W = 6.9 / 3;
+const BACK_W = 6.9 / 4;
 const FRONT_W = 6.9 / 2;
 
 export const helpdeskPoles: HelpdeskPole[] = [
-  { clientId: 'thelem', site: 'laciotat', label: 'Pôle Thelem', x: -BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.55, 0.55] },
-  { clientId: 'ird', site: 'laciotat', label: 'Pôle IRD', x: 0, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.55, 0.55] },
-  { clientId: 'ortec', site: 'laciotat', label: 'Pôle Ortec', x: BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#f8d5b8', columns: [-0.55, 0.55] },
-  { clientId: 'multi', site: 'laciotat', label: 'Pôle Multi', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
-  { clientId: 'sodiaal', site: 'laciotat', label: 'Pôle Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
+  // Rangée du fond : équipes du Pôle Dédié.
+  { clientId: 'thelem', group: 'dedie', site: 'laciotat', label: 'Dédié · Thelem', x: -1.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.42, 0.42] },
+  { clientId: 'ird', group: 'dedie', site: 'laciotat', label: 'Dédié · IRD', x: -0.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.42, 0.42] },
+  { clientId: 'ortec', group: 'dedie', site: 'laciotat', label: 'Dédié · Ortec', x: 0.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#f8d5b8', columns: [-0.42, 0.42] },
+  { clientId: 'primagaz', group: 'dedie', site: 'laciotat', label: 'Dédié · PRIMAGAZ', x: 1.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#fbd0d9', columns: [-0.42, 0.42] },
+  // Rangée de devant : Pôle Multi et équipe SODIAAL du Pôle Dédié.
+  { clientId: 'multi', group: 'multi', site: 'laciotat', label: 'Pôle Multi', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
+  { clientId: 'sodiaal', group: 'dedie', site: 'laciotat', label: 'Dédié · Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
   // Montpellier : seconde équipe du Pôle Multi (mêmes clients). Paris : aucun pôle client affecté.
-  { clientId: 'multi-mtp', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
+  { clientId: 'multi-mtp', group: 'multi', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
 ];
 
 export const polesOf = (site: SiteId) => helpdeskPoles.filter((p) => p.site === site);

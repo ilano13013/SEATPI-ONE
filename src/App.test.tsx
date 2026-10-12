@@ -56,7 +56,7 @@ describe('App (mode démo)', () => {
 
   it('ouvre un pôle client depuis le plateau', () => {
     render(<App />);
-    fireEvent.click(within(screen.getByRole('region', { name: 'La Ciotat' })).getByRole('button', { name: /Pôle Sodiaal/ }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'La Ciotat' })).getByRole('button', { name: /Dédié · Sodiaal/ }));
     expect(panel().getByRole('heading', { name: 'Plateau Helpdesk' })).toBeTruthy();
     expect((panel().getByLabelText('Pôle client') as HTMLSelectElement).value).toBe('sodiaal');
     expect(panel().getAllByRole('button', { name: /^Sodiaal ·/ })).toHaveLength(1);
@@ -152,7 +152,7 @@ describe('App (mode démo)', () => {
     expect(within(screen.getByRole('region', { name: 'Paris' })).queryByRole('button', { name: /Ressources humaines|Stock/ })).toBeNull();
   });
 
-  it('affiche la cartographie ITSM unique et signale PRIMAGAZ comme non renseigné', () => {
+  it('affiche la cartographie ITSM unique et signale G2S comme non renseigné', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
     fireEvent.click(screen.getByRole('button', { name: 'Connecteurs ITSM' }));
@@ -161,13 +161,8 @@ describe('App (mode démo)', () => {
     expect(reg.getAllByText('SNR').length).toBeGreaterThan(0);
     expect(reg.getAllByText('Zendesk').length).toBeGreaterThan(0);
     expect(reg.getByText('THELEM, TRANSGOURMET, MONEXT')).toBeTruthy();
-    expect(reg.getAllByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE').length).toBe(5); // PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S
-    // Cockpit PRIMAGAZ : aucun ticket inventé.
-    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
-    const cockpit = within(screen.getByRole('region', { name: 'Supervision des clients externes' }));
-    fireEvent.click(within(cockpit.getByRole('navigation', { name: 'Clients' })).getByRole('button', { name: /PRIMAGAZ/ }));
-    fireEvent.click(cockpit.getByRole('tab', { name: 'Tickets' }));
-    expect(cockpit.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
+    expect(reg.getByText('PRIMAGAZ, SODIAAL, IRD')).toBeTruthy();
+    expect(reg.getAllByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE').length).toBe(1); // G2S
   });
 
   it('cockpit Helpdesk consolidé : compteur cliquable, filtres partagés tableau / Kanban', () => {
@@ -187,7 +182,7 @@ describe('App (mode démo)', () => {
     // Création simulée sur un client sans ITSM : refusée.
     fireEvent.click(hd.getByRole('button', { name: /Nouveau ticket/ }));
     const dlg = within(screen.getByRole('dialog'));
-    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'N2:primagaz' } });
+    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'N1:g2s' } });
     expect(dlg.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
     expect((dlg.getByRole('button', { name: /Créer dans/ }) as HTMLButtonElement).disabled).toBe(true);
   });

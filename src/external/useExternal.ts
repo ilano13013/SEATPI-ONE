@@ -225,7 +225,7 @@ export function useExternal(running: boolean, seed = 2026) {
       const records = s.sources[clientId];
       const team = externalTeams.find((t) => t.clientId === clientId)!;
       const seq = records.length + 5001;
-      const sourceId = client.tool === 'ISILOG' ? `ISL-${40000 + seq}` : client.tool === 'EasyVista' ? `I26_${String(10400 + seq).padStart(6, '0')}` : client.tool === 'GLPI' ? String(48200 + seq) : `DEMO-${seq}`;
+      const sourceId = client.tool === 'ISILOG' ? `ISL-${40000 + seq}` : client.tool === 'EasyVista' ? `I26_${String(10400 + seq).padStart(6, '0')}` : client.tool === 'GLPI' ? String(48200 + seq) : client.tool === 'ServiceNow' ? `INC${String(50400 + seq).padStart(7, '0')}` : `DEMO-${seq}`;
       const at = Math.floor(now / 60_000) * 60_000;
       const record: NormalizedRecord = {
         sourceId,

@@ -1,28 +1,34 @@
 // Cartographie ITSM de référence — SOURCE UNIQUE pour toute l'application.
 //
-// Configuration fournie (mise à jour : clients du Pôle Multi) :
-//   EasyVista : INVIVO, DMB, TERACT
-//   Jira      : LBR FR, EURAPHARMA
-//   GLPI      : ANGE, HSTV, NOCIBE
-//   ISILOG    : THELEM, TRANSGOURMET, MONEXT
-//   Zendesk   : SNR
-// Tout client absent de ce tableau (PRIMAGAZ, IRD, ORTEC, SODIAAL, G2S) est
-// « ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE ». Aucun outil n'est attribué par défaut.
+// Configuration fournie (Pôle Multi, Pôle Dédié et clients déjà référencés) :
+//   EasyVista  : INVIVO, DMB, TERACT
+//   Jira       : LBR FR, EURAPHARMA, ORTEC
+//   GLPI       : ANGE, HSTV, NOCIBE
+//   ISILOG     : THELEM, TRANSGOURMET, MONEXT
+//   Zendesk    : SNR
+//   ServiceNow : PRIMAGAZ, SODIAAL, IRD
+// G2S : outil « à confirmer » → ITSM NON RENSEIGNÉ. Aucun outil n'est attribué par défaut,
+// et le rattachement à un pôle ne se déduit jamais de l'outil ITSM.
 import type { ItsmTool } from '../external/types';
 
-export type MappedTool = Extract<ItsmTool, 'EasyVista' | 'Jira' | 'GLPI' | 'ISILOG' | 'Zendesk'>;
+export type MappedTool = Extract<ItsmTool, 'EasyVista' | 'Jira' | 'GLPI' | 'ISILOG' | 'Zendesk' | 'ServiceNow'>;
 
 export const ITSM_MAPPING: Record<MappedTool, string[]> = {
   EasyVista: ['INVIVO', 'DMB', 'TERACT'],
-  Jira: ['LBR FR', 'EURAPHARMA'],
+  Jira: ['LBR FR', 'EURAPHARMA', 'ORTEC'],
   GLPI: ['ANGE', 'HSTV', 'NOCIBE'],
   ISILOG: ['THELEM', 'TRANSGOURMET', 'MONEXT'],
   Zendesk: ['SNR'],
+  ServiceNow: ['PRIMAGAZ', 'SODIAAL', 'IRD'],
 };
 
 export const ITSM_NOT_SET = 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE';
 
 export type ClientKind = 'interne' | 'externe';
+
+/** Pôles du plateau Helpdesk : chaque client est rattaché explicitement (jamais d'après son outil). */
+export type PoleGroup = 'multi' | 'dedie';
+export const POLE_GROUP_LABEL: Record<PoleGroup, string> = { multi: 'Pôle Multi', dedie: 'Pôle Dédié' };
 
 /** Client : entité contractante. À ne pas confondre avec le site, le contrat ou l'équipe. */
 export interface ClientRecord {
@@ -33,22 +39,23 @@ export interface ClientRecord {
   kind: ClientKind;
   /** Équipe(s) qui traitent les demandes. */
   teamLabel: string;
-  /** Groupe de pôles N1 qui traite le client sur les plateaux internes (null = aucun N1 interne). */
-  n1Pole: string | null;
+  /** Pôle du plateau Helpdesk qui traite le client en N1 (null = pas de N1 interne). */
+  pole: PoleGroup | null;
   /** Rattachement de démonstration à confirmer (pôle, site). */
   allocationToConfirm: boolean;
 }
 
 const MULTI = 'Pôle Multi — La Ciotat et Montpellier';
+const DEDIE = (n: string) => `Pôle Dédié — équipe ${n} (La Ciotat)`;
 
 export const clientRegistry: ClientRecord[] = [
-  { id: 'invivo', name: 'INVIVO', kind: 'externe', teamLabel: `${MULTI} (N1) · MCO N2 INVIVO chez le client`, n1Pole: 'multi', allocationToConfirm: false },
-  { id: 'primagaz', name: 'PRIMAGAZ', kind: 'externe', teamLabel: 'MCO N2 PRIMAGAZ (chez le client)', n1Pole: null, allocationToConfirm: false },
-  { id: 'monext', name: 'MONEXT', kind: 'externe', teamLabel: 'MCO N2 MONEXT (chez le client)', n1Pole: null, allocationToConfirm: false },
-  { id: 'thelem', name: 'THELEM', kind: 'interne', teamLabel: 'Pôle Thelem — La Ciotat', n1Pole: 'thelem', allocationToConfirm: true },
-  { id: 'ird', name: 'IRD', kind: 'interne', teamLabel: 'Pôle IRD — La Ciotat', n1Pole: 'ird', allocationToConfirm: true },
-  { id: 'ortec', name: 'ORTEC', kind: 'interne', teamLabel: 'Pôle Ortec — La Ciotat', n1Pole: 'ortec', allocationToConfirm: true },
-  { id: 'sodiaal', name: 'SODIAAL', kind: 'interne', teamLabel: 'Pôle Sodiaal — La Ciotat', n1Pole: 'sodiaal', allocationToConfirm: true },
+  { id: 'invivo', name: 'INVIVO', kind: 'externe', teamLabel: `${MULTI} (N1) · MCO N2 INVIVO chez le client`, pole: 'multi', allocationToConfirm: false },
+  { id: 'primagaz', name: 'PRIMAGAZ', kind: 'externe', teamLabel: `${DEDIE('PRIMAGAZ')} (N1) · MCO N2 PRIMAGAZ chez le client`, pole: 'dedie', allocationToConfirm: false },
+  { id: 'monext', name: 'MONEXT', kind: 'externe', teamLabel: 'MCO N2 MONEXT (chez le client)', pole: null, allocationToConfirm: false },
+  { id: 'thelem', name: 'THELEM', kind: 'interne', teamLabel: DEDIE('THELEM'), pole: 'dedie', allocationToConfirm: false },
+  { id: 'ird', name: 'IRD', kind: 'interne', teamLabel: DEDIE('IRD'), pole: 'dedie', allocationToConfirm: false },
+  { id: 'ortec', name: 'ORTEC', kind: 'interne', teamLabel: DEDIE('ORTEC'), pole: 'dedie', allocationToConfirm: false },
+  { id: 'sodiaal', name: 'SODIAAL', kind: 'interne', teamLabel: DEDIE('SODIAAL'), pole: 'dedie', allocationToConfirm: false },
   ...(
     [
       ['ange', 'ANGE'],
@@ -62,7 +69,7 @@ export const clientRegistry: ClientRecord[] = [
       ['g2s', 'G2S'],
       ['eurapharma', 'EURAPHARMA'],
     ] as const
-  ).map(([id, name]) => ({ id, name, kind: 'interne' as const, teamLabel: MULTI, n1Pole: 'multi', allocationToConfirm: true })),
+  ).map(([id, name]) => ({ id, name, kind: 'interne' as const, teamLabel: MULTI, pole: 'multi' as const, allocationToConfirm: id === 'eurapharma' })),
 ];
 
 const norm = (s: string) => s.trim().toUpperCase();
@@ -80,20 +87,27 @@ export function itsmOf(idOrName: string): MappedTool | null {
 export const clientRecord = (id: string) => clientRegistry.find((c) => c.id === id);
 
 /** Clients d'un groupe de pôles N1 (ordre de la liste fournie pour le Pôle Multi). */
+// EURAPHARMA : affectation existante au Pôle Multi conservée.
 const MULTI_CLIENTS = ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr', 'dmb', 'nocibe', 'teract', 'g2s', 'eurapharma'];
 
 /**
  * Clients traités par chaque pôle du plateau (clé = identifiant du pôle).
- * Le Pôle Multi existe à La Ciotat (`multi`) et à Montpellier (`multi-mtp`) avec les mêmes clients.
+ * Pôle Dédié : une équipe par client (THELEM, IRD, ORTEC, SODIAAL, PRIMAGAZ) à La Ciotat.
+ * Pôle Multi : La Ciotat (`multi`) et Montpellier (`multi-mtp`), avec les mêmes clients.
  */
 export const POLE_CLIENTS: Record<string, string[]> = {
   thelem: ['thelem'],
   ird: ['ird'],
   ortec: ['ortec'],
   sodiaal: ['sodiaal'],
+  primagaz: ['primagaz'],
   multi: MULTI_CLIENTS,
   'multi-mtp': MULTI_CLIENTS,
 };
+
+/** Zones de pôle (identifiants) de chaque pôle du plateau. */
+export const POLE_ZONES: Record<PoleGroup, string[]> = { dedie: ['thelem', 'ird', 'ortec', 'primagaz', 'sodiaal'], multi: ['multi', 'multi-mtp'] };
+export const poleGroupOfZone = (zone: string): PoleGroup | null => (Object.keys(POLE_ZONES) as PoleGroup[]).find((g) => POLE_ZONES[g].includes(zone)) ?? null;
 
 /** Clients distincts traités en N1 sur les plateaux, avec les pôles qui les prennent en charge. */
 export const n1Clients: { clientId: string; poleIds: string[] }[] = [...new Set(Object.values(POLE_CLIENTS).flat())].map((clientId) => ({

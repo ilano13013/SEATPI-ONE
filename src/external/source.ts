@@ -60,6 +60,7 @@ function sourceIdFor(client: ExternalClient, seq: number): string {
   if (client.tool === 'ISILOG') return `ISL-${40000 + seq}`;
   if (client.tool === 'Jira') return `${client.name.slice(0, 3).toUpperCase()}-${3100 + seq}`;
   if (client.tool === 'Zendesk') return String(70000 + seq);
+  if (client.tool === 'ServiceNow') return `INC${String(10400 + seq).padStart(7, '0')}`;
   return `DEMO-${seq}`;
 }
 

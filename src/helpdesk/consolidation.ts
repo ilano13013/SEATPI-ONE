@@ -4,7 +4,7 @@
 import type { Agent } from '../types';
 import type { ItsmTool, Priority, Technician, Ticket, TicketStatus } from '../external/types';
 import { isOpen, periods, reopenedIn, resolvedIn, createdIn, type Period } from '../external/metrics';
-import { clientRecord } from '../config/itsm';
+import { clientRecord, type PoleGroup } from '../config/itsm';
 import { internalTicketClients, ticketTeams } from './teams';
 import type { Collaborator } from '../org/collaborators';
 import { personById } from '../org/people';
@@ -15,6 +15,8 @@ export type Scope = 'interne' | 'externe';
 export interface HdTicket extends Ticket {
   scope: Scope;
   clientName: string;
+  /** Pôle du plateau pour les tickets N1 ; null pour les tickets N2 (MCO chez le client). */
+  pole: PoleGroup | null;
   teamLabel: string;
   /** Manager responsable de l'équipe qui traite le ticket. */
   managerId: string | null;
@@ -33,6 +35,7 @@ export function consolidate(internal: Ticket[], external: Ticket[], collaborator
       ...t,
       scope,
       clientName: clientRecord(t.clientId)?.name ?? t.clientId.toUpperCase(),
+      pole: scope === 'interne' ? (clientRecord(t.clientId)?.pole ?? null) : null,
       teamLabel: team ? `${team.name} · ${team.service}` : t.teamId,
       managerId: assignee?.managerId ?? teamManager,
       assigneeName: name(t.assigneeId),
@@ -49,6 +52,8 @@ const poleOfTeam = (teamId: string) => internalTicketClients.find((c) => `int-${
 export type PeriodFilter = 'tout' | 'today' | 'week' | 'prevWeek';
 
 export interface HdFilters {
+  /** Pôle du plateau (N1) ; « n2 » = sites clients MCO. */
+  pole: PoleGroup | 'n2' | '';
   client: string;
   team: string;
   manager: string;
@@ -59,7 +64,7 @@ export interface HdFilters {
   tool: ItsmTool | '';
 }
 
-export const EMPTY_FILTERS: HdFilters = { client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '' };
+export const EMPTY_FILTERS: HdFilters = { pole: '', client: '', team: '', manager: '', tech: '', priority: '', status: '', period: 'tout', tool: '' };
 
 /** Ticket actif sur la période : créé, mis à jour ou encore ouvert pendant la période. */
 const inPeriod = (t: Ticket, p: Period) => t.createdAt < p.end && (isOpen(t) || t.updatedAt >= p.start);
@@ -68,6 +73,7 @@ export function applyFilters(list: HdTicket[], f: HdFilters, now: number): HdTic
   const p = f.period === 'tout' ? null : periods(now)[f.period];
   return list.filter(
     (t) =>
+      (!f.pole || (f.pole === 'n2' ? t.scope === 'externe' : t.pole === f.pole)) &&
       (!f.client || t.clientId === f.client) &&
       (!f.team || t.teamId === f.team) &&
       (!f.manager || t.managerId === f.manager) &&

@@ -19,13 +19,15 @@ describe('consolidation Helpdesk', () => {
     expect(all.some((t) => t.scope === 'externe')).toBe(true);
     expect(new Set(all.map((t) => t.id)).size).toBe(all.length);
   });
-  it('couvre les cinq outils ITSM et conserve identifiants et statuts source', () => {
-    expect(new Set(all.map((t) => t.source.tool))).toEqual(new Set(['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk']));
+  it('couvre les six outils ITSM et conserve identifiants et statuts source', () => {
+    expect(new Set(all.map((t) => t.source.tool))).toEqual(new Set(['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow']));
     for (const t of all) {
       expect(t.source.id).toBeTruthy();
       expect(t.sourceStatus).toBeTruthy();
     }
-    expect(all.some((t) => t.clientId === 'primagaz')).toBe(false); // ITSM non renseigné
+    expect(all.some((t) => (t.clientId as string) === 'g2s')).toBe(false); // ITSM à confirmer
+    // PRIMAGAZ : N1 (Pôle Dédié) et N2 (chez le client) sur ServiceNow.
+    expect(new Set(all.filter((t) => t.clientId === 'primagaz').map((t) => t.pole))).toEqual(new Set(['dedie', null]));
   });
   it('attribue un manager à chaque ticket', () => {
     for (const t of all.filter((x) => x.scope === 'externe')) expect(t.managerId).toBe('mgr-mco');

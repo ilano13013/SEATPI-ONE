@@ -7,10 +7,11 @@ describe('cartographie ITSM de référence', () => {
   it('reprend exactement la configuration fournie', () => {
     expect(ITSM_MAPPING).toEqual({
       EasyVista: ['INVIVO', 'DMB', 'TERACT'],
-      Jira: ['LBR FR', 'EURAPHARMA'],
+      Jira: ['LBR FR', 'EURAPHARMA', 'ORTEC'],
       GLPI: ['ANGE', 'HSTV', 'NOCIBE'],
       ISILOG: ['THELEM', 'TRANSGOURMET', 'MONEXT'],
       Zendesk: ['SNR'],
+      ServiceNow: ['PRIMAGAZ', 'SODIAAL', 'IRD'],
     });
   });
 
@@ -27,7 +28,19 @@ describe('cartographie ITSM de référence', () => {
     expect(itsmOf('teract')).toBe('EasyVista');
     expect(itsmOf('nocibe')).toBe('GLPI');
     expect(itsmOf('snr')).toBe('Zendesk');
-    for (const id of ['primagaz', 'ird', 'ortec', 'sodiaal', 'g2s']) expect(itsmOf(id)).toBeNull();
+    for (const id of ['primagaz', 'sodiaal', 'ird']) expect(itsmOf(id)).toBe('ServiceNow');
+    expect(itsmOf('ortec')).toBe('Jira');
+    expect(itsmOf('g2s')).toBeNull();
+  });
+
+  it('distingue le Pôle Multi et le Pôle Dédié sans déduire le pôle de l’outil', () => {
+    const pole = (id: string) => clientRegistry.find((c) => c.id === id)!.pole;
+    for (const id of ['ange', 'hstv', 'lbrfr', 'transgourmet', 'invivo', 'snr', 'dmb', 'nocibe', 'teract', 'g2s', 'eurapharma']) expect(pole(id), id).toBe('multi');
+    for (const id of ['primagaz', 'sodiaal', 'ird', 'thelem', 'ortec']) expect(pole(id), id).toBe('dedie');
+    expect(pole('monext')).toBeNull();
+    // Même outil, pôles différents : ISILOG (THELEM dédié, TRANSGOURMET multi), Jira (ORTEC dédié, LBR FR multi).
+    expect(itsmOf('thelem')).toBe(itsmOf('transgourmet'));
+    expect(pole('thelem')).not.toBe(pole('transgourmet'));
   });
 
   it('le Pôle Multi (La Ciotat et Montpellier) traite les 11 clients fournis', () => {
@@ -44,7 +57,7 @@ describe('cartographie ITSM de référence', () => {
   });
 
   it('les sites clients externes utilisent la cartographie unique', () => {
-    expect(Object.fromEntries(externalClients.map((c) => [c.id, c.tool]))).toEqual({ invivo: 'EasyVista', primagaz: null, monext: 'ISILOG' });
+    expect(Object.fromEntries(externalClients.map((c) => [c.id, c.tool]))).toEqual({ invivo: 'EasyVista', primagaz: 'ServiceNow', monext: 'ISILOG' });
   });
 
   it('registre des connecteurs : une entrée par couple outil / client, sans valeur inventée', () => {

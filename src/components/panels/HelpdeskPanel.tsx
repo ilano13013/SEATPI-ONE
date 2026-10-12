@@ -4,7 +4,7 @@ import { can, clientScope, type Role } from '../../auth/roles';
 import { formatDuration, formatMinutes, slaTone } from '../../lib/format';
 import { allStatuses, statusColors } from '../../lib/status';
 import { clientSummary } from '../../services/simulation';
-import { POLE_CLIENTS, clientRecord, itsmOf } from '../../config/itsm';
+import { POLE_CLIENTS, POLE_GROUP_LABEL, clientRecord, itsmOf, poleGroupOfZone } from '../../config/itsm';
 import { Badge, Chips, Detail, Empty, Row, Tabs } from '../ui';
 
 type Tab = 'files' | 'agents' | 'tickets';
@@ -59,13 +59,18 @@ export function HelpdeskPanel({ state, role, selectedPole, onSelectPole, focusAg
         <span>Pôle client</span>
         <select value={clientId ?? 'all'} disabled={!!scope} onChange={(e) => onSelectPole(e.target.value === 'all' ? null : e.target.value)}>
           {!scope && <option value="all">Tout le plateau</option>}
-          {state.clients
-            .filter((c) => !scope || c.id === scope)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                Pôle {c.name}
-              </option>
-            ))}
+          {(['dedie', 'multi'] as const).map((g) => {
+            const list = state.clients.filter((c) => (!scope || c.id === scope) && poleGroupOfZone(c.id) === g);
+            return list.length ? (
+              <optgroup key={g} label={POLE_GROUP_LABEL[g]}>
+                {list.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {g === 'dedie' ? `Pôle Dédié · ${c.name}` : `Pôle ${c.name}`}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null;
+          })}
         </select>
       </label>
       {scope && <p className="hint">Rôle Agent : périmètre limité à votre pôle ({clientName(scope)}).</p>}

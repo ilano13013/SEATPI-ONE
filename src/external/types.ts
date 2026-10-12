@@ -3,7 +3,7 @@
 
 export type ExternalClientId = 'invivo' | 'primagaz' | 'monext';
 
-export type ItsmTool = 'GLPI' | 'EasyVista' | 'ISILOG' | 'Service Manager' | 'Jira' | 'Zendesk' | 'Autre';
+export type ItsmTool = 'GLPI' | 'EasyVista' | 'ISILOG' | 'Service Manager' | 'ServiceNow' | 'Jira' | 'Zendesk' | 'Autre';
 
 export type Service = 'Helpdesk N1' | 'MCO N2' | 'Exploitation' | 'CSM' | 'Équipe externe';
 

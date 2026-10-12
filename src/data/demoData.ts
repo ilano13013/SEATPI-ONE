@@ -8,7 +8,8 @@ const clients = [
   { id: 'ortec', name: 'Ortec' },
   { id: 'multi', name: 'Multi' },
   { id: 'sodiaal', name: 'Sodiaal' },
-  // Pôles des plateaux de Montpellier et Paris (répartition de démonstration, à confirmer).
+  { id: 'primagaz', name: 'PRIMAGAZ' },
+  // Seconde équipe du Pôle Multi, à Montpellier.
   { id: 'multi-mtp', name: 'Multi (Montpellier)' },
 ];
 
@@ -20,6 +21,7 @@ const queues: Queue[] = [
   { id: 'q-ortec-n2', clientId: 'ortec', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },
   { id: 'q-multi-hl', clientId: 'multi', name: 'Hotline multi-clients', waiting: 1, longestWaitSec: 67, handledToday: 54, abandonedToday: 2, sla: 94, slaTarget: 95 },
   { id: 'q-sodiaal-n1', clientId: 'sodiaal', name: 'Support utilisateurs', waiting: 0, longestWaitSec: 0, handledToday: 77, abandonedToday: 1, sla: 98, slaTarget: 90 },
+  { id: 'q-primagaz-n1', clientId: 'primagaz', name: 'Helpdesk N1', waiting: 1, longestWaitSec: 58, handledToday: 64, abandonedToday: 2, sla: 93, slaTarget: 95 },
   { id: 'q-multi-mtp-hl', clientId: 'multi-mtp', name: 'Hotline multi-clients', waiting: 2, longestWaitSec: 95, handledToday: 88, abandonedToday: 3, sla: 93, slaTarget: 95 },
 ];
 
@@ -50,6 +52,9 @@ const agentSeed: [string, string, AgentStatus, number][] = [
   ['Agent F04', 'multi-mtp', 'En appel', 95],
   ['Agent F05', 'multi-mtp', 'Post-appel', 25],
   ['Agent F06', 'multi-mtp', 'Disponible', 140],
+  // Équipe PRIMAGAZ du Pôle Dédié (ajoutée en fin de liste : identifiants existants inchangés).
+  ['Agent H01', 'primagaz', 'En appel', 120],
+  ['Agent H02', 'primagaz', 'Disponible', 30],
 ];
 
 const POLE_SITE: Record<string, SiteId> = { 'multi-mtp': 'montpellier' };
@@ -100,7 +105,7 @@ export function createInitialState(now = Date.now()): DemoState {
       { id: 'b-mg', costCenter: 'Moyens généraux', allocated: 60000, spent: 57200 },
       { id: 'b-flotte', costCenter: 'Flotte automobile', allocated: 38000, spent: 21400 },
     ],
-    hr: { pendingLeaves: 7, upcomingTrainings: 3, certificationsToRenew: 2, plannedHeadcount: 26 },
+    hr: { pendingLeaves: 7, upcomingTrainings: 3, certificationsToRenew: 2, plannedHeadcount: 28 },
     reception: [
       { id: 'rc-1', time: '09:30', label: 'Visite fournisseur (fictif)', kind: 'Visite' },
       { id: 'rc-2', time: '11:00', label: 'Livraison matériel IT', kind: 'Livraison' },

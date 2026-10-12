@@ -13,7 +13,7 @@ import { closedTotals, landingTotals, monthResult, monthsOf, prestationAmount, r
 import { craCounters, leaveConflicts } from '../../management/rules';
 import { departments, internalSites } from '../../data/sites';
 import { rooms } from '../../data/layout';
-import { clientRegistry, ITSM_NOT_SET, itsmOf } from '../../config/itsm';
+import { clientRegistry, ITSM_NOT_SET, itsmOf, POLE_GROUP_LABEL } from '../../config/itsm';
 import { isOpen, periods, slaRate } from '../../external/metrics';
 import { HealthDot } from '../external/common';
 import type { AppView } from '../Rail';
@@ -243,7 +243,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
                   <td className="clientcell">
                     {v && <HealthDot health={v.health} />} <b>{c.name}</b>
                   </td>
-                  <td>{[c.n1Pole ? (c.n1Pole === 'multi' ? 'Pôle Multi (N1)' : 'Pôle dédié (N1)') : null, c.kind === 'externe' ? 'Site client (N2)' : null].filter(Boolean).join(' + ')}</td>
+                  <td>{[c.pole ? `${POLE_GROUP_LABEL[c.pole]} (N1)` : null, c.kind === 'externe' ? 'Site client (N2)' : null].filter(Boolean).join(' + ')}</td>
                   <td>{itsmOf(c.id) ?? <em className="nr">Non renseigné</em>}</td>
                   <td>{contractIds.join(', ') || '—'}</td>
                   <td>{itsmOf(c.id) ? tickets.filter((t) => t.clientId === c.id && isOpen(t)).length : '—'}</td>

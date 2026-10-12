@@ -9,7 +9,7 @@ import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
 import { applyFilters, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
 import { ticketTeams } from '../../helpdesk/teams';
 import { dateKey } from '../../external/calendar';
-import { clientRecord, ITSM_NOT_SET, itsmOf, n1Clients } from '../../config/itsm';
+import { clientRecord, ITSM_NOT_SET, itsmOf, n1Clients, POLE_GROUP_LABEL } from '../../config/itsm';
 import { externalClients } from '../../external/config';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
@@ -40,10 +40,10 @@ interface Props {
 const SCOPE_CLIENTS = [...new Set([...n1Clients.map((c) => c.clientId), ...externalClients.map((c) => c.id)])];
 /** Cibles de création : un même client peut être traité en N1 (Pôle Multi) et en N2 (INVIVO). */
 const CREATE_TARGETS: { value: string; label: string }[] = [
-  ...n1Clients.map((c) => ({ value: `N1:${c.clientId}`, label: `${clientRecord(c.clientId)?.name ?? c.clientId} — N1 ${c.poleIds.includes('multi') ? 'Pôle Multi' : 'pôle dédié'} — ${itsmOf(c.clientId) ?? 'ITSM non renseigné'}` })),
+  ...n1Clients.map((c) => ({ value: `N1:${c.clientId}`, label: `${clientRecord(c.clientId)?.name ?? c.clientId} — N1 ${POLE_GROUP_LABEL[clientRecord(c.clientId)?.pole ?? 'dedie']} — ${itsmOf(c.clientId) ?? 'ITSM non renseigné'}` })),
   ...externalClients.map((c) => ({ value: `N2:${c.id}`, label: `${c.name} — N2 chez le client — ${c.tool ?? 'ITSM non renseigné'}` })),
 ];
-const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk'] as const;
+const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow'] as const;
 const KANBAN: TicketStatus[] = ['Nouveau', 'Affecté', 'En cours', 'En attente', 'Bloqué', 'Escaladé', 'Réouvert', 'Résolu'];
 const PAGE = 40;
 
@@ -107,9 +107,15 @@ export function HelpdeskCockpit(props: Props) {
       </div>
 
       <div className="xc-toolbar hd-filters" role="group" aria-label="Filtres">
+        <select aria-label="Pôle" value={filters.pole} onChange={(e) => set({ pole: e.target.value as HdFilters['pole'], client: '' })}>
+          <option value="">Tous les pôles</option>
+          <option value="multi">Pôle Multi (N1)</option>
+          <option value="dedie">Pôle Dédié (N1)</option>
+          <option value="n2">MCO N2 — sites clients</option>
+        </select>
         <select aria-label="Client" value={filters.client} onChange={(e) => set({ client: e.target.value })}>
           <option value="">Tous les clients</option>
-          {SCOPE_CLIENTS.map((c) => (
+          {SCOPE_CLIENTS.filter((c) => !filters.pole || (filters.pole === 'n2' ? externalClients.some((x) => x.id === c) : clientRecord(c)?.pole === filters.pole)).map((c) => (
             <option key={c} value={c}>
               {clientRecord(c)?.name ?? c} {itsmOf(c) ? `· ${itsmOf(c)}` : '· ITSM non renseigné'}
             </option>
@@ -295,6 +301,7 @@ export function HelpdeskCockpit(props: Props) {
                 <tr>
                   <th>N° SEATPI</th>
                   <th>Source</th>
+                  <th>Pôle</th>
                   <th>Client</th>
                   <th>Équipe</th>
                   <th>Titre</th>
@@ -315,6 +322,7 @@ export function HelpdeskCockpit(props: Props) {
                     <td>
                       {t.source.tool} <code>{t.source.id}</code>
                     </td>
+                    <td>{t.pole ? POLE_GROUP_LABEL[t.pole] : 'MCO N2'}</td>
                     <td>{t.clientName}</td>
                     <td>{t.teamLabel}</td>
                     <td>{t.title}</td>
@@ -336,7 +344,7 @@ export function HelpdeskCockpit(props: Props) {
                 ))}
                 {shown.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="hint">
+                    <td colSpan={12} className="hint">
                       Aucun ticket pour ces critères.
                     </td>
                   </tr>

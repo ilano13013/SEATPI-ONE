@@ -11,17 +11,17 @@ const { state } = initialInternalState(4242, agents, NOW);
 
 describe('tickets multi-ITSM des plateaux internes', () => {
   it('chaque client interne doté d’un outil a des tickets issus de cet outil', () => {
-    expect(internalClients.map((c) => c.id).sort()).toEqual(['ange', 'dmb', 'eurapharma', 'hstv', 'invivo', 'lbrfr', 'nocibe', 'snr', 'teract', 'thelem', 'transgourmet']);
+    expect(internalClients.map((c) => c.id).sort()).toEqual(['ange', 'dmb', 'eurapharma', 'hstv', 'invivo', 'ird', 'lbrfr', 'nocibe', 'ortec', 'primagaz', 'snr', 'sodiaal', 'teract', 'thelem', 'transgourmet']);
     for (const c of internalClients) {
       const list = state.tickets[c.id];
       expect(list.length, c.id).toBeGreaterThan(10);
       expect(list.every((t) => t.source.tool === itsmOf(c.id))).toBe(true);
     }
-    expect(new Set(Object.values(state.tickets).flat().map((t) => t.source.tool))).toEqual(new Set(['ISILOG', 'EasyVista', 'Jira', 'GLPI', 'Zendesk']));
+    expect(new Set(Object.values(state.tickets).flat().map((t) => t.source.tool))).toEqual(new Set(['ISILOG', 'EasyVista', 'Jira', 'GLPI', 'Zendesk', 'ServiceNow']));
   });
 
-  it('aucun ticket pour les clients sans ITSM (IRD, ORTEC, SODIAAL, G2S)', () => {
-    for (const id of ['ird', 'ortec', 'sodiaal', 'g2s']) expect(state.tickets[id]).toBeUndefined();
+  it('aucun ticket pour le client dont l’ITSM est à confirmer (G2S)', () => {
+    for (const id of ['g2s']) expect(state.tickets[id]).toBeUndefined();
   });
 
   it('les tickets sont traités par les agents du pôle et escaladés vers le MCO N2', () => {

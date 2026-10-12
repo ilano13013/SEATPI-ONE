@@ -1,3 +1,4 @@
+import { POLE_ZONES } from '../config/itsm';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './demoData';
 import { floors, helpdeskPoles, plateauOf, poleByClient, poleDesks, polesOf, rooms, roomsOnFloor } from './layout';
@@ -37,8 +38,11 @@ describe('plan du bâtiment', () => {
 describe('pôles des plateaux Helpdesk', () => {
   it('associe un pôle à chaque client du plateau', () => {
     const { clients } = createInitialState(0);
-    for (const c of clients) expect(poleByClient(c.id)?.label).toBe(`Pôle ${c.name.replace(' (Montpellier)', '')}`);
-    expect(polesOf('laciotat').map((p) => p.label)).toEqual(['Pôle Thelem', 'Pôle IRD', 'Pôle Ortec', 'Pôle Multi', 'Pôle Sodiaal']);
+    for (const c of clients) expect(poleByClient(c.id), c.id).toBeDefined();
+    expect(polesOf('laciotat').map((p) => p.label)).toEqual(['Dédié · Thelem', 'Dédié · IRD', 'Dédié · Ortec', 'Dédié · PRIMAGAZ', 'Pôle Multi', 'Dédié · Sodiaal']);
+    // Deux pôles distincts : Pôle Dédié (une équipe par client) et Pôle Multi.
+    expect(helpdeskPoles.filter((p) => p.group === 'dedie').map((p) => p.clientId)).toEqual(POLE_ZONES.dedie.filter((z) => z !== 'sodiaal').concat('sodiaal'));
+    expect(helpdeskPoles.filter((p) => p.group === 'multi').map((p) => p.clientId)).toEqual(['multi', 'multi-mtp']);
     // Le Pôle Multi est présent à La Ciotat et à Montpellier ; aucun pôle client à Paris.
     expect(polesOf('montpellier').map((p) => p.clientId)).toEqual(['multi-mtp']);
     expect(polesOf('paris')).toEqual([]);
