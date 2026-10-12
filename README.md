@@ -16,6 +16,16 @@ npm run preview  # sert le build de production
 
 Ouvrir l'URL indiquée par Vite.
 
+## Version en ligne (GitHub Pages)
+
+Le workflow `.github/workflows/deploy-pages.yml` lance les tests, construit le site et le publie sur
+**https://ilano13013.github.io/SEATPI-ONE/** à chaque push sur la branche principale (ou manuellement via
+l'onglet *Actions* → *Publication GitHub Pages* → *Run workflow*).
+
+Activation (une seule fois) : *Settings* → *Pages* → *Build and deployment* → *Source* : **GitHub Actions**.
+
+⚠️ Le dépôt et le site sont publics : n'y mettre que des données fictives.
+
 ## Fonctionnel aujourd'hui (V0.2)
 
 **Entreprise virtuelle 3D**

@@ -11,8 +11,8 @@ const clients = [
 ];
 
 const queues: Queue[] = [
-  { id: 'q-thelem-sin', clientId: 'thelem', name: 'Sinistres', waiting: 3, longestWaitSec: 142, handledToday: 186, abandonedToday: 7, sla: 92, slaTarget: 95 },
-  { id: 'q-thelem-ass', clientId: 'thelem', name: 'Assistance', waiting: 1, longestWaitSec: 48, handledToday: 64, abandonedToday: 2, sla: 95, slaTarget: 95 },
+  { id: 'q-thelem-n1', clientId: 'thelem', name: 'Helpdesk N1', waiting: 3, longestWaitSec: 142, handledToday: 186, abandonedToday: 7, sla: 92, slaTarget: 95 },
+  { id: 'q-thelem-n2', clientId: 'thelem', name: 'Helpdesk N2', waiting: 1, longestWaitSec: 48, handledToday: 64, abandonedToday: 2, sla: 95, slaTarget: 95 },
   { id: 'q-ird-n1', clientId: 'ird', name: 'Support N1', waiting: 1, longestWaitSec: 35, handledToday: 121, abandonedToday: 3, sla: 96, slaTarget: 95 },
   { id: 'q-ortec-n1', clientId: 'ortec', name: 'Support N1', waiting: 2, longestWaitSec: 210, handledToday: 98, abandonedToday: 6, sla: 89, slaTarget: 92 },
   { id: 'q-ortec-n2', clientId: 'ortec', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },
@@ -61,7 +61,7 @@ export function createInitialState(now = Date.now()): DemoState {
     agents,
     tickets: [
       { id: 'TCK-1042', clientId: 'thelem', title: 'Poste bloqué après mise à jour', priority: 'P2', status: 'En cours', ageMin: 38, assigneeId: 'ag-01' },
-      { id: 'TCK-1043', clientId: 'thelem', title: 'Déclaration de sinistre incomplète', priority: 'P3', status: 'Nouveau', ageMin: 12, assigneeId: null },
+      { id: 'TCK-1043', clientId: 'thelem', title: 'Imprimante réseau indisponible', priority: 'P3', status: 'Nouveau', ageMin: 12, assigneeId: null },
       { id: 'TCK-1044', clientId: 'ird', title: 'Accès portail impossible', priority: 'P2', status: 'En attente', ageMin: 95, assigneeId: 'ag-05' },
       { id: 'TCK-1045', clientId: 'sodiaal', title: 'Demande de rappel planifié', priority: 'P4', status: 'Nouveau', ageMin: 5, assigneeId: null },
       { id: 'TCK-1046', clientId: 'ortec', title: 'Incident messagerie multi-sites', priority: 'P1', status: 'En cours', ageMin: 22, assigneeId: 'ag-08' },

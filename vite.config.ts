@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // Chemins relatifs : le build fonctionne à la racine comme sous /SEATPI-ONE/ (GitHub Pages).
+  base: './',
   build: {
     // La scène 3D (three.js) est chargée à la demande via React.lazy, dans son propre chunk.
     chunkSizeWarningLimit: 1200,
