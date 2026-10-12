@@ -44,6 +44,8 @@ interface Props {
   onExternalObjective: (clientId: string, key: keyof ObjectiveConfig, value: number) => void;
   now: number;
   onBack: () => void;
+  /** Adresses des outils CRA et RH (Administration → Paramètres) ; vides = à renseigner. */
+  toolUrls?: { cra: string; rh: string };
 }
 
 /** Périmètre d'un manager : collaborateurs placés sous sa responsabilité (directs et indirects). */
@@ -51,7 +53,7 @@ export function managerScope(persona: string, store: ManagementStore['state']): 
   return teamOf(persona, store.collaborators);
 }
 
-export function ManagementCockpit({ store, role, persona, onPersona, tab, onTab, objectiveScopes, onExternalObjective, now, onBack }: Props) {
+export function ManagementCockpit({ store, role, persona, onPersona, tab, onTab, objectiveScopes, onExternalObjective, now, onBack, toolUrls }: Props) {
   const { state } = store;
   const me = personById(persona)!;
   const people = useMemo(() => managerScope(persona, state), [persona, state]);
@@ -177,8 +179,8 @@ export function ManagementCockpit({ store, role, persona, onPersona, tab, onTab,
         </>
       )}
 
-      {tab === 'cra' && <CraChecklistWidget store={store} scope={scope} user={user} canFollow={canFollow} />}
-      {tab === 'conges' && <LeaveChecklistWidget store={store} scope={scope} user={user} canFollow={canFollow} />}
+      {tab === 'cra' && <CraChecklistWidget store={store} scope={scope} user={user} canFollow={canFollow} toolUrl={toolUrls?.cra} />}
+      {tab === 'conges' && <LeaveChecklistWidget store={store} scope={scope} user={user} canFollow={canFollow} toolUrl={toolUrls?.rh} />}
 
       {tab === 'objectifs' && (
         <Objectives

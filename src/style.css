@@ -611,3 +611,6 @@ details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }
 .fin-summary { font-size: 13px; margin: 6px 0; }
 .fin-months tr.m-encours td { background: #f5f9ff; }
 .fin-months tr.m-prevision td { color: #5b6b80; font-style: italic; }
+.ck-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ck-tool { font-size: 12px; }
+.ck-follow { display: inline-flex; flex-direction: column; gap: 2px; }

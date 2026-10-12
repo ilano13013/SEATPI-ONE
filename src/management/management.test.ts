@@ -79,3 +79,16 @@ describe('checklist congés', () => {
     expect(leaveChecklist(m.leaves, m.collaborators, f, m.rules, NO_FILTERS).remaining).toBe(k.remaining - 1);
   });
 });
+
+describe('suivi des checklists sans effet sur l’état RH officiel', () => {
+  it('« Traité » ne change ni les demandes de l’outil RH, ni le compteur à valider, ni les effectifs prévus', () => {
+    const m = initialManagement(agents, techs, NOW);
+    const before = leaveChecklist(m.leaves, m.collaborators, m.followUps, m.rules, NO_FILTERS);
+    expect(before.pending).toBeGreaterThan(0);
+    const follow = setFollow(m.followUps, before.items[0].key, 'Traité', 'Manager', NOW);
+    const after = leaveChecklist(m.leaves, m.collaborators, follow, m.rules, NO_FILTERS);
+    expect(after.pending).toBe(before.pending);
+    expect(after.remaining).toBe(before.remaining - 1);
+    expect(m.leaves.find((l) => l.id === before.items[0].leave.id)?.status).toBe('Soumise');
+  });
+});

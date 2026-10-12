@@ -274,7 +274,9 @@ describe('App (mode démo)', () => {
     const remaining = () => Number(within(mg.getByLabelText('CRA restant à traiter')).getByText(/^\d+$/).textContent);
     const r0 = remaining();
     expect(r0).toBeGreaterThan(0);
-    fireEvent.click(mg.getAllByRole('checkbox', { name: /Traité : CRA/ })[0]);
+    fireEvent.change(mg.getAllByRole('combobox', { name: /Suivi : CRA/ })[0], { target: { value: 'Traité' } });
+    expect(mg.queryByRole('checkbox', { name: /Traité/ })).toBeNull();
+    expect(mg.getByText('Outil CRA : URL de l’outil à renseigner')).toBeTruthy();
     expect(remaining()).toBe(r0 - 1);
     expect(mg.getByText(/pas une validation officielle/)).toBeTruthy();
     fireEvent.click(mg.getByRole('tab', { name: 'Historique du suivi' }));

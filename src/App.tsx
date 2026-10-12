@@ -560,6 +560,7 @@ export function App() {
             onExternalObjective={(id, key, v) => ext.setObjective(id as ExternalClientId, key, v)}
             now={ext.state.now}
             onBack={backToMap}
+            toolUrls={{ cra: admin.state.dashboard.craToolUrl, rh: admin.state.dashboard.rhToolUrl }}
           />
         )}
         {show('finance') && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} entity={finEntity} onEntity={setFinEntity} onBack={backToMap} />}

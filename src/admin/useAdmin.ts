@@ -29,6 +29,10 @@ export interface SlaSettings {
 export interface DashboardSettings {
   /** Ancienneté (heures) au-delà de laquelle un ticket ouvert compte dans le backlog. */
   backlogHours: number;
+  /** Adresse de l'outil CRA de l'entreprise ('' = à renseigner ; jamais inventée). */
+  craToolUrl: string;
+  /** Adresse de l'outil RH (congés) de l'entreprise ('' = à renseigner). */
+  rhToolUrl: string;
 }
 
 export interface AdminState {
@@ -52,7 +56,7 @@ export function initialAdmin(): AdminState {
     crm: Object.fromEntries(clientRegistry.map((c) => [c.id, { sector: '', referent: '', contractRef: contractOf(c.id), status: 'Actif' as ClientStatus, notes: '' }])),
     overrides: {},
     sla: { answerObjective: {}, n2TakeCharge: {}, n2Resolution: {}, demoObjectives: false },
-    dashboard: { backlogHours: 48 },
+    dashboard: { backlogHours: 48, craToolUrl: '', rhToolUrl: '' },
   };
 }
 
@@ -174,6 +178,7 @@ export function useAdmin() {
 
   const setDashboard = useCallback((patch: Partial<DashboardSettings>): AdminResult => {
     if (patch.backlogHours !== undefined && (patch.backlogHours < 1 || patch.backlogHours > 720)) return { ok: false, message: 'Seuil entre 1 et 720 heures.' };
+    for (const url of [patch.craToolUrl, patch.rhToolUrl]) if (url && !/^https:\/\/\S+$/.test(url.trim())) return { ok: false, message: 'Adresse https:// attendue (ou vide).' };
     const s = ref.current;
     apply({ ...s, dashboard: { ...s.dashboard, ...patch } });
     return { ok: true, message: 'Paramètre enregistré.' };

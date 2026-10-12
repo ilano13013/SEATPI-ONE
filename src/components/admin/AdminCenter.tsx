@@ -592,6 +592,14 @@ function Settings({ admin, role }: Props) {
         <dd>
           <InlineEdit value={admin.state.dashboard.backlogHours} field="Seuil du backlog (heures)" module="Tableaux de bord" canEdit={editDash} type="number" min={1} max={720} step={1} format={(v) => `${v} h`} onSave={(v) => admin.setDashboard({ backlogHours: v })} />
         </dd>
+        <dt>Adresse de l’outil CRA</dt>
+        <dd>
+          <InlineEdit value={admin.state.dashboard.craToolUrl} field="Adresse de l’outil CRA" module="Tableaux de bord" canEdit={editDash} format={(v) => v || <em className="nr">URL de l’outil à renseigner</em>} validate={() => null} onSave={(v) => admin.setDashboard({ craToolUrl: v.trim() })} />
+        </dd>
+        <dt>Adresse de l’outil RH (congés)</dt>
+        <dd>
+          <InlineEdit value={admin.state.dashboard.rhToolUrl} field="Adresse de l’outil RH" module="Tableaux de bord" canEdit={editDash} format={(v) => v || <em className="nr">URL de l’outil à renseigner</em>} validate={() => null} onSave={(v) => admin.setDashboard({ rhToolUrl: v.trim() })} />
+        </dd>
       </dl>
     </>
   );

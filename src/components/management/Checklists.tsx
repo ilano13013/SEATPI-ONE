@@ -14,10 +14,25 @@ interface Common {
   scope: Set<string> | null;
   user: string;
   canFollow: boolean;
+  /** Adresse de l'outil officiel (CRA ou RH) ; absente = « URL de l'outil à renseigner ». */
+  toolUrl?: string;
 }
 
 const fmtD = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-export const OFFICIAL_NOTE = 'Suivi interne à SEATPI ONE : une coche n’est pas une validation officielle dans l’outil RH ou CRA.';
+export const OFFICIAL_NOTE = 'Suivi interne à SEATPI ONE : le statut « Traité » signifie seulement que le manager a fait le nécessaire ; ce n’est pas une validation officielle dans l’outil RH ou CRA et cela ne modifie ni l’état RH ni les effectifs prévus.';
+
+/** Lien vers l'outil officiel, uniquement si son adresse est configurée (jamais inventée). */
+function ToolLink({ url, label }: { url?: string; label: string }) {
+  return url ? (
+    <a className="ghost ck-tool" href={url} target="_blank" rel="noopener noreferrer">
+      Ouvrir l’{label}
+    </a>
+  ) : (
+    <span className="ck-tool nr" title="À renseigner dans Administration → Paramètres SLA et tableaux de bord">
+      {label.charAt(0).toUpperCase() + label.slice(1)} : URL de l’outil à renseigner
+    </span>
+  );
+}
 
 function Filters({ store, scope, value, onChange, withWeek }: { store: ManagementStore; scope: Set<string> | null; value: ChecklistFilters; onChange: (f: ChecklistFilters) => void; withWeek: boolean }) {
   const people = store.state.collaborators.filter((c) => (!scope || scope.has(c.id)) && (c.population === 'Agent N1' || c.population === 'Technicien N2'));
@@ -56,23 +71,30 @@ function Filters({ store, scope, value, onChange, withWeek }: { store: Managemen
   );
 }
 
-function FollowControl({ status, label, disabled, onChange }: { status: FollowStatus; label: string; disabled: boolean; onChange: (s: FollowStatus) => void }) {
+const lastFollow = (store: ManagementStore, key: string) => {
+  const h = store.state.followUps[key]?.history ?? [];
+  return h[h.length - 1];
+};
+
+/** Contrôle unique du suivi interne : À traiter / Relancé / Traité, avec le dernier suivi visible. */
+function FollowControl({ status, label, disabled, onChange, last }: { status: FollowStatus; label: string; disabled: boolean; onChange: (s: FollowStatus) => void; last?: { at: number; by: string; to: FollowStatus } }) {
   return (
     <span className="ck-follow">
-      <label className="ck-check">
-        <input type="checkbox" aria-label={`Traité : ${label}`} disabled={disabled} checked={status === 'Traité'} onChange={(e) => onChange(e.target.checked ? 'Traité' : 'À traiter')} />
-        Traité
-      </label>
-      <select aria-label={`Suivi : ${label}`} disabled={disabled} value={status} onChange={(e) => onChange(e.target.value as FollowStatus)}>
+      <select aria-label={`Suivi : ${label}`} disabled={disabled} value={status} onChange={(e) => onChange(e.target.value as FollowStatus)} title={disabled ? 'Suivi réservé aux profils disposant du droit « Modification » sur le Management' : undefined}>
         {FOLLOW_STATUSES.map((s) => (
           <option key={s}>{s}</option>
         ))}
       </select>
+      {last && (
+        <small className="hint">
+          {last.to} le {new Date(last.at).toLocaleDateString('fr-FR')} · {last.by}
+        </small>
+      )}
     </span>
   );
 }
 
-export function CraChecklistWidget({ store, scope, user, canFollow }: Common) {
+export function CraChecklistWidget({ store, scope, user, canFollow, toolUrl }: Common) {
   const weeks = useMemo(() => [...new Set(store.state.cra.map((s) => s.weekStart))].sort(), [store.state.cra]);
   const [f, setF] = useState<ChecklistFilters>({ ...NO_FILTERS, week: weeks[weeks.length - 1] ?? '' });
   const k = craChecklist(store.state.cra, store.state.collaborators, store.state.followUps, f, scope);
@@ -82,12 +104,15 @@ export function CraChecklistWidget({ store, scope, user, canFollow }: Common) {
         <b>{i.person.name}</b> · {i.person.teamLabel} · semaine du {fmtD(i.sheet.weekStart)}
         {i.sheet.status === 'À corriger' ? ' · renvoyé pour correction' : ''}
       </span>
-      <FollowControl status={i.follow} label={`CRA ${i.person.name} ${i.sheet.weekStart}`} disabled={!canFollow} onChange={(s) => store.setFollowUp(i.key, s, user)} />
+      <FollowControl status={i.follow} label={`CRA ${i.person.name} ${i.sheet.weekStart}`} disabled={!canFollow} last={lastFollow(store, i.key)} onChange={(s) => store.setFollowUp(i.key, s, user)} />
     </li>
   );
   return (
     <section className="ck" aria-label="Checklist CRA">
-      <h3>Checklist CRA</h3>
+      <div className="ck-head">
+        <h3>Checklist CRA</h3>
+        <ToolLink url={toolUrl} label="outil CRA" />
+      </div>
       <Filters store={store} scope={scope} value={f} onChange={setF} withWeek />
       <div className="xc-kpis">
         <div className="xc-kpi">
@@ -126,12 +151,15 @@ export function CraChecklistWidget({ store, scope, user, canFollow }: Common) {
   );
 }
 
-export function LeaveChecklistWidget({ store, scope, user, canFollow }: Common) {
+export function LeaveChecklistWidget({ store, scope, user, canFollow, toolUrl }: Common) {
   const [f, setF] = useState<ChecklistFilters>(NO_FILTERS);
   const k = leaveChecklist(store.state.leaves, store.state.collaborators, store.state.followUps, store.state.rules, f, scope);
   return (
     <section className="ck" aria-label="Checklist congés">
-      <h3>Checklist congés</h3>
+      <div className="ck-head">
+        <h3>Checklist congés</h3>
+        <ToolLink url={toolUrl} label="outil RH" />
+      </div>
       <Filters store={store} scope={scope} value={f} onChange={setF} withWeek={false} />
       <div className="xc-kpis">
         <div className={`xc-kpi ${k.pending ? 'warn' : 'ok'}`}>
@@ -167,7 +195,7 @@ export function LeaveChecklistWidget({ store, scope, user, canFollow }: Common) 
               <td>{personById(i.managerId ?? '')?.name ?? '—'}</td>
               <td>{i.conflicts.length ? <span className="xc-warn">Effectif réduit le {i.conflicts.map(fmtD).join(', ')}</span> : '—'}</td>
               <td>
-                <FollowControl status={i.follow} label={`congé ${i.person.name} ${i.leave.start}`} disabled={!canFollow} onChange={(s) => store.setFollowUp(i.key, s, user)} />
+                <FollowControl status={i.follow} label={`congé ${i.person.name} ${i.leave.start}`} disabled={!canFollow} last={lastFollow(store, i.key)} onChange={(s) => store.setFollowUp(i.key, s, user)} />
               </td>
             </tr>
           ))}
