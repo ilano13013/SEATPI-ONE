@@ -60,6 +60,8 @@ import { AdminCenter, Crm, type AdminTab } from './components/admin/AdminCenter'
 import { AuditContext, useAuditLog } from './audit/audit';
 import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } from './auth/roles';
 import { Toast } from './components/external/common';
+import { ConnectionContext } from './admin/connectionStates';
+import { configStatus } from './admin/connections';
 
 /** Cockpit ouvert par un clic sur une personne de l'encadrement. */
 const PERSON_VIEW: Record<string, AppView> = {
@@ -449,12 +451,23 @@ export function App() {
   }, [state]);
 
   const room = selected ? roomById(selected) : null;
+  const connectionInfo = useMemo(
+    () => ({
+      running: sim.running,
+      realOf: (clientId: string) => {
+        const c = admin.state.connectors.find((x) => x.scope === 'client' && x.clientId === clientId);
+        return c ? configStatus(c) : undefined;
+      },
+    }),
+    [sim.running, admin.state.connectors],
+  );
   // Même règle d'accès pour la carte, le menu, les raccourcis et les liens directs.
   const access = appView === 'jumeau' ? null : viewAccess(role, appView);
   const show = (v: ModuleView) => appView === v && !!access?.ok;
 
   return (
     <AuditContext.Provider value={{ user: `${roleLabels[role]} (démonstration)`, record: audit.record }}>
+    <ConnectionContext.Provider value={connectionInfo}>
     <div className="app">
       <Rail
         view={appView}
@@ -709,6 +722,7 @@ export function App() {
         />
       )}
     </div>
+    </ConnectionContext.Provider>
     </AuditContext.Provider>
   );
 }

@@ -3,6 +3,9 @@ import type { ClientView } from '../../external/derive';
 import { agingBuckets, computeKpis, periods, receivedPerDay, resolvedIn, type PeriodKey } from '../../external/metrics';
 import { CAPACITY_HORIZON_DAYS, EFFORT_H } from '../../external/workload';
 import { HealthDot, ItsmMissing, LoadBar, healthLabel, fmtDateTime } from './common';
+import type { DimensionState } from '../../external/alerts';
+
+const DIM_STATE: Record<DimensionState, string> = { ok: 'dans les seuils', attention: 'point d’attention', critique: 'incident critique', indisponible: 'non mesurable' };
 
 interface Props {
   view: ClientView;
@@ -44,10 +47,17 @@ export function ClientDashboard({ view, now, onFilter }: Props) {
         <HealthDot health={view.health} />
         <div>
           <b>{healthLabel[view.health]}</b>
-          <span>{view.reasons.slice(0, 3).join(' · ')}</span>
+          <ul className="xc-dims" aria-label="Détail de l’état">
+            {view.dimensions.map((d) => (
+              <li key={d.key} className={`dim ${d.state}`} title={d.reason}>
+                <b>{d.label}</b> : {DIM_STATE[d.state]}
+                {d.state !== 'ok' && <span> — {d.reason}</span>}
+              </li>
+            ))}
+          </ul>
         </div>
         <small>
-          {view.client.tool ? `Données synchronisées le ${fmtDateTime(view.connector.lastSuccessAt)} (${view.client.tool})` : 'Aucune source de tickets configurée'}
+          {view.client.tool ? `Simulation — données synchronisées le ${fmtDateTime(view.connector.lastSuccessAt)} (flux fictif ${view.client.tool}, aucune connexion réelle)` : 'Aucune source de tickets configurée'}
         </small>
       </div>
 

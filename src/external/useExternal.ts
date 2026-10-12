@@ -78,7 +78,7 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
         status: 'erreur',
         lastAttemptAt: now,
         nextSyncAt: now + SYNC_INTERVAL_MIN * 60_000,
-        log: [{ at: now, level: 'error' as const, message: 'HTTP 429 : limite d’API atteinte. Données précédentes conservées, nouvelle tentative planifiée.' }, ...prev.log].slice(0, 30),
+        log: [{ at: now, level: 'error' as const, message: 'Simulation — erreur HTTP 429 simulée (limite d’API) : données précédentes conservées, nouvelle tentative planifiée.' }, ...prev.log].slice(0, 30),
       };
       continue;
     }

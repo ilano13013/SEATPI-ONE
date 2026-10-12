@@ -81,7 +81,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
           <span>Collaborateurs SEATPI affectés chez les clients · données fictives</span>
         </div>
         <button className="ghost" onClick={() => store.syncNow()} disabled={!can(role, 'integrations', 'configure')} title="Synchroniser tous les connecteurs">
-          <RefreshCw size={13} /> Synchroniser
+          <RefreshCw size={13} /> Simulation : synchroniser
         </button>
       </div>
 
@@ -109,7 +109,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
           </div>
           {view.connector.status === 'erreur' && (
             <div className="restricted">
-              Connecteur {view.client.tool} en erreur : données de la dernière synchronisation réussie ({fmtDateTime(view.connector.lastSuccessAt)}).
+              Simulation en erreur pour {view.client.tool} : données de la dernière synchronisation simulée réussie ({fmtDateTime(view.connector.lastSuccessAt)}). Connexion réelle : non configurée.
             </div>
           )}
           {nav.tab === 'dashboard' && <ClientDashboard view={view} now={state.now} onFilter={filterTo} />}

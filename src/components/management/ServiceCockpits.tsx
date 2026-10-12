@@ -1,6 +1,8 @@
 // Cockpits MCO N2 et Exploitation : indicateurs propres à chaque service,
 // jamais additionnés à ceux du Helpdesk N1.
 import { ArrowLeft } from 'lucide-react';
+import { SlaStateBadge } from '../SlaStateBadge';
+import { slaState } from '../../telephony/qlik';
 import type { ClientView } from '../../external/derive';
 import type { ExternalClientId } from '../../external/types';
 import type { ExternalNav } from '../external/common';
@@ -121,6 +123,7 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudge
                 <th>Conformes</th>
                 <th>Hors SLA</th>
                 <th>Risques de dépassement</th>
+                <th>État</th>
               </tr>
             </thead>
             <tbody>
@@ -129,7 +132,7 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudge
                   return (
                     <tr key={v.client.id}>
                       <td>{v.client.name}</td>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <em className="nr">{ITSM_NOT_SET}</em>
                       </td>
                     </tr>
@@ -159,6 +162,9 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudge
                       <button className="link" onClick={() => go('risques de dépassement', part.atRisk)}>
                         {part.atRisk.length}
                       </button>
+                    </td>
+                    <td>
+                      <SlaStateBadge state={slaState(part.rate, obj)} />
                     </td>
                   </tr>
                 );

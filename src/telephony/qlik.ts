@@ -88,19 +88,32 @@ export interface Aggregate {
   rate: number | null;
   /** Raison de l'indisponibilité. */
   unavailable: string | null;
+  /** Lignes exclues du calcul faute de volumes (file, mois, champs absents). */
+  missing: { queueId: string; queueName: string; month: string; fields: string[] }[];
 }
+
+const queueName = (id: string) => QLIK_QUEUES.find((q) => q.id === id)?.name ?? id;
 
 /** Agrégation compatible avec le reporting : à partir des volumes, jamais des pourcentages. */
 export function aggregate(rows: QlikRow[]): Aggregate {
-  if (!rows.length) return { offered: 0, answeredInTarget: 0, rate: null, unavailable: 'Aucune donnée pour ce périmètre.' };
-  if (rows.some((r) => r.offered === null || r.answeredInTarget === null)) {
-    const offered = rows.reduce((n, r) => n + (r.offered ?? 0), 0);
-    return { offered, answeredInTarget: rows.reduce((n, r) => n + (r.answeredInTarget ?? 0), 0), rate: null, unavailable: 'Volumes manquants dans l’extraction : calcul indisponible.' };
+  if (!rows.length) return { offered: 0, answeredInTarget: 0, rate: null, unavailable: 'Aucune donnée pour ce périmètre.', missing: [] };
+  const incomplete = rows.filter((r) => r.offered === null || r.answeredInTarget === null);
+  const complete = rows.filter((r) => !incomplete.includes(r));
+  // Volumes des lignes complètes uniquement (aucune estimation des lignes manquantes).
+  const offered = complete.reduce((n, r) => n + r.offered!, 0);
+  const answeredInTarget = complete.reduce((n, r) => n + r.answeredInTarget!, 0);
+  if (incomplete.length) {
+    const missing = incomplete.map((r) => ({
+      queueId: r.queueId,
+      queueName: queueName(r.queueId),
+      month: r.month,
+      fields: [...(r.offered === null ? ['appels présentés'] : []), ...(r.answeredInTarget === null ? ['décrochés dans le délai'] : [])],
+    }));
+    const detail = missing.map((m) => `« ${m.queueName} » (${m.fields.join(', ')})`).join(' ; ');
+    return { offered, answeredInTarget, rate: null, unavailable: `Volumes manquants dans l’extraction : ${detail}. Calcul indisponible (aucune estimation).`, missing };
   }
-  const offered = rows.reduce((n, r) => n + r.offered!, 0);
-  const answeredInTarget = rows.reduce((n, r) => n + r.answeredInTarget!, 0);
-  if (!offered) return { offered, answeredInTarget, rate: null, unavailable: 'Aucun appel présenté.' };
-  return { offered, answeredInTarget, rate: Math.round((answeredInTarget / offered) * 1000) / 10, unavailable: null };
+  if (!offered) return { offered, answeredInTarget, rate: null, unavailable: 'Aucun appel présenté.', missing: [] };
+  return { offered, answeredInTarget, rate: Math.round((answeredInTarget / offered) * 1000) / 10, unavailable: null, missing: [] };
 }
 
 export interface QlikFilters {
@@ -126,7 +139,7 @@ export function clientSla(rows: QlikRow[], clientId: string, months: string[]): 
   const shared = QLIK_QUEUES.some((q) => q.clientId === null && (POLE_CLIENTS[q.zone] ?? []).includes(clientId));
   const own = QLIK_QUEUES.filter((q) => q.clientId === clientId).map((q) => q.id);
   if (shared || !own.length)
-    return { clientId, agg: { offered: 0, answeredInTarget: 0, rate: null, unavailable: shared ? 'File partagée multi-clients : le SLA par client n’est pas disponible dans l’extraction.' : 'Aucune file associée.' } };
+    return { clientId, agg: { offered: 0, answeredInTarget: 0, missing: [], rate: null, unavailable: shared ? 'File partagée multi-clients : le SLA par client n’est pas disponible dans l’extraction.' : 'Aucune file associée.' } };
   return { clientId, agg: aggregate(rows.filter((r) => own.includes(r.queueId) && months.includes(r.month))) };
 }
 
@@ -141,4 +154,27 @@ export function compare(rate: number | null, objective: number | null | undefine
   if (objective === null || objective === undefined || rate === null) return { objective: objective ?? null, gap: null, breach: false };
   const gap = Math.round((rate - objective) * 10) / 10;
   return { objective, gap, breach: gap < 0 };
+}
+
+/** État d'évaluation d'un SLA : jamais de conformité implicite sans objectif renseigné. */
+export type SlaState = 'conforme' | 'non conforme' | 'non évalué' | 'données indisponibles';
+
+export const SLA_STATE_LABEL: Record<SlaState, string> = {
+  conforme: 'Conforme',
+  'non conforme': 'Non conforme',
+  'non évalué': 'Non évalué — objectif à renseigner',
+  'données indisponibles': 'Données indisponibles',
+};
+
+export const SLA_STATE_DEFINITIONS: [SlaState, string][] = [
+  ['conforme', 'SLA calculé à partir des volumes et supérieur ou égal à l’objectif contractuel renseigné.'],
+  ['non conforme', 'SLA calculé et inférieur à l’objectif contractuel renseigné (écart affiché).'],
+  ['non évalué', 'Aucun objectif contractuel renseigné : la conformité ne peut pas être évaluée.'],
+  ['données indisponibles', 'Volumes absents ou file partagée : le SLA n’est pas calculable, il n’est jamais estimé.'],
+];
+
+export function slaState(rate: number | null, objective: number | null | undefined): SlaState {
+  if (rate === null) return 'données indisponibles';
+  if (objective === null || objective === undefined) return 'non évalué';
+  return rate >= objective ? 'conforme' : 'non conforme';
 }

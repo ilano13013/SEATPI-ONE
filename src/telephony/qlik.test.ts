@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aggregate, clientSla, compare, demoExtraction, filterRows, lastMonths, QLIK_QUEUES, type QlikRow } from './qlik';
+import { aggregate, clientSla, compare, demoExtraction, filterRows, lastMonths, QLIK_QUEUES, slaState, type QlikRow } from './qlik';
 import { n2SlaSplit } from '../external/n2sla';
 import { initialExternalState } from '../external/useExternal';
 import { periods } from '../external/metrics';
@@ -45,5 +45,26 @@ describe('SLA N2 : prise en charge et résolution distincts', () => {
       if (part.rate !== null && base) expect(part.rate).toBe(Math.round((part.compliant.length / base) * 1000) / 10);
     }
     expect(split.takeCharge).not.toEqual(split.resolution);
+  });
+});
+
+describe('états SLA et données manquantes', () => {
+  it('sans objectif : « non évalué », jamais conforme ; sans volumes : « données indisponibles »', () => {
+    expect(slaState(97, null)).toBe('non évalué');
+    expect(slaState(97, undefined)).toBe('non évalué');
+    expect(slaState(null, 90)).toBe('données indisponibles');
+    expect(slaState(90, 90)).toBe('conforme');
+    expect(slaState(89.9, 90)).toBe('non conforme');
+  });
+  it('les lignes aux volumes manquants sont identifiées et exclues, sans estimation', () => {
+    const rows: QlikRow[] = [
+      { month: '2026-01', queueId: 'q-ird-n1', offered: 100, answeredInTarget: 90 },
+      { month: '2026-01', queueId: 'q-ortec-n2', offered: null, answeredInTarget: null },
+    ];
+    const a = aggregate(rows);
+    expect(a.rate).toBeNull();
+    expect(a.offered).toBe(100);
+    expect(a.missing).toEqual([{ queueId: 'q-ortec-n2', queueName: 'Ortec · Support N2', month: '2026-01', fields: ['appels présentés', 'décrochés dans le délai'] }]);
+    expect(a.unavailable).toMatch(/Ortec · Support N2/);
   });
 });

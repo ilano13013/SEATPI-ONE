@@ -178,6 +178,6 @@ export function syncClient(client: ExternalClient, raw: unknown[], previous: Tic
     else stats.unchanged++;
     tickets.push(ticket);
   }
-  log.push({ at: now, level: 'info', message: `Synchronisation ${client.tool} : ${stats.created} créé(s), ${stats.updated} mis à jour, ${stats.rejected} rejeté(s)` });
+  log.push({ at: now, level: 'info', message: `Simulation — synchronisation ${client.tool} : ${stats.created} créé(s), ${stats.updated} mis à jour, ${stats.rejected} rejeté(s)` });
   return { tickets, registry: reg, stats, log };
 }

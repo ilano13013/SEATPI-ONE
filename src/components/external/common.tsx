@@ -48,7 +48,7 @@ export function SlaBadge({ state, paused }: { state: SlaState; paused?: boolean 
   return <span className={`badge ${tone}`}>{paused && state !== 'dépassé' ? 'suspendu' : state}</span>;
 }
 
-export const healthLabel: Record<Health, string> = { vert: 'Dans les seuils', orange: 'Risque SLA / surcharge', rouge: 'Incident critique', gris: 'ITSM non renseigné' };
+export const healthLabel: Record<Health, string> = { vert: 'Dans les seuils', orange: 'Points d’attention', rouge: 'Incident critique', gris: 'ITSM non renseigné' };
 
 export function HealthDot({ health }: { health: Health }) {
   return <i className={`hdot ${health}`} aria-label={healthLabel[health]} title={healthLabel[health]} />;

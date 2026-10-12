@@ -84,7 +84,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
 
   const risks: Risk[] = [
     ...(kN1.horsSla.length + kN2.horsSla.length ? [{ level: 'bad' as const, label: `${kN1.horsSla.length + kN2.horsSla.length} ticket(s) hors SLA (N1 : ${kN1.horsSla.length}, N2 : ${kN2.horsSla.length})`, view: 'helpdesk' as AppView }] : []),
-    ...connectorIssues.map((v) => ({ level: 'warn' as const, label: `Connecteur ${v.client.tool} ${v.client.name} : ${v.connector.status}`, view: 'itsm' as AppView })),
+    ...connectorIssues.map((v) => ({ level: 'warn' as const, label: `Simulation ${v.client.tool} ${v.client.name} : ${v.connector.status === 'erreur' ? 'en erreur' : 'dégradée'} (connexion réelle non configurée)`, view: 'itsm' as AppView })),
     { level: 'warn', label: `${noItsm.length} client(s) sans outil ITSM renseigné (${noItsm.map((c) => c.name).join(', ')}) — ${ITSM_NOT_SET}`, view: 'itsm' },
     ...(travel.consumedRate >= 80 ? [{ level: (travel.balance <= 0 ? 'bad' : 'warn') as Risk['level'], label: `Enveloppe déplacements consommée ou engagée à ${travel.consumedRate.toLocaleString("fr-FR")} % (solde ${eur(travel.balance)})`, view: 'finance' as AppView, sub: 'deplacements' }] : []),
     ...(fin.recruitment.rule === 'À confirmer' ? [{ level: 'warn' as const, label: `Budget recrutement : ${RULE_TO_CONFIRM}`, view: 'finance' as AppView, sub: 'recrutement' }] : []),

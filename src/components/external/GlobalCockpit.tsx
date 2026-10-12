@@ -1,4 +1,5 @@
 import type { ExternalClientId } from '../../external/types';
+import { realConnectionLabel, simulationLabel, simulationState, useConnectionInfo } from '../../admin/connectionStates';
 import type { ClientView, GlobalRow } from '../../external/derive';
 import { HealthDot, LoadBar, eur, fmtDateTime } from './common';
 
@@ -15,6 +16,7 @@ interface Props {
 const n = (v: number | null) => (v === null ? '—' : v.toLocaleString('fr-FR'));
 
 export function GlobalCockpit({ rows, total, views, showFinance, onOpenClient, onOpenInternal, onAlert }: Props) {
+  const { running, realOf } = useConnectionInfo();
   const line = (r: GlobalRow, clickable: boolean) => (
     <tr
       key={r.id}
@@ -58,7 +60,7 @@ export function GlobalCockpit({ rows, total, views, showFinance, onOpenClient, o
               <HealthDot health={v.health} />
               <b>{v.client.name}</b>
               <small>
-                {v.client.tool ? `${v.client.tool} · ${v.connector.status} · synchro ${fmtDateTime(v.connector.lastSuccessAt)}` : 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE'}
+                {v.client.tool ? `${v.client.tool} · ${realConnectionLabel(realOf(v.client.id))} · ${simulationLabel(simulationState(v.connector.status, running), v.connector.status)} · synchro simulée ${fmtDateTime(v.connector.lastSuccessAt)}` : 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE'}
               </small>
             </button>
             <ul>

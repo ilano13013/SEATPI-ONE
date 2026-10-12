@@ -79,18 +79,54 @@ export function computeAlerts(tickets: Ticket[], client: ExternalClient, cfg: Ob
 /** gris : outil ITSM non renseigné, état opérationnel non mesurable. */
 export type Health = 'vert' | 'orange' | 'rouge' | 'gris';
 
-/** Nombre de tickets hors SLA (ou proches) à partir duquel un site passe à l'orange. */
-export const ORANGE_SLA_COUNT = 3;
+export type DimensionKey = 'incident' | 'sla' | 'charge' | 'donnees';
+export type DimensionState = 'ok' | 'attention' | 'critique' | 'indisponible';
 
-/** État opérationnel d'un site : vert dans les seuils, orange risque, rouge incident critique. */
-export function clientHealth(alerts: Alert[]): { health: Health; reasons: string[] } {
-  const critical = alerts.filter((a) => a.severity === 'critical');
-  if (critical.length) return { health: 'rouge', reasons: critical.map((a) => a.message) };
-  // Orange : plusieurs tickets hors SLA ou proches de l'échéance, surcharge ou backlog au-dessus du seuil.
-  const warn = alerts.filter(
-    (a) =>
-      ((a.kind === 'hors SLA' || a.kind === 'proche SLA') && a.ticketIds.length >= ORANGE_SLA_COUNT) || a.kind === 'surcharge équipe' || a.kind === 'backlog au-dessus du seuil',
-  );
-  if (warn.length) return { health: 'orange', reasons: warn.map((a) => a.message) };
-  return { health: 'vert', reasons: ['Activité dans les seuils définis'] };
+export interface HealthDimension {
+  key: DimensionKey;
+  label: string;
+  state: DimensionState;
+  reason: string;
+}
+
+export const DIMENSION_LABEL: Record<DimensionKey, string> = { incident: 'Incident', sla: 'SLA', charge: 'Charge', donnees: 'Qualité des données' };
+
+/** Statut d'un objectif (sous-ensemble utile ici, sans dépendance circulaire). */
+interface ObjectiveLike {
+  label: string;
+  kind: 'volume' | 'qualité';
+  status: 'atteint' | 'en bonne voie' | 'à risque' | 'non atteint';
+}
+
+/**
+ * Dimensions de l'état d'un site client. Aucun seuil n'est inventé : on s'appuie sur les
+ * alertes calculées, les statuts des objectifs paramétrés et l'état du connecteur.
+ */
+export function healthDimensions(alerts: Alert[], objectives: ObjectiveLike[] = [], connectorStatus: string | null = 'connecté', toolSet = true): HealthDimension[] {
+  const of = (k: AlertKind) => alerts.filter((a) => a.kind === k);
+  const critical = alerts.filter((a) => a.severity === 'critical' && (a.kind === 'prioritaire non pris en charge' || a.kind === 'hors SLA'));
+  const risky = (kind: ObjectiveLike['kind']) => objectives.filter((o) => o.kind === kind && (o.status === 'à risque' || o.status === 'non atteint'));
+  const slaReasons = [...of('hors SLA'), ...of('proche SLA')].map((a) => a.message).concat(risky('qualité').map((o) => `objectif « ${o.label} » ${o.status}`));
+  const loadReasons = [...of('surcharge équipe'), ...of('backlog au-dessus du seuil')].map((a) => a.message).concat(risky('volume').map((o) => `objectif « ${o.label} » ${o.status}`));
+  return [
+    { key: 'incident', label: DIMENSION_LABEL.incident, state: critical.length ? 'critique' : 'ok', reason: critical.length ? critical.map((a) => a.message).join(' · ') : 'Aucun incident critique' },
+    { key: 'sla', label: DIMENSION_LABEL.sla, state: slaReasons.length ? 'attention' : 'ok', reason: slaReasons.length ? slaReasons.join(' · ') : 'Aucun ticket hors SLA ni objectif qualité à risque' },
+    { key: 'charge', label: DIMENSION_LABEL.charge, state: loadReasons.length ? 'attention' : 'ok', reason: loadReasons.length ? loadReasons.join(' · ') : 'Charge et backlog dans les seuils paramétrés' },
+    {
+      key: 'donnees',
+      label: DIMENSION_LABEL.donnees,
+      state: !toolSet ? 'indisponible' : connectorStatus === 'connecté' ? 'ok' : 'attention',
+      reason: !toolSet ? 'ITSM non renseigné — configuration requise' : connectorStatus === 'connecté' ? 'Dernière synchronisation (simulation) réussie' : `Synchronisation (simulation) : ${connectorStatus ?? 'inconnue'}`,
+    },
+  ];
+}
+
+/** État opérationnel d'un site : rouge incident critique, orange point d'attention, vert toutes dimensions dans les seuils. */
+export function clientHealth(alerts: Alert[], objectives: ObjectiveLike[] = [], connectorStatus: string | null = 'connecté'): { health: Health; reasons: string[]; dimensions: HealthDimension[] } {
+  const dimensions = healthDimensions(alerts, objectives, connectorStatus);
+  const flagged = dimensions.filter((d) => d.state !== 'ok');
+  const reasons = flagged.map((d) => `${d.label} : ${d.reason}`);
+  if (dimensions.some((d) => d.state === 'critique')) return { health: 'rouge', reasons, dimensions };
+  if (flagged.length) return { health: 'orange', reasons, dimensions };
+  return { health: 'vert', reasons: ['Toutes les dimensions sont dans les seuils paramétrés'], dimensions };
 }

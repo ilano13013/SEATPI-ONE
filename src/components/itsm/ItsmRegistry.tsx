@@ -1,4 +1,5 @@
 import { ITSM_MAPPING, ITSM_NOT_SET, clientRegistry, connectorRegistry, itsmOf, type MappedTool } from '../../config/itsm';
+import { realConnectionLabel, simulationLabel, simulationState, useConnectionInfo } from '../../admin/connectionStates';
 import { adapters } from '../../external/itsm/adapters';
 import { externalClients } from '../../external/config';
 import type { ConnectorState } from '../../external/sync';
@@ -9,6 +10,7 @@ const NR = <em className="nr">Non renseigné</em>;
 
 /** Registre ITSM : cartographie de référence, clients et connecteurs. */
 export function ItsmRegistry({ connectors }: { connectors: Record<string, ConnectorState> }) {
+  const { running, realOf } = useConnectionInfo();
   return (
     <section className="xc module" aria-label="Connecteurs ITSM">
       <div className="xc-head">
@@ -88,7 +90,8 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
                 <b>
                   {entry.tool} · {client?.name ?? entry.clientId}
                 </b>
-                <span className={`badge ${demo ? 'info' : 'muted'}`}>{demo ? 'Flux de démonstration simulé' : entry.status}</span>
+                <span className="badge muted">{realConnectionLabel(realOf(entry.clientId))}</span>
+                {demo && <span className={`badge ${simulationState(demo.status, running) === 'active' ? 'info' : 'warn'}`}>{simulationLabel(simulationState(demo.status, running), demo.status)}</span>}
               </header>
               <dl className="detail">
                 <div>
@@ -105,7 +108,7 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
                 </div>
                 <div>
                   <dt>Dernière synchronisation</dt>
-                  <dd>{demo?.lastSuccessAt ? `${fmtDateTime(demo.lastSuccessAt)} (démo)` : 'Jamais'}</dd>
+                  <dd>{demo?.lastSuccessAt ? `Simulation — ${fmtDateTime(demo.lastSuccessAt)}` : 'Aucune (pas de connexion réelle)'}</dd>
                 </div>
                 <div>
                   <dt>Lecture / écriture</dt>

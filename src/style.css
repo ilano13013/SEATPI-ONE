@@ -601,3 +601,10 @@ main > .notice { margin-top: 0; }
 details.defs { margin: 6px 0 10px; font-size: 12px; color: #475569; }
 details.defs summary { cursor: pointer; font-weight: 600; color: #36557f; }
 details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }
+.xc-dims { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.xc-dims .dim::before { content: '●'; margin-right: 6px; }
+.xc-dims .dim.ok::before { content: '✓'; color: #15803d; }
+.xc-dims .dim.attention::before { content: '!'; color: #b45309; font-weight: 800; }
+.xc-dims .dim.critique::before { content: '✗'; color: #b91c1c; }
+.xc-dims .dim.indisponible::before { content: '?'; color: #64748b; }
+.xc-dims .dim span { color: #475569; }

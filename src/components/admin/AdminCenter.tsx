@@ -187,12 +187,14 @@ function Connections({ admin, role, onOpenProduction }: Props) {
               <InlineEdit value={c.secretRef} field={`${c.name} — référence du secret`} module="Connexions & API" canEdit={editable} sensitive format={(v) => v || NR} onSave={(v) => admin.setConnectorField(c.id, 'secretRef', v)} />
               <small className="hint"> Nom du secret dans le coffre du backend — jamais la valeur.</small>
             </dd>
-            <dt>Statut de connexion</dt>
+            <dt>Connexion réelle</dt>
             <dd>{configStatus(c) === 'Prêt à tester' ? 'Prêt à tester — aucun test réel possible sans backend sécurisé' : configStatus(c)}</dd>
             <dt>Dernier test</dt>
             <dd>{c.lastTest ? `${fmtDateTime(c.lastTest.at)} — ${c.lastTest.result}` : 'Jamais'}</dd>
-            <dt>Dernière synchronisation</dt>
+            <dt>Dernière synchronisation réelle</dt>
             <dd>{c.lastSync ? fmtDateTime(c.lastSync) : 'Aucune (pas de connexion réelle)'}</dd>
+            <dt>Simulation</dt>
+            <dd>{c.scope === 'client' ? 'Flux de tickets fictifs générés dans le navigateur, indépendant de cette configuration' : 'Extraction fictive (aucune connexion)'}</dd>
             <dt>Éléments manquants</dt>
             <dd>{missingFields(c).join(' ; ') || 'Aucun'}</dd>
           </dl>

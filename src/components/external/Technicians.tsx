@@ -169,7 +169,7 @@ export function TechnicianSheet({ tech, view, now, onClose, onOpenTicket }: { te
               ['Demandes en attente', tech.pendingLeaveRequests],
               ['CRA de la semaine', tech.cra.status],
               ['Heures déclarées', `${tech.cra.hours} h`],
-              ['Dernière synchronisation', fmtDateTime(view.connector.lastSuccessAt)],
+              ['Dernière synchronisation (simulation)', fmtDateTime(view.connector.lastSuccessAt)],
             ]}
           />
         </section>

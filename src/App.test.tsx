@@ -118,6 +118,21 @@ describe('App (mode démo)', () => {
     expect(screen.getByText('Historique des changements')).toBeTruthy();
   });
 
+  it('fiche connecteur : connexion réelle et simulation distinctes, sans contradiction', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
+    const cockpit = within(screen.getByRole('region', { name: 'Supervision des clients externes' }));
+    fireEvent.click(within(cockpit.getByRole('navigation', { name: 'Clients' })).getByRole('button', { name: /MONEXT/ }));
+    fireEvent.click(cockpit.getByRole('tab', { name: /Intégration ITSM/ }));
+    expect(cockpit.getByText('non configurée')).toBeTruthy();
+    expect(cockpit.getByText(/^(active|suspendue|en erreur)/)).toBeTruthy();
+    expect(cockpit.queryByText('État de connexion')).toBeNull();
+    // Suspendre la simulation se reflète dans l'état affiché.
+    fireEvent.click(screen.getByRole('button', { name: 'Suspendre la simulation' }));
+    expect(cockpit.getByText('suspendue')).toBeTruthy();
+  });
+
   it('masque la supervision externe au rôle Agent', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'agent' } });

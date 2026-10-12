@@ -2,7 +2,7 @@
 import type { ExternalClient, ExternalClientId, ExternalTeam, Technician, Ticket } from './types';
 import { externalClients, teamsOf } from './config';
 import type { ExternalState } from './useExternal';
-import { computeAlerts, clientHealth, type Alert, type Health } from './alerts';
+import { computeAlerts, clientHealth, healthDimensions, type Alert, type Health, type HealthDimension } from './alerts';
 import { teamLoads, type TeamLoad } from './workload';
 import { computeObjectives, type ObjectiveRow } from './objectives';
 import { isOpen, periods, resolvedIn, slaRate } from './metrics';
@@ -17,6 +17,8 @@ export interface ClientView {
   loads: TeamLoad[];
   alerts: Alert[];
   health: Health;
+  /** Détail de l'état : Incident, SLA, Charge, Qualité des données. */
+  dimensions: HealthDimension[];
   reasons: string[];
   objectives: ObjectiveRow[];
   connector: ConnectorState;
@@ -30,8 +32,12 @@ export function deriveClient(state: ExternalState, id: ExternalClientId): Client
   const loads = teamLoads(tickets, teams, techs, client, state.now);
   const alerts = computeAlerts(tickets, client, state.objectives[id], state.alertSettings, loads, state.now);
   // Sans outil ITSM, l'état n'est pas mesurable : ni vert ni rouge.
-  const { health, reasons } = client.tool ? clientHealth(alerts) : { health: 'gris' as const, reasons: ['ITSM non renseigné — configuration requise'] };
-  return { client, tickets, techs, teams, loads, alerts, health, reasons, objectives: computeObjectives(tickets, client, state.objectives[id], state.now), connector: state.connectors[id] };
+  const objectives = computeObjectives(tickets, client, state.objectives[id], state.now);
+  const connector = state.connectors[id];
+  const { health, reasons, dimensions } = client.tool
+    ? clientHealth(alerts, objectives, connector?.status ?? null)
+    : { health: 'gris' as const, reasons: ['ITSM non renseigné — configuration requise'], dimensions: healthDimensions(alerts, objectives, null, false) };
+  return { client, tickets, techs, teams, loads, alerts, health, reasons, dimensions, objectives, connector };
 }
 
 export function deriveAll(state: ExternalState): Record<ExternalClientId, ClientView> {
