@@ -118,11 +118,12 @@ describe('App (mode démo)', () => {
     expect(panel().getAllByText(/INVIVO|PRIMAGAZ|MONEXT/).length).toBeGreaterThanOrEqual(3);
   });
 
-  it('liste les déplacements en cours dans la vue globale', () => {
+  it('liste les déplacements des managers CSM dans la vue globale', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
     fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
-    expect(screen.getByRole('heading', { name: 'Déplacements en cours' })).toBeTruthy();
-    expect(screen.getAllByText(/En route|Sur site|Retour/).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Déplacements des managers CSM' })).toBeTruthy();
+    expect(screen.getAllByText(/Siège SEATPI → Siège (INVIVO|PRIMAGAZ|MONEXT)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/En route|Chez le client|Retour/).length).toBeGreaterThan(0);
   });
 });

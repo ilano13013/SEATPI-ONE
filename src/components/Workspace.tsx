@@ -3,6 +3,9 @@ import { ChevronRight, Maximize2 } from 'lucide-react';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
 import type { SiteSceneData } from '../scene/ExternalSite';
 import type { ServicesSceneData } from '../scene/ServiceRooms';
+import type { CsmTripView } from '../scene/CsmTravel';
+import type { Trip } from '../external/trips';
+import { CsmTripsOverlay } from './external/Trips';
 import { floors, helpdeskPoles, rooms, roomsOnFloor } from '../data/layout';
 import { allStatuses, statusColors } from '../lib/status';
 
@@ -23,7 +26,10 @@ interface Props {
   services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
   onTechClick: (clientId: string, techId: string) => void;
-  onTripClick: (clientId: string, tripId: string) => void;
+  csmTrips: CsmTripView[];
+  /** Noms des managers CSM visibles selon le rôle. */
+  tripsIndividual: boolean;
+  onTripClick: (trip: Trip) => void;
   /** Masque l'espace sans démonter la scène 3D. */
   hidden?: boolean;
   reducedMotion: boolean;
@@ -99,6 +105,8 @@ export function Workspace(props: Props) {
           ))}
         </div>
       )}
+
+      {mode3d && floor === 'sites' && <CsmTripsOverlay trips={props.csmTrips.map((v) => v.trip)} individual={props.tripsIndividual} onSelect={props.onTripClick} />}
 
       {mode3d && (
         <div className="legend" aria-label="Légende des états">

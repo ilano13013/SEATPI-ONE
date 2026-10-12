@@ -21,7 +21,8 @@ import type { SiteSceneData } from './scene/ExternalSite';
 import type { ServicesSceneData } from './scene/ServiceRooms';
 import { clientById } from './external/config';
 import { csmTeam, exploitationTeam, serviceSummary } from './external/services';
-import { activeTripOf, isTripActive } from './external/trips';
+import { activeTripOf, isTripActive, type Trip } from './external/trips';
+import type { CsmTripView } from './scene/CsmTravel';
 
 export function App() {
   const sim = useDemoSimulation();
@@ -73,7 +74,8 @@ export function App() {
     [views, openExternal],
   );
 
-  const openTrip = useCallback((clientId: string) => openExternal({ scope: clientId as ExternalClientId, tab: 'trips' }), [openExternal]);
+  // Un déplacement CSM ouvre la vue globale, qui détaille tous les déplacements.
+  const openTrip = useCallback((_trip: Trip) => openExternal({ scope: 'global', tab: 'dashboard' }), [openExternal]);
 
   const openTech = useCallback(
     (clientId: string, techId: string) => openExternal({ scope: clientId as ExternalClientId, tab: 'techs', techId }),
@@ -152,10 +154,6 @@ export function App() {
           name: v.client.name,
           accent: v.client.accent,
           health: v.health,
-          secondarySite: v.client.sites[1],
-          trips: ext.state.trips
-            .filter((t) => t.clientId === v.client.id && isTripActive(t, ext.state.now))
-            .map((t) => ({ ...t, techLabel: individual ? (v.techs.find((x) => x.id === t.techId)?.name ?? 'Technicien') : 'Technicien' })),
           teams: v.loads.map((l) => ({
             id: l.team.id,
             name: l.team.name,
@@ -165,7 +163,7 @@ export function App() {
               return {
                 id: t.id,
                 name: individual ? t.name : 'Technicien',
-                state: isOnLeave(t, ext.state.now) ? 'congé' : activeTripOf(ext.state.trips, t.id, ext.state.now) ? 'déplacement' : inProgress ? 'occupé' : 'disponible',
+                state: isOnLeave(t, ext.state.now) ? 'congé' : inProgress ? 'occupé' : 'disponible',
                 tooltip: individual ? `${inProgress} ticket(s) en cours` : 'Détail réservé (rôle)',
               };
             }),
@@ -194,10 +192,12 @@ export function App() {
       csm: csmTeam.map((m) => {
         const client = clientById(m.clientId!);
         const mine = csm.open.filter((r) => r.ownerId === m.id);
+        // Un CSM en déplacement n'est pas à son bureau.
+        const away = activeTripOf(ext.state.trips, m.id, ext.state.now);
         return {
           id: m.id,
           name: individual('csm') ? m.name : 'CSM',
-          state: mine.length ? 'occupé' : 'disponible',
+          state: away ? 'absent' : mine.length ? 'occupé' : 'disponible',
           tooltip: mine.length ? `${mine.length} escalade(s) ${client.name} en cours` : `Compte ${client.name}`,
           accent: client.accent,
           label: `CSM ${client.name}`,
@@ -205,6 +205,20 @@ export function App() {
       }),
     };
   }, [views, role, ext.state.now]);
+
+  // Déplacements CSM affichés sur la carte des sites clients.
+  const csmTrips = useMemo<CsmTripView[]>(
+    () =>
+      ext.state.trips
+        .filter((t) => isTripActive(t, ext.state.now))
+        .map((t) => ({
+          trip: t,
+          memberLabel: can(role, 'csm', 'individual') ? (csmTeam.find((m) => m.id === t.memberId)?.name ?? 'CSM') : 'Manager CSM',
+          clientName: clientById(t.clientId).name,
+          x: roomById(`ext-${t.clientId}` as RoomId).x,
+        })),
+    [ext.state.trips, ext.state.now, role],
+  );
 
   // Ligne « interne » de la vue consolidée, issue de la simulation du plateau.
   const internalRow = useMemo<GlobalRow>(
@@ -285,6 +299,8 @@ export function App() {
           services={services}
           onTeamClick={openTeam}
           onTechClick={openTech}
+          csmTrips={csmTrips}
+          tripsIndividual={can(role, 'csm', 'individual')}
           onTripClick={openTrip}
           mode3d={mode3d}
           floor={floor}
@@ -314,6 +330,7 @@ export function App() {
           onFocusAgent={setFocusAgentId}
           onClose={() => setPanelOpen(false)}
           views={Object.values(views)}
+          trips={ext.state.trips}
           now={ext.state.now}
           onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })}
           onOpenClient={(clientId) => openExternal({ scope: clientId, tab: 'dashboard' })}

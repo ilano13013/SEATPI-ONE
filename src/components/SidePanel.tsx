@@ -8,6 +8,7 @@ import { Restricted } from './ui';
 import { CsmPanel, ExploitationPanel } from './panels/ServicesPanels';
 import type { ClientView } from '../external/derive';
 import type { ExternalClientId } from '../external/types';
+import type { Trip } from '../external/trips';
 
 interface Props {
   room: Room;
@@ -20,12 +21,13 @@ interface Props {
   onClose: () => void;
   /** Données des clients externes (services Exploitation et CSM). */
   views: ClientView[];
+  trips: Trip[];
   now: number;
   onOpenTicket: (clientId: ExternalClientId, ticketId: string) => void;
   onOpenClient: (clientId: ExternalClientId) => void;
 }
 
-export function SidePanel({ room, state, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, now, onOpenTicket, onOpenClient }: Props) {
+export function SidePanel({ room, state, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, trips, now, onOpenTicket, onOpenClient }: Props) {
   const allowed = can(role, room.module);
   const props = { state, role };
   return (
@@ -54,8 +56,8 @@ export function SidePanel({ room, state, role, selectedPole, onSelectPole, focus
           {room.id === 'parking' && <ParkingPanel {...props} />}
           {room.id === 'direction' && <DirectionPanel {...props} />}
           {room.id === 'accueil' && <AccueilPanel {...props} />}
-          {room.id === 'exploitation' && <ExploitationPanel views={views} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={onOpenClient} />}
-          {room.id === 'csm' && <CsmPanel views={views} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={onOpenClient} />}
+          {room.id === 'exploitation' && <ExploitationPanel views={views} trips={trips} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={onOpenClient} />}
+          {room.id === 'csm' && <CsmPanel views={views} trips={trips} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={onOpenClient} />}
         </div>
       )}
       <div className="bottom">

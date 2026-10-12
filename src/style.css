@@ -100,8 +100,21 @@ h1 span { color: var(--brand); }
 .csm-head small { width: 100%; font-size: 11px; color: #6c7f98; }
 .scene-tip { pointer-events: none; background: var(--navy); color: white; border-radius: 8px; padding: 6px 9px; display: flex; flex-direction: column; gap: 2px; white-space: nowrap; font-size: 11px; box-shadow: 0 4px 14px #14253e33; }
 .scene-tip span { color: #b9c8de; font-size: 10px; }
-.trip-chip { border: 0; background: #1d4ed8; color: white; border-radius: 6px; padding: 2px 6px; font-size: 9px; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 6px #1d4ed844; }
-.trip-chip:hover { background: #1e3a8a; }
+/* Déplacements CSM */
+.csm-chip { border: 2px solid white; background: #be185d; color: white; border-radius: 9px; padding: 4px 9px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; white-space: nowrap; cursor: pointer; box-shadow: 0 4px 14px #83184355; text-align: left; }
+.csm-chip b { font-size: 12px; }
+.csm-chip span { font-size: 10px; color: #fce7f3; }
+.csm-chip:hover { background: #9d174d; }
+.csm-overlay { position: absolute; top: 70px; left: 18px; z-index: 3; width: min(330px, calc(100% - 36px)); background: #ffffffef; border: 1px solid #f3c4d8; border-left: 4px solid #be185d; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 6px 20px #14253e1a; }
+.csm-overlay > b { font-size: 12px; color: #831843; }
+.csm-overlay > small { font-size: 11px; color: #6c7f98; }
+.csm-overlay button { display: flex; align-items: center; gap: 8px; border: 0; background: none; text-align: left; padding: 6px 0; border-top: 1px solid #f6dbe7; }
+.csm-overlay button:hover { background: #fdf2f8; }
+.csm-overlay button > i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.csm-overlay button > span:first-of-type { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.csm-overlay strong { font-size: 12px; }
+.csm-overlay small { font-size: 10px; color: #6c7f98; }
+.csm-overlay .badge { text-align: right; line-height: 1.35; }
 
 /* Mode 2D */
 .twod { position: absolute; inset: 0; padding: 78px 20px 64px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }

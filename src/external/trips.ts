@@ -1,17 +1,19 @@
-// Déplacements des techniciens N2 : intervention sur le site secondaire du client.
-// Un trajet comporte trois phases : aller, intervention sur site, retour.
-import type { ExternalClient, Technician, Ticket } from './types';
+// Déplacements des managers CSM du siège SEATPI vers les clients
+// (comités de pilotage, revues de service, points d'escalade). Données fictives.
+import type { ExternalClientId } from './types';
 import type { Rng } from '../services/random';
-import { isOnLeave } from './workload';
+import { csmTeam, nextCommittee } from './services';
+import { clientById } from './config';
 
-export type TripPhase = 'En route' | 'Sur site' | 'Retour' | 'Terminé';
+export type TripPhase = 'En route' | 'Chez le client' | 'Retour' | 'Terminé';
+export type TripPurpose = 'Comité de pilotage' | 'Revue de service' | 'Point escalade';
 
 export interface Trip {
   id: string;
-  clientId: string;
-  techId: string;
-  /** Ticket interne à l'origine de l'intervention. */
-  ticketId: string;
+  clientId: ExternalClientId;
+  /** Manager CSM (services.ts). */
+  memberId: string;
+  purpose: TripPurpose;
   from: string;
   to: string;
   transport: string;
@@ -22,7 +24,7 @@ export interface Trip {
 
 export interface TripStatus {
   phase: TripPhase;
-  /** Avancement du trajet en cours (0–1) ; 1 sur site. */
+  /** Avancement du trajet en cours (0–1) ; 1 chez le client. */
   progress: number;
   arriveAt: number;
   leaveSiteAt: number;
@@ -30,76 +32,70 @@ export interface TripStatus {
 }
 
 const MIN = 60_000;
-const TRANSPORTS = ['Véhicule de service SEATPI', 'Véhicule de service SEATPI', 'Transport en commun', 'Véhicule personnel (indemnités km)'];
+export const HQ_LABEL = 'Siège SEATPI';
+const TRANSPORTS = ['Véhicule de service SEATPI', 'Train', 'Véhicule de service SEATPI', 'Transport en commun'];
 
 export function tripStatus(trip: Trip, now: number): TripStatus {
   const arriveAt = trip.departAt + trip.travelMin * MIN;
   const leaveSiteAt = arriveAt + trip.onSiteMin * MIN;
   const backAt = leaveSiteAt + trip.travelMin * MIN;
   const base = { arriveAt, leaveSiteAt, backAt };
-  if (now < trip.departAt) return { ...base, phase: 'En route', progress: 0 };
-  if (now < arriveAt) return { ...base, phase: 'En route', progress: (now - trip.departAt) / (arriveAt - trip.departAt) };
-  if (now < leaveSiteAt) return { ...base, phase: 'Sur site', progress: 1 };
+  if (now < arriveAt) return { ...base, phase: 'En route', progress: Math.max(0, (now - trip.departAt) / (arriveAt - trip.departAt)) };
+  if (now < leaveSiteAt) return { ...base, phase: 'Chez le client', progress: 1 };
   if (now < backAt) return { ...base, phase: 'Retour', progress: (now - leaveSiteAt) / (backAt - leaveSiteAt) };
   return { ...base, phase: 'Terminé', progress: 1 };
 }
 
 export const isTripActive = (trip: Trip, now: number) => tripStatus(trip, now).phase !== 'Terminé';
 
-export function activeTripOf(trips: Trip[], techId: string, now: number): Trip | undefined {
-  return trips.find((t) => t.techId === techId && isTripActive(t, now));
+export function activeTripOf(trips: Trip[], memberId: string, now: number): Trip | undefined {
+  return trips.find((t) => t.memberId === memberId && isTripActive(t, now));
 }
 
-/** Tickets justifiant une intervention : ouverts, affectés, situés sur le site secondaire. */
-function candidates(tickets: Ticket[], techs: Technician[], client: ExternalClient, trips: Trip[], now: number): Ticket[] {
-  const busy = new Set(trips.filter((t) => isTripActive(t, now)).map((t) => t.techId));
-  const done = new Set(trips.map((t) => t.ticketId));
-  return tickets.filter((t) => {
-    if (t.clientId !== client.id || t.site === client.sites[0] || !t.assigneeId || done.has(t.id)) return false;
-    if (t.status !== 'En cours' && t.status !== 'Affecté') return false;
-    const tech = techs.find((x) => x.id === t.assigneeId);
-    return !!tech && !busy.has(tech.id) && !isOnLeave(tech, now);
-  });
+const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString();
+
+/** Motif : comité le jour prévu, point d'escalade si une escalade contractuelle est ouverte, sinon revue de service. */
+function purposeFor(clientId: ExternalClientId, now: number, openEscalation: boolean): TripPurpose {
+  const committee = nextCommittee(clientId, now - 86_400_000);
+  if (sameDay(committee, now)) return 'Comité de pilotage';
+  return openEscalation ? 'Point escalade' : 'Revue de service';
 }
 
-function makeTrip(t: Ticket, client: ExternalClient, departAt: number, rng: Rng): Trip {
+function makeTrip(memberId: string, clientId: ExternalClientId, departAt: number, rng: Rng, openEscalation: boolean): Trip {
+  const purpose = purposeFor(clientId, departAt, openEscalation);
   return {
-    id: `DEP-${t.id}`,
-    clientId: client.id,
-    techId: t.assigneeId!,
-    ticketId: t.id,
-    from: client.sites[0],
-    to: t.site,
+    id: `DEP-${memberId}-${Math.floor(departAt / MIN)}`,
+    clientId,
+    memberId,
+    purpose,
+    from: HQ_LABEL,
+    to: `Siège ${clientById(clientId).name}`,
     transport: TRANSPORTS[Math.floor(rng() * TRANSPORTS.length)],
     departAt: Math.floor(departAt / MIN) * MIN,
-    travelMin: 25 + Math.round(rng() * 35),
-    onSiteMin: 45 + Math.round(rng() * 75),
+    travelMin: 30 + Math.round(rng() * 45),
+    onSiteMin: purpose === 'Comité de pilotage' ? 120 : 60 + Math.round(rng() * 60),
   };
 }
 
-/** Déplacements en cours au démarrage : phases variées (aller, sur site, retour). */
-export function initialTrips(tickets: Ticket[], techs: Technician[], client: ExternalClient, now: number, rng: Rng): Trip[] {
-  const trips: Trip[] = [];
-  const count = 2 + Math.floor(rng() * 2);
-  for (let i = 0; i < count; i++) {
-    const t = candidates(tickets, techs, client, trips, now)[0];
-    if (!t) break;
-    const trip = makeTrip(t, client, now, rng);
+/** Au démarrage, deux CSM sont en déplacement, à des étapes différentes. */
+export function initialTrips(now: number, rng: Rng, openEscalations: Set<string> = new Set()): Trip[] {
+  const phases = [0.25, 0.6];
+  return csmTeam.slice(0, phases.length).map((m, i) => {
+    const trip = makeTrip(m.id, m.clientId!, now, rng, openEscalations.has(m.clientId!));
     const total = trip.travelMin * 2 + trip.onSiteMin;
-    trip.departAt = Math.floor((now - (0.1 + 0.8 * rng()) * total * MIN) / MIN) * MIN;
-    trips.push(trip);
-  }
-  return trips;
+    trip.departAt = Math.floor((now - phases[i] * total * MIN) / MIN) * MIN;
+    trip.id = `DEP-${m.id}-${Math.floor(trip.departAt / MIN)}`;
+    return trip;
+  });
 }
 
-/** Fait évoluer les déplacements entre deux synchronisations. */
-export function evolveTrips(trips: Trip[], tickets: Ticket[], techs: Technician[], client: ExternalClient, now: number, rng: Rng): Trip[] {
-  // On garde les trajets terminés depuis moins de 2 h pour l'historique du jour.
-  const kept = trips.filter((t) => t.clientId !== client.id || now - tripStatus(t, now).backAt < 2 * 3_600_000);
-  const active = kept.filter((t) => t.clientId === client.id && isTripActive(t, now)).length;
-  if (active < 3 && rng() < 0.35) {
-    const t = candidates(tickets, techs, client, kept, now)[0];
-    if (t) return [...kept, makeTrip(t, client, now, rng)];
+/** Entre deux synchronisations, un CSM disponible peut partir chez son client. */
+export function evolveTrips(trips: Trip[], now: number, rng: Rng, openEscalations: Set<string> = new Set()): Trip[] {
+  const kept = trips.filter((t) => now - tripStatus(t, now).backAt < 2 * 3_600_000);
+  for (const m of csmTeam) {
+    if (activeTripOf(kept, m.id, now)) continue;
+    const chance = openEscalations.has(m.clientId!) ? 0.25 : 0.08;
+    if (rng() < chance) kept.push(makeTrip(m.id, m.clientId!, now, rng, openEscalations.has(m.clientId!)));
   }
   return kept;
 }

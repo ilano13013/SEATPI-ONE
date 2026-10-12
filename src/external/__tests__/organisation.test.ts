@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { externalClients, externalTeams, clientById } from '../config';
-import { initialTrips, tripStatus, activeTripOf, isTripActive, type Trip } from '../trips';
+import { externalClients, externalTeams } from '../config';
+import { initialTrips, evolveTrips, tripStatus, activeTripOf, isTripActive, type Trip } from '../trips';
 import { csmTeam, receivedEscalations, serviceSummary } from '../services';
 import type { ClientView } from '../derive';
 import { createRng } from '../../services/random';
-import { dataset, NOW, techs } from './fixtures';
+import { dataset, NOW } from './fixtures';
 
 const { tickets } = dataset();
 
@@ -46,32 +46,51 @@ describe('services internes Exploitation et CSM', () => {
   });
 });
 
-describe('déplacements des techniciens', () => {
-  const trip: Trip = { id: 'D1', clientId: 'invivo', techId: 'tech-inv-01', ticketId: 'SPI-1', from: 'Siège', to: 'Site régional Ouest', transport: 'Transport en commun', departAt: NOW, travelMin: 30, onSiteMin: 60 };
+describe('déplacements des managers CSM', () => {
+  const trip: Trip = {
+    id: 'D1',
+    clientId: 'invivo',
+    memberId: 'csm-01',
+    purpose: 'Revue de service',
+    from: 'Siège SEATPI',
+    to: 'Siège INVIVO',
+    transport: 'Train',
+    departAt: NOW,
+    travelMin: 30,
+    onSiteMin: 60,
+  };
   const m = 60_000;
 
-  it('enchaîne aller, intervention sur site et retour', () => {
+  it('enchaîne aller, visite chez le client et retour', () => {
     expect(tripStatus(trip, NOW + 15 * m)).toMatchObject({ phase: 'En route', progress: 0.5 });
-    expect(tripStatus(trip, NOW + 45 * m).phase).toBe('Sur site');
+    expect(tripStatus(trip, NOW + 45 * m).phase).toBe('Chez le client');
     expect(tripStatus(trip, NOW + 105 * m)).toMatchObject({ phase: 'Retour', progress: 0.5 });
     expect(tripStatus(trip, NOW + 121 * m).phase).toBe('Terminé');
     expect(tripStatus(trip, NOW).backAt).toBe(NOW + 120 * m);
   });
 
-  it('génère des déplacements cohérents avec les tickets et les techniciens', () => {
-    for (const c of externalClients) {
-      const trips = initialTrips(tickets[c.id], techs, clientById(c.id), NOW, createRng(5));
-      expect(trips.length).toBeGreaterThan(0);
-      for (const t of trips) {
-        const ticket = tickets[c.id].find((x) => x.id === t.ticketId)!;
-        expect(ticket.assigneeId).toBe(t.techId);
-        expect(t.to).toBe(ticket.site);
-        expect(t.to).not.toBe(t.from);
-        expect(isTripActive(t, NOW)).toBe(true);
-        expect(activeTripOf(trips, t.techId, NOW)).toBe(t);
-      }
-      // Un technicien n'effectue qu'un déplacement à la fois.
-      expect(new Set(trips.map((t) => t.techId)).size).toBe(trips.length);
+  it('seuls les CSM se déplacent, chacun vers son propre client', () => {
+    const trips = initialTrips(NOW, createRng(5));
+    expect(trips.length).toBeGreaterThan(0);
+    for (const t of trips) {
+      const csm = csmTeam.find((x) => x.id === t.memberId);
+      expect(csm).toBeDefined();
+      expect(t.clientId).toBe(csm!.clientId);
+      expect(t.from).toBe('Siège SEATPI');
+      expect(isTripActive(t, NOW)).toBe(true);
+      expect(activeTripOf(trips, t.memberId, NOW)).toBe(t);
+    }
+    expect(new Set(trips.map((t) => t.memberId)).size).toBe(trips.length);
+  });
+
+  it('un CSM ne part pas tant qu’un déplacement est en cours, et les trajets terminés sont purgés', () => {
+    let trips = initialTrips(NOW, createRng(5));
+    const rng = createRng(9);
+    for (let i = 1; i <= 200; i++) {
+      const now = NOW + i * 5 * m;
+      trips = evolveTrips(trips, now, rng, new Set(['invivo', 'primagaz', 'monext']));
+      for (const c of csmTeam) expect(trips.filter((t) => t.memberId === c.id && isTripActive(t, now)).length).toBeLessThanOrEqual(1);
+      expect(trips.every((t) => now - tripStatus(t, now).backAt < 2 * 3_600_000)).toBe(true);
     }
   });
 });

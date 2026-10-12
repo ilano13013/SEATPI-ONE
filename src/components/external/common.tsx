@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import type { ExternalClientId, Priority, SlaState, TicketStatus } from '../../external/types';
 import type { Health } from '../../external/alerts';
 
-export type ClientTab = 'dashboard' | 'tickets' | 'kanban' | 'techs' | 'trips' | 'objectives' | 'escalations' | 'integration' | 'report';
+export type ClientTab = 'dashboard' | 'tickets' | 'kanban' | 'techs' | 'objectives' | 'escalations' | 'integration' | 'report';
 
 export interface ExternalNav {
   scope: 'global' | ExternalClientId;

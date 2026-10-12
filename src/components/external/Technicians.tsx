@@ -4,20 +4,18 @@ import type { ClientView } from '../../external/derive';
 import { contractById } from '../../external/config';
 import { periods } from '../../external/metrics';
 import { planning, techStats, type TechStats } from '../../external/workload';
-import { activeTripOf, tripStatus, type Trip } from '../../external/trips';
 import { Detail } from '../ui';
 import { LoadBar, Modal, fmtDateTime, fmtDay, fmtHours, PriorityBadge, StatusBadge, SlaBadge } from './common';
 
 interface Props {
   view: ClientView;
   now: number;
-  trips: Trip[];
   individual: boolean;
   onOpenTech: (techId: string) => void;
   onFilter: (label: string, ids: string[]) => void;
 }
 
-export function Technicians({ view, now, trips, individual, onOpenTech, onFilter }: Props) {
+export function Technicians({ view, now, individual, onOpenTech, onFilter }: Props) {
   const week = periods(now).week;
   const stats = useMemo(
     () => [...view.techs].sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((t) => techStats(t, view.tickets, view.client, now, week)),
@@ -77,15 +75,7 @@ export function Technicians({ view, now, trips, individual, onOpenTech, onFilter
                     </td>
                     <td>{teamName(s.tech.teamId)}</td>
                     <td>{Math.round(s.tech.availability * 100)} %</td>
-                    <td>
-                      {s.onLeaveToday ? (
-                        <span className="badge muted">Congé</span>
-                      ) : activeTripOf(trips, s.tech.id, now) ? (
-                        <span className="badge info">En déplacement</span>
-                      ) : (
-                        <span className="badge ok">Présent</span>
-                      )}
-                    </td>
+                    <td>{s.onLeaveToday ? <span className="badge muted">Congé</span> : <span className="badge ok">Présent</span>}</td>
                     <td>{s.assigned.length}</td>
                     <td>{s.inProgress.length}</td>
                     <td>{s.resolved.length}</td>
@@ -111,11 +101,9 @@ export function Technicians({ view, now, trips, individual, onOpenTech, onFilter
   );
 }
 
-export function TechnicianSheet({ tech, view, now, trips, onClose, onOpenTicket }: { tech: Technician; view: ClientView; now: number; trips: Trip[]; onClose: () => void; onOpenTicket: (id: string) => void }) {
+export function TechnicianSheet({ tech, view, now, onClose, onOpenTicket }: { tech: Technician; view: ClientView; now: number; onClose: () => void; onOpenTicket: (id: string) => void }) {
   const s: TechStats = techStats(tech, view.tickets, view.client, now, periods(now).week);
   const team = view.teams.find((t) => t.id === tech.teamId);
-  const trip = activeTripOf(trips, tech.id, Date.now());
-  const tripS = trip ? tripStatus(trip, Date.now()) : null;
   const list = (title: string, items: typeof s.assigned) => (
     <section>
       <h4>
@@ -148,10 +136,6 @@ export function TechnicianSheet({ tech, view, now, trips, onClose, onOpenTicket 
               ['Disponibilité déclarée', `${Math.round(tech.availability * 100)} %`],
               ['Compétences', tech.skills.join(', ')],
               ['Identifiant source', `${view.client.tool} · ${tech.sourceLogin}`],
-              [
-                'Déplacement en cours',
-                trip && tripS ? `${tripS.phase} : ${trip.from} → ${trip.to} (${trip.ticketId}) · retour prévu ${fmtDateTime(tripS.backAt)}` : 'Aucun',
-              ],
             ]}
           />
           <h4>Planning</h4>

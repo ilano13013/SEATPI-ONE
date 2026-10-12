@@ -17,7 +17,6 @@ export interface RoomContentProps extends PoleProps {
   sites?: Record<string, SiteSceneData>;
   onTeamClick?: (clientId: string, teamId: string) => void;
   onTechClick?: (clientId: string, techId: string) => void;
-  onTripClick?: (clientId: string, tripId: string) => void;
   /** Personnel des services internes Exploitation et CSM. */
   services?: ServicesSceneData;
 }
@@ -40,12 +39,12 @@ const pauseSeats: [number, number, number][] = [
   [0.6, 1.1, Math.PI],
 ];
 
-export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, onTripClick, services, ...poles }: RoomContentProps) {
+export function RoomContents({ room, agents, vehicles, inventory, animate, onAgentClick, sites, onTeamClick, onTechClick, services, ...poles }: RoomContentProps) {
   if (room.externalClientId) {
     const site = sites?.[room.externalClientId];
     if (!site) return null;
     const id = room.externalClientId;
-    return <ExternalSite site={site} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} onTripClick={(t) => onTripClick?.(id, t)} />;
+    return <ExternalSite site={site} animate={animate} onTeamClick={(t) => onTeamClick?.(id, t)} onTechClick={(t) => onTechClick?.(id, t)} />;
   }
   switch (room.id) {
     case 'exploitation':

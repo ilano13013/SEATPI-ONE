@@ -4,10 +4,13 @@ import { csmCards, exploitationTeam, serviceSummary, supervisionChecks, csmTeam 
 import { periods, slaRate } from '../../external/metrics';
 import { can, type Role } from '../../auth/roles';
 import { HealthDot, fmtDateTime } from '../external/common';
+import { activeTripOf, tripStatus, type Trip } from '../../external/trips';
+import { PHASE_TONE, tripTiming } from '../external/Trips';
 import { Badge } from '../ui';
 
 interface Props {
   views: ClientView[];
+  trips: Trip[];
   role: Role;
   now: number;
   onOpenTicket: (clientId: ExternalClientId, ticketId: string) => void;
@@ -98,7 +101,7 @@ export function ExploitationPanel({ views, role, now, onOpenTicket }: Props) {
   );
 }
 
-export function CsmPanel({ views, role, now, onOpenTicket, onOpenClient }: Props) {
+export function CsmPanel({ views, trips, role, now, onOpenTicket, onOpenClient }: Props) {
   const individual = can(role, 'csm', 'individual');
   const week = periods(now).week;
   return (
@@ -114,6 +117,21 @@ export function CsmPanel({ views, role, now, onOpenTicket, onOpenClient }: Props
               <b>{c.view.client.name}</b>
               <small>{individual ? c.csm.name : 'CSM du compte'} · comité {fmtDateTime(c.committee)}</small>
             </button>
+            {(() => {
+              const trip = activeTripOf(trips, c.csm.id, Date.now());
+              if (!trip) return null;
+              const st = tripStatus(trip, Date.now());
+              return (
+                <div className="kv">
+                  <span>
+                    Déplacement : {trip.purpose} ({trip.transport})
+                  </span>
+                  <span className={`badge ${PHASE_TONE[st.phase]}`}>
+                    {st.phase} · {tripTiming(trip, Date.now())}
+                  </span>
+                </div>
+              );
+            })()}
             <div className="kv">
               <span>SLA de la semaine</span>
               <b>{sla === null ? '—' : `${sla.toLocaleString('fr-FR')} %`}</b>

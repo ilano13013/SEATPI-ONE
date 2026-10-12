@@ -25,7 +25,7 @@ export interface ExternalState {
   objectives: Record<ExternalClientId, ObjectiveConfig>;
   alertSettings: AlertSettings;
   writes: SyncLogEntry[];
-  /** Déplacements des techniciens (en cours et terminés récemment). */
+  /** Déplacements des managers CSM (en cours et terminés récemment). */
   trips: Trip[];
 }
 
@@ -77,7 +77,6 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
     const res = syncClient(client, readSource(client, source, rng), next.tickets[id] ?? [], next.registry, next.techs, now);
     next = { ...next, registry: res.registry };
     next.tickets[id] = res.tickets;
-    if (mode.evolve) next.trips = evolveTrips(next.trips, res.tickets, next.techs, client, now, rng);
     next.connectors[id] = {
       clientId: id,
       tool: client.tool,
@@ -90,13 +89,21 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
       log: [...res.log.reverse(), ...(prev?.log ?? [])].slice(0, 30),
     };
   }
+  if (mode.evolve) next.trips = evolveTrips(next.trips, now, rngs.trips, openCsmEscalations(next));
   return next;
+}
+
+/** Clients ayant une escalade contractuelle (vers le CSM) en cours. */
+function openCsmEscalations(s: ExternalState): Set<string> {
+  return new Set(
+    externalClients.filter((c) => (s.tickets[c.id] ?? []).some((t) => t.escalations.some((e) => e.to === 'CSM' && e.status === 'En cours'))).map((c) => c.id),
+  );
 }
 
 function initialState(seed: number): { state: ExternalState; rngs: Record<string, Rng> } {
   const now = Date.now();
   const techs = buildTechnicians(now);
-  const rngs = Object.fromEntries(externalClients.map((c, i) => [c.id, createRng(seed + i * 101)]));
+  const rngs: Record<string, Rng> = { ...Object.fromEntries(externalClients.map((c, i) => [c.id, createRng(seed + i * 101)])), trips: createRng(seed + 7) };
   const sources = Object.fromEntries(externalClients.map((c) => [c.id, generateSource(c, techs, now, rngs[c.id])])) as ExternalState['sources'];
   const base: ExternalState = {
     now,
@@ -111,7 +118,7 @@ function initialState(seed: number): { state: ExternalState; rngs: Record<string
     trips: [],
   };
   const synced = runSync(base, externalClients.map((c) => c.id), now, rngs, { evolve: false, mayFail: false });
-  const trips = externalClients.flatMap((c) => initialTrips(synced.tickets[c.id], techs, c, now, rngs[c.id]));
+  const trips = initialTrips(now, rngs.trips, openCsmEscalations(synced));
   return { state: { ...synced, trips }, rngs };
 }
 

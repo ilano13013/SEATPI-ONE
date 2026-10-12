@@ -8,6 +8,8 @@ import { CameraRig, type CameraFocus } from './CameraRig';
 import { RoomMesh } from './RoomMesh';
 import type { SiteSceneData } from './ExternalSite';
 import type { ServicesSceneData } from './ServiceRooms';
+import { CsmTravel, type CsmTripView } from './CsmTravel';
+import type { Trip } from '../external/trips';
 
 export interface SceneProps {
   floor: FloorId;
@@ -26,7 +28,9 @@ export interface SceneProps {
   services: ServicesSceneData;
   onTeamClick: (clientId: string, teamId: string) => void;
   onTechClick: (clientId: string, techId: string) => void;
-  onTripClick: (clientId: string, tripId: string) => void;
+  /** Déplacements des managers CSM affichés sur la carte des sites. */
+  csmTrips: CsmTripView[];
+  onTripClick: (trip: Trip) => void;
   reducedMotion: boolean;
   onSelect: (id: RoomId) => void;
   onAgentClick: (agent: Agent) => void;
@@ -51,7 +55,7 @@ function FloorTransition({ animate, children }: { animate: boolean; children: Re
 }
 
 export default function Scene(props: SceneProps) {
-  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, services, onTeamClick, onTechClick, onTripClick, reducedMotion, onSelect, onAgentClick } = props;
+  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, services, csmTrips, onTeamClick, onTechClick, onTripClick, reducedMotion, onSelect, onAgentClick } = props;
   const [hovered, setHovered] = useState<RoomId | null>(null);
   const [hoveredPole, setHoveredPole] = useState<string | null>(null);
   const animate = !reducedMotion;
@@ -59,7 +63,7 @@ export default function Scene(props: SceneProps) {
 
   const focus = useMemo<CameraFocus>(() => {
     const room = selected ? roomById(selected) : null;
-    // L'étage des sites inclut la route des déplacements : vue légèrement recentrée vers l'avant.
+    // L'étage des sites inclut le siège SEATPI et les routes des CSM : vue recentrée vers l'avant.
     if (overview || !room || room.floor !== floor)
       return floor === 'sites' ? { target: [0, 0, 1.4], distance: OVERVIEW_DISTANCE + 2, key: focusKey } : { target: [0, 0, 0], distance: OVERVIEW_DISTANCE, key: focusKey };
     const pole = room.id === 'helpdesk' && selectedPole ? poleByClient(selectedPole) : undefined;
@@ -139,10 +143,10 @@ export default function Scene(props: SceneProps) {
             services={services}
             onTeamClick={onTeamClick}
             onTechClick={onTechClick}
-            onTripClick={onTripClick}
             onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}
+        {floor === 'sites' && <CsmTravel trips={csmTrips} siteXs={floorRooms.map((r) => r.x)} onSelect={onTripClick} />}
       </FloorTransition>
 
       <OrbitControls
