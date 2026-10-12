@@ -42,9 +42,13 @@ import type { Technician } from './external/types';
 import { useFinance } from './finance/useFinance';
 import { FinanceCockpit, type FinanceTab } from './components/finance/FinanceCockpit';
 import { PdgCockpit } from './components/pdg/PdgCockpit';
+import { INITIAL_READINESS, ProductionCockpit } from './components/production/ProductionCockpit';
+import type { ReadinessItem } from './production/readiness';
+import { activeData } from './data/provider';
+import { Toast } from './components/external/common';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'finance', 'pdg', 'itsm']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'finance', 'pdg', 'itsm', 'production']);
 
 /** Lien d'un espace 3D vers un module applicatif. */
 const MODULE_VIEW: Record<ModuleLink, AppView> = {
@@ -100,6 +104,8 @@ export function App() {
   const { syncTrips } = fin;
   // Chaque déplacement CSM planifié est soumis à l'enveloppe déplacements (blocage si plafond atteint).
   useEffect(() => syncTrips(ext.state.trips), [ext.state.trips, syncTrips]);
+  const [readiness, setReadiness] = useState<ReadinessItem[]>(INITIAL_READINESS);
+  const [resetDone, setResetDone] = useState(false);
 
   // Les décisions du management (congés, CRA) se répercutent sur les techniciens N2 des sites clients.
   const extState = useMemo<ExternalState>(() => {
@@ -188,6 +194,25 @@ export function App() {
     if (v === 'management') setPersona(personId);
     setAppView(v);
   }, []);
+
+  /** RÉINITIALISER LA DÉMONSTRATION : tous les modules repartent de leurs données fictives initiales. */
+  const resetAll = () => {
+    sim.reset();
+    const fresh = ext.reset();
+    internal.reset();
+    mgmt.reset();
+    fin.reset(mgmt.state.collaborators, state.agents, fresh.trips);
+    setReadiness(INITIAL_READINESS);
+    setPersona('resp-helpdesk');
+    setFinTab('global');
+    setFocusPersonId(null);
+    setSelectedPole(null);
+    setAppView('jumeau');
+    setFloor('carte');
+    setOverview(true);
+    setFocusKey((k) => k + 1);
+    setResetDone(true);
+  };
 
   const backToMap = useCallback(() => {
     setAppView('jumeau');
@@ -418,7 +443,9 @@ export function App() {
         onOpen={(v) => (v === 'externes' ? openExternal({ scope: 'global', tab: 'dashboard' }) : setAppView(v))}
       />
       <main>
-        <Header role={role} onRole={setRole} sim={sim} mode3d={mode3d} webgl={webgl} onToggleMode={() => setMode3d((m) => !m)} />
+        <Header role={role} onRole={setRole} sim={sim} mode3d={mode3d} webgl={webgl} onToggleMode={() => setMode3d((m) => !m)} onResetAll={resetAll} />
+        {activeData.warning && <div className="notice">{activeData.warning}</div>}
+        {resetDone && <Toast ok message="Démonstration réinitialisée : toutes les données fictives ont été régénérées (aucun système réel concerné)." onDone={() => setResetDone(false)} />}
         {!webgl && <div className="notice">WebGL n'est pas disponible sur ce poste : la vue 2D donne accès aux mêmes modules.</div>}
         {appView === 'externes' && (
           <ExternalCockpit
@@ -487,6 +514,7 @@ export function App() {
             }}
           />
         )}
+        {appView === 'production' && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
         {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} />}
         {appView === 'exploitation' && (
           <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />

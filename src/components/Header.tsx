@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Pause, Play, RefreshCw, RotateCcw } from 'lucide-react';
+import { activeData } from '../data/provider';
 import { roleLabels, type Role } from '../auth/roles';
 import { formatTime } from '../lib/format';
 import { REFRESH_OPTIONS, type DemoSimulation, type RefreshInterval } from '../services/useDemoSimulation';
@@ -10,9 +12,12 @@ interface Props {
   mode3d: boolean;
   webgl: boolean;
   onToggleMode: () => void;
+  /** Réinitialise tous les modules de la démonstration. */
+  onResetAll: () => void;
 }
 
-export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode }: Props) {
+export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode, onResetAll }: Props) {
+  const [confirm, setConfirm] = useState(false);
   return (
     <header className="header">
       <div>
@@ -23,7 +28,7 @@ export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode }: Props
         <p>Centre de commande de l'entreprise · Environnement de démonstration</p>
       </div>
       <div className="topright">
-        <span className="pill" title="Données 100 % fictives, aucune connexion aux systèmes SEATPI">
+        <span className="pill" title={`${activeData.provider.label} — aucune connexion aux systèmes SEATPI`}>
           <i /> MODE DÉMO
         </span>
         <label className="field">
@@ -50,13 +55,31 @@ export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode }: Props
           <button className="icon" onClick={sim.refresh} aria-label="Rafraîchir maintenant" title="Rafraîchir maintenant">
             <RefreshCw size={15} />
           </button>
-          <button className="icon" onClick={sim.reset} aria-label="Réinitialiser la démo" title="Réinitialiser la démo">
-            <RotateCcw size={15} />
-          </button>
           <span className="fresh" aria-live="polite">
             {sim.running ? 'Simulation' : 'En pause'} · {formatTime(sim.state.updatedAt)}
           </span>
         </div>
+        {confirm ? (
+          <div className="reset-confirm" role="group" aria-label="Confirmer la réinitialisation">
+            <span>Toutes les actions de démonstration seront effacées.</span>
+            <button
+              className="outline danger"
+              onClick={() => {
+                setConfirm(false);
+                onResetAll();
+              }}
+            >
+              Confirmer
+            </button>
+            <button className="outline" onClick={() => setConfirm(false)}>
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <button className="outline" onClick={() => setConfirm(true)} title="Régénère toutes les données fictives de tous les modules">
+            <RotateCcw size={14} /> RÉINITIALISER LA DÉMONSTRATION
+          </button>
+        )}
         <button className="outline" onClick={onToggleMode} disabled={!webgl && !mode3d} title={webgl ? undefined : 'WebGL indisponible : mode 2D uniquement'}>
           {mode3d ? 'Vue 2D' : 'Vue 3D'}
         </button>

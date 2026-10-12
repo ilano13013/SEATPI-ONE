@@ -149,6 +149,7 @@ export function useExternal(running: boolean, seed = 2026) {
     rngs.current = fresh.rngs;
     stateRef.current = fresh.state;
     setState(fresh.state);
+    return fresh.state;
   }, [seed]);
 
   const syncNow = useCallback((ids: ExternalClientId[] = externalClients.map((c) => c.id)) => {

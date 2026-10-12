@@ -8,6 +8,7 @@ import type { ActionResult, NewTicketInput } from '../../external/useExternal';
 import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
 import { applyFilters, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
 import { ticketTeams } from '../../helpdesk/teams';
+import { dateKey } from '../../external/calendar';
 import { clientRecord, ITSM_NOT_SET, itsmOf } from '../../config/itsm';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
@@ -39,7 +40,7 @@ const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG'] as const;
 const KANBAN: TicketStatus[] = ['Nouveau', 'Affecté', 'En cours', 'En attente', 'Bloqué', 'Escaladé', 'Réouvert', 'Résolu'];
 const PAGE = 40;
 
-const today = (now: number) => new Date(now).toISOString().slice(0, 10);
+const today = (now: number) => dateKey(now);
 
 export function HelpdeskCockpit(props: Props) {
   const { tickets, agents, techsN1, techsN2, leaveDates, targets, now, role } = props;

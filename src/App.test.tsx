@@ -232,4 +232,68 @@ describe('App (mode démo)', () => {
     fireEvent.click(fin.getByRole('tab', { name: 'Budget recrutement' }));
     expect(fin.getAllByText(/RÈGLE D’IMPUTATION À CONFIRMER/).length).toBeGreaterThan(0);
   });
+
+  it('RÉINITIALISER LA DÉMONSTRATION remet tous les modules à leur état initial', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
+    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
+    let mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    const pendingTab = () => mg.getByRole('tab', { name: /Congés/ }).textContent;
+    const before = pendingTab();
+    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
+    fireEvent.change(mg.getAllByPlaceholderText(/Commentaire/)[0], { target: { value: 'Non' } });
+    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
+    expect(pendingTab()).not.toBe(before);
+    fireEvent.click(screen.getByRole('button', { name: /RÉINITIALISER LA DÉMONSTRATION/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmer' }));
+    expect(screen.getByText(/Démonstration réinitialisée/)).toBeTruthy();
+    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
+    mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    expect(pendingTab()).toBe(before);
+  });
+
+  it('préparation à la production : NO-GO, Validé exige une preuve, rapport généré', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: 'Préparation à la production' }));
+    const pr = within(screen.getByRole('region', { name: 'Préparation à la production' }));
+    expect(pr.getByText('NO-GO')).toBeTruthy();
+    expect(pr.getByText(/pas une certification de sécurité/)).toBeTruthy();
+    fireEvent.click(pr.getAllByText('SEC-05')[0]);
+    const dlg = within(screen.getByRole('dialog'));
+    fireEvent.click(dlg.getByRole('button', { name: 'Validé' }));
+    expect(screen.getByText(/qu’après vérification réelle/)).toBeTruthy();
+    fireEvent.click(dlg.getByRole('button', { name: /Fermer/ }));
+    fireEvent.click(pr.getByRole('button', { name: 'GÉNÉRER LE RAPPORT DE PRÉPARATION' }));
+    expect(within(screen.getByRole('dialog')).getByText(/Décision : NO-GO/)).toBeTruthy();
+  });
+
+  it('une validation de congé se répercute sur les effectifs prévus du cockpit Helpdesk', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
+    fireEvent.click(modules.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
+    const planned = () => Number(within(within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' })).getByRole('button', { name: /Agents prévus/ })).getByText(/^\d+$/).textContent);
+    const p0 = planned();
+    fireEvent.click(modules.getByRole('button', { name: /Management : congés/ }));
+    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
+    fireEvent.click(mg.getByRole('button', { name: /Saisir une demande/ }));
+    const today = new Date();
+    while (today.getDay() === 0 || today.getDay() === 6) today.setDate(today.getDate() + 1);
+    const d = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    fireEvent.change(mg.getByLabelText('Début'), { target: { value: d } });
+    fireEvent.change(mg.getByLabelText('Fin'), { target: { value: d } });
+    fireEvent.change(mg.getByLabelText('Collaborateur'), { target: { value: 'ag-01' } });
+    fireEvent.change(mg.getByLabelText('Type'), { target: { value: 'RTT' } });
+    fireEvent.click(mg.getByRole('button', { name: 'Soumettre' }));
+    const card = mg.getAllByRole('article').find((a) => a.textContent?.includes('RTT') && a.textContent.includes(new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })))!;
+    const c = within(card);
+    if (c.queryByRole('checkbox')) fireEvent.click(c.getByRole('checkbox'));
+    fireEvent.change(c.getByPlaceholderText(/Commentaire/), { target: { value: 'OK' } });
+    fireEvent.click(c.getByRole('button', { name: 'Valider' }));
+    fireEvent.click(modules.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
+    expect(planned()).toBe(p0 - 1);
+  });
 });
