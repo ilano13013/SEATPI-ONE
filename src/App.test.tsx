@@ -46,6 +46,29 @@ describe('App (mode démo)', () => {
     expect(panel().getByRole('heading', { name: 'Parc automobile' })).toBeTruthy();
   });
 
+  it('parc automobile : calendrier hebdomadaire (cases barrées), proposition de date puis réservation', () => {
+    render(<App />);
+    openRoom('Parc automobile');
+    fireEvent.click(panel().getByRole('button', { name: /Réserver un véhicule/ }));
+    const dlg = within(screen.getByRole('dialog'));
+    const grid = within(dlg.getByRole('region', { name: 'Calendrier de réservation' }));
+    // L'utilitaire en entretien est indisponible (cases barrées, non sélectionnables).
+    expect(grid.getAllByRole('img', { name: /Utilitaire.*entretien/ }).length).toBeGreaterThan(0);
+    fireEvent.change(dlg.getByLabelText('Motif'), { target: { value: 'Visite client' } });
+    fireEvent.click(dlg.getByRole('button', { name: 'Proposer des dates' }));
+    expect(dlg.getAllByRole('button', { name: 'Réserver ce créneau' }).length).toBeGreaterThan(0);
+    fireEvent.click(dlg.getAllByRole('button', { name: 'Voir dans le calendrier' })[0]);
+    const freeBefore = grid.getAllByRole('button', { name: /choisir ce créneau/ }).length;
+    fireEvent.click(dlg.getAllByRole('button', { name: 'Réserver ce créneau' })[0]);
+    expect(dlg.getByText(/Réservation enregistrée/)).toBeTruthy();
+    expect(within(dlg.getByRole('region', { name: 'Mes réservations' })).getAllByRole('button', { name: 'Annuler' }).length).toBeGreaterThan(0);
+    expect(grid.getAllByRole('button', { name: /choisir ce créneau/ }).length).toBeLessThan(freeBefore);
+    expect(grid.getAllByRole('img', { name: /réservé — Visite client \(Manager/ }).length).toBeGreaterThan(0);
+    // Une case libre cliquée devient la date demandée et est proposée en premier.
+    fireEvent.click(grid.getAllByRole('button', { name: /choisir ce créneau/ })[0]);
+    expect(dlg.getByText('Le créneau demandé est disponible.')).toBeTruthy();
+  });
+
   it('filtre les files du plateau Helpdesk par pôle client', () => {
     render(<App />);
     expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(7);

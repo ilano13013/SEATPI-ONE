@@ -7,6 +7,7 @@ import { internalSites } from './data/sites';
 import { personById } from './org/people';
 import { clientSummary } from './services/simulation';
 import { useDemoSimulation } from './services/useDemoSimulation';
+import { createInitialState } from './data/demoData';
 import { hasWebGL, isNarrowScreen, prefersReducedMotion } from './lib/env';
 import { Header } from './components/Header';
 import { MetricsBar } from './components/MetricsBar';
@@ -61,6 +62,7 @@ import { AuditContext, useAuditLog } from './audit/audit';
 import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } from './auth/roles';
 import { Toast } from './components/external/common';
 import { ConnectionContext } from './admin/connectionStates';
+import { book as bookCar, cancel as cancelCar, currentState as carState, demoBookings } from './fleet/bookings';
 import { initialRoute, parseHash, toHash, type RouteState } from './navigation/route';
 import type { HdFilters } from './helpdesk/consolidation';
 import type { HdTab } from './components/helpdesk/HelpdeskCockpit';
@@ -100,6 +102,8 @@ export function App() {
     setRoleState(r);
   };
   const [focusConnector, setFocusConnector] = useState<string | null>(null);
+  // Réservations du parc automobile (calendrier par demi-journée, données fictives).
+  const [carBookings, setCarBookings] = useState(() => demoBookings(createInitialState().vehicles, Date.now()));
   const [hdNav, setHdNav] = useState<{ tab: HdTab; filters: HdFilters; ticketId: string | null }>(route0.hd);
   // Règles de permissions modifiables par l'administrateur (appliquées avant le rendu des modules).
   const [permRules, setPermRules] = useState<PermissionRule[]>(DEFAULT_RULES);
@@ -233,6 +237,7 @@ export function App() {
     mgmt.reset();
     const freshFin = fin.reset(mgmt.state.collaborators, state.agents, fresh.trips);
     moyens.reset(freshFin.travel);
+    setCarBookings(demoBookings(state.vehicles, Date.now()));
     setReadiness(INITIAL_READINESS);
     admin.reset();
     audit.reset();
@@ -321,7 +326,7 @@ export function App() {
 
   const badges = useMemo<Partial<Record<RoomId, string>>>(() => {
     const lowStock = state.inventory.filter((i) => i.inStock <= i.alertThreshold).length;
-    const available = state.vehicles.filter((v) => v.status === 'Disponible').length;
+    const available = state.vehicles.filter((v) => carState(carBookings, v.id, Date.now()) === 'Disponible').length;
     const spent = state.budgets.reduce((s, b) => s + b.spent, 0);
     const allocated = state.budgets.reduce((s, b) => s + b.allocated, 0);
     return {
@@ -358,7 +363,7 @@ export function App() {
         }),
       ),
     };
-  }, [state, metrics, views, ext.state.now, rhCounters]);
+  }, [state, metrics, views, ext.state.now, rhCounters, carBookings]);
 
   // Données 3D des sites clients : état opérationnel, équipes et techniciens.
   const sites = useMemo<Record<string, SiteSceneData>>(() => {
@@ -771,6 +776,20 @@ export function App() {
           trips={ext.state.trips}
           focusPersonId={focusPersonId}
           onOpenPerson={openPersonCockpit}
+          fleet={{
+            bookings: carBookings,
+            now: Date.now(),
+            user: `${roleLabels[role]} (démonstration)`,
+            onBook: (p) => {
+              const r = bookCar(carBookings, { ...p, by: `${roleLabels[role]} (démonstration)` }, Date.now());
+              if (r.ok) {
+                setCarBookings(r.bookings);
+                audit.record({ user: `${roleLabels[role]} (démonstration)`, module: 'Parc automobile', field: `Réservation ${p.vehicleId}`, oldValue: 'Libre', newValue: `${p.day} ${p.slots.join(' + ')} — ${p.purpose}` });
+              }
+              return r;
+            },
+            onCancel: (id) => setCarBookings((b) => cancelCar(b, id)),
+          }}
           rh={{
             ...rhCounters,
             onOpenLeaves: can(role, 'management')

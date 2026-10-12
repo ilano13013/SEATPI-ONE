@@ -5,7 +5,7 @@ import { roleLabels, type Role } from '../auth/roles';
 import { roomDataAccess } from '../auth/access';
 import { HelpdeskPanel } from './panels/HelpdeskPanel';
 import { PausePanel } from './panels/PausePanel';
-import { AccueilPanel, DirectionPanel, ParkingPanel, RhPanel, StockPanel, type RhCounters } from './panels/OtherPanels';
+import { AccueilPanel, DirectionPanel, ParkingPanel, RhPanel, StockPanel, type FleetProps, type RhCounters } from './panels/OtherPanels';
 import { AccessNotice } from './ui';
 import { CsmPanel, ExploitationPanel } from './panels/ServicesPanels';
 import type { ClientView } from '../external/derive';
@@ -38,6 +38,8 @@ interface Props {
   onOpenPerson?: (personId: string) => void;
   /** Compteurs RH (même source que la checklist congés). */
   rh?: RhCounters;
+  /** Calendrier de réservation du parc automobile. */
+  fleet?: FleetProps;
   /** Contenu complémentaire du bureau d'une personne (checklists du manager). */
   personExtras?: (personId: string) => ReactNode;
 }
@@ -111,7 +113,7 @@ export function SidePanel(p: Props) {
           {room.kind === 'pause' && <PausePanel {...props} />}
           {room.kind === 'rh' && <RhPanel {...props} rh={p.rh} />}
           {room.kind === 'stock' && <StockPanel {...props} />}
-          {room.kind === 'parking' && <ParkingPanel {...props} />}
+          {room.kind === 'parking' && <ParkingPanel {...props} fleet={p.fleet} />}
           {room.id === 'direction' && <DirectionPanel {...props} />}
           {room.kind === 'accueil' && <AccueilPanel {...props} />}
           {room.kind === 'exploitation' && <ExploitationPanel views={views} trips={trips} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={onOpenClient} site={site} />}

@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import type { DemoState, InventoryItem, Vehicle } from '../../types';
+import { currentState, fmtDayShort, nextBooking, SLOT_SHORT, type CarBooking, type Slot } from '../../fleet/bookings';
+import { FleetCalendar } from '../fleet/FleetCalendar';
+import { Modal } from '../external/common';
 import { can, type Role } from '../../auth/roles';
 import { formatEuro } from '../../lib/format';
 import { Badge, Chips, Detail, Row, SimulatedAction } from '../ui';
@@ -116,35 +119,69 @@ const isLow = (i: InventoryItem) => i.inStock <= i.alertThreshold;
 const VEHICLE_FILTERS = ['Tous', 'Disponible', 'Réservé', 'Entretien'] as const;
 const vehicleTone = (s: Vehicle['status']) => (s === 'Disponible' ? 'ok' : s === 'Réservé' ? 'info' : 'warn');
 
-export function ParkingPanel({ state, role }: Props) {
+/** Calendrier de réservation du parc (état partagé, conservé hors du panneau). */
+export interface FleetProps {
+  bookings: CarBooking[];
+  now: number;
+  user: string;
+  onBook: (p: { vehicleId: string; day: string; slots: Slot[]; purpose: string }) => { ok: boolean; message: string };
+  onCancel: (id: string) => void;
+}
+
+export function ParkingPanel({ state, role, fleet }: Props & { fleet?: FleetProps }) {
   const [filter, setFilter] = useState<(typeof VEHICLE_FILTERS)[number]>('Tous');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [calendar, setCalendar] = useState(false);
+  const canBook = can(role, 'vehicules', 'view');
+  // État et prochaine réservation lus dans le calendrier (même source que la grille).
+  const statusOf = (v: Vehicle) => (fleet ? currentState(fleet.bookings, v.id, fleet.now) : v.status);
+  const nextOf = (v: Vehicle) => {
+    if (!fleet) return v.nextBooking;
+    const b = nextBooking(fleet.bookings, v.id, fleet.now);
+    return b ? `${fmtDayShort(b.day)} ${SLOT_SHORT[b.slot].toLowerCase()}` : null;
+  };
   return (
     <>
+      {fleet && (
+        <button className="action primary" onClick={() => setCalendar(true)}>
+          Réserver un véhicule — calendrier et proposition de date
+        </button>
+      )}
       <Chips label="Filtrer par disponibilité" options={VEHICLE_FILTERS} value={filter} onChange={setFilter} />
       <div className="list">
         {state.vehicles
-          .filter((v) => filter === 'Tous' || v.status === filter)
+          .filter((v) => filter === 'Tous' || statusOf(v) === filter)
           .map((v) => (
             <Row
               key={v.id}
               open={openId === v.id}
               onToggle={() => setOpenId(openId === v.id ? null : v.id)}
               title={v.label}
-              meta={`${v.plate} · prochaine réservation : ${v.nextBooking ?? 'aucune'}`}
-              aside={<Badge tone={vehicleTone(v.status)}>{v.status}</Badge>}
+              meta={`${v.plate} · prochaine réservation : ${nextOf(v) ?? 'aucune'}`}
+              aside={<Badge tone={vehicleTone(statusOf(v))}>{statusOf(v)}</Badge>}
             >
               <Detail
                 items={[
                   ['Immatriculation (fictive)', v.plate],
                   ['Kilométrage', `${v.km.toLocaleString('fr-FR')} km`],
-                  ['Prochaine réservation', v.nextBooking ?? 'Aucune'],
+                  ['Prochaine réservation', nextOf(v) ?? 'Aucune'],
                 ]}
               />
-              <SimulatedAction label="Réserver ce véhicule" allowed={can(role, 'vehicules', 'view') && v.status === 'Disponible'} />
+              {fleet ? (
+                <button className="action" onClick={() => setCalendar(true)}>
+                  Voir ses disponibilités
+                </button>
+              ) : (
+                <SimulatedAction label="Réserver ce véhicule" allowed={canBook && v.status === 'Disponible'} />
+              )}
             </Row>
           ))}
       </div>
+      {fleet && calendar && (
+        <Modal title="Réservation des véhicules (démonstration)" wide onClose={() => setCalendar(false)}>
+          <FleetCalendar vehicles={state.vehicles} bookings={fleet.bookings} now={fleet.now} user={fleet.user} canBook={canBook} onBook={fleet.onBook} onCancel={fleet.onCancel} />
+        </Modal>
+      )}
     </>
   );
 }
