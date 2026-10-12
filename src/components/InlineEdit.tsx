@@ -2,7 +2,7 @@
 // clic → saisie → Enregistrer / Annuler (Entrée / Échap) → validation → enregistrement
 // → historique (utilisateur, champ, ancienne et nouvelle valeur, date, module).
 // Sans permission, la valeur reste en lecture seule (avec un cadenas discret).
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Check, Lock, Pencil, X } from 'lucide-react';
 import { useAudit } from '../audit/audit';
 
@@ -37,6 +37,12 @@ export function InlineEdit<T extends string | number>({ value, field, module, ca
   const [draft, setDraft] = useState(String(value));
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+  useEffect(() => {
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(null), 4000);
+    return () => clearTimeout(t);
+  }, [saved]);
   const numeric = type === 'number' || typeof value === 'number';
   const shown = format ? format(value) : options ? (options.find((o) => o.value === value)?.label ?? String(value)) : String(value);
 
@@ -44,11 +50,13 @@ export function InlineEdit<T extends string | number>({ value, field, module, ca
     return (
       <span className="ie-ro" title={lockedReason ?? 'Lecture seule pour votre profil'}>
         {shown} <Lock size={10} aria-hidden />
+        <span className="sr-only"> (lecture seule)</span>
       </span>
     );
 
   if (!editing)
     return (
+      <>
       <button
         type="button"
         className="ie-value"
@@ -62,6 +70,12 @@ export function InlineEdit<T extends string | number>({ value, field, module, ca
       >
         {shown} <Pencil size={10} aria-hidden />
       </button>
+      {saved && (
+        <span className="ie-saved" role="status">
+          {saved}
+        </span>
+      )}
+      </>
     );
 
   const parsed = (numeric ? Number(draft.replace(',', '.')) : draft) as T;
@@ -77,6 +91,7 @@ export function InlineEdit<T extends string | number>({ value, field, module, ca
     const r = onSave(parsed);
     if (r && !r.ok) return setError(r.message);
     record({ user, module, field, oldValue: String(value), newValue: String(parsed) });
+    setSaved(r?.message ? `Enregistré — ${r.message}` : 'Enregistré');
     setEditing(false);
   };
 

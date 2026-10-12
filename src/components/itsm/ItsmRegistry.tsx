@@ -14,7 +14,7 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
       <div className="xc-head">
         <div>
           <b>Connecteurs ITSM — registre et cartographie</b>
-          <span>Configuration unique réutilisée dans toute l’application (src/config/itsm.ts)</span>
+          <span>Référentiel unique réutilisé dans toute l’application (modifiable dans Administration → Clients)</span>
         </div>
       </div>
       <div className="notice">

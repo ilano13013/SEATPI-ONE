@@ -11,8 +11,8 @@ describe('rôles et permissions (démonstration)', () => {
   });
 
   it('la visibilité ne donne pas le droit de modifier', () => {
-    expect(can('teamLeader', 'clients')).toBe(true);
-    expect(can('teamLeader', 'clients', 'edit')).toBe(false);
+    expect(can('teamLeader', 'finance')).toBe(false);
+    expect(can('teamLeader', 'telephonie', 'edit')).toBe(false);
     expect(can('direction', 'finance')).toBe(true);
     expect(can('direction', 'finance', 'edit')).toBe(false);
   });
@@ -27,7 +27,15 @@ describe('rôles et permissions (démonstration)', () => {
     expect(can('teamLeader', 'objectifs', 'edit')).toBe(true);
     expect(can('teamLeader', 'management', 'edit')).toBe(true);
     expect(can('agent', 'management')).toBe(false);
-    expect(can('agent', 'clients', 'edit')).toBe(false);
+    expect(can('agent', 'finance')).toBe(false);
+  });
+
+  it('CRM : les profils qui consultent le référentiel modifient ses champs métier, jamais les permissions ni les secrets', () => {
+    for (const r of roles.filter((x) => can(x, 'clients'))) expect(can(r, 'clients', 'edit'), r).toBe(true);
+    expect(clientScope('agent')).not.toBeNull(); // technicien : limité à son périmètre client
+    expect(roles.filter((r) => can(r, 'permissions', 'configure'))).toEqual(['admin']);
+    expect(can('teamLeader', 'integrations', 'configure')).toBe(false);
+    expect(can('teamLeader', 'finance', 'validate')).toBe(false);
   });
 
   it('révision du plafond : permission spécifique (direction, administrateur)', () => {

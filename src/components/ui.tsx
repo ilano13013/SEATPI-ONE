@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Lock } from 'lucide-react';
+import { Hourglass, Lock } from 'lucide-react';
 import type { Tone } from '../lib/format';
+import type { Access } from '../auth/access';
 
 export function Chips<T extends string>({ label, options, value, onChange }: { label: string; options: readonly T[]; value: T; onChange: (v: T) => void }) {
   return (
@@ -76,13 +77,15 @@ export function SimulatedAction({ label, allowed }: { label: string; allowed: bo
   );
 }
 
-export function Restricted({ what }: { what: string }) {
+/** Refus d'accès (droit manquant nommé) ou module à venir — jamais confondus. */
+export function AccessNotice({ access }: { access: Exclude<Access, { ok: true }> }) {
+  const Icon = access.kind === 'refus' ? Lock : Hourglass;
   return (
-    <div className="restricted">
-      <Lock size={18} />
+    <div className={access.kind === 'refus' ? 'restricted' : 'restricted coming'} role="note">
+      <Icon size={18} aria-hidden />
       <div>
-        <b>Accès restreint</b>
-        <p>Le rôle sélectionné n'a pas accès à {what} dans cette maquette.</p>
+        <b>{access.title}</b>
+        <p>{access.message}</p>
       </div>
     </div>
   );

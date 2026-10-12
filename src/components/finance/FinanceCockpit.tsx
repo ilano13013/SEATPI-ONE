@@ -1,6 +1,8 @@
 // Budget & Rentabilité : deux budgets distincts, Helpdesk N1 et MCO N2 (jamais additionnés).
 // Valeurs FICTIVES de démonstration, modifiables avec recalcul immédiat.
 import { useMemo, useState } from 'react';
+import { AccessNotice } from '../ui';
+import { missingRight } from '../../auth/access';
 import { ArrowLeft } from 'lucide-react';
 import type { FinanceResult, FinanceStore } from '../../finance/useFinance';
 import {
@@ -77,9 +79,9 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
     return (
       <section className="xc" aria-label="Budget et rentabilité">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
-        <p className="restricted">Accès réservé aux profils Finance, Direction, Responsable et Administrateur (maquette, pas une mesure de sécurité).</p>
+        <AccessNotice access={missingRight(role, ['finance'])} />
       </section>
     );
   }
@@ -88,7 +90,7 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
     <section className="xc fin" aria-label="Budget et rentabilité">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <small className="crumb">Départements › {ENTITY_LABEL[entity]} › Direction du département › Budget & Rentabilité</small>

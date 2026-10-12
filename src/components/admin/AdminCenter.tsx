@@ -2,11 +2,13 @@
 // (CRM), paramètres SLA / tableaux de bord et historique des modifications.
 // Démonstration : aucune connexion réelle, aucun secret saisi, aucune persistance.
 import { useState } from 'react';
-import { ArrowLeft, Plug, Plus, ShieldCheck } from 'lucide-react';
+import { AccessNotice } from '../ui';
+import { missingRight } from '../../auth/access';
+import { ArrowLeft, Lock, Pencil, Plug, Plus, ShieldCheck } from 'lucide-react';
 import type { AdminStore, ClientStatus } from '../../admin/useAdmin';
 import { AUTH_TYPES, CONFIG_STATUSES, configStatus, DEMO_TEST_MESSAGE, ITSM_TOOLS, missingFields, readinessLinksOf, toolOfConnector, type ConnectorKind } from '../../admin/connections';
 import { clientBudget, clientRecord, clientRegistry, itsmOf, POLE_GROUP_LABEL, type MappedTool, type PoleGroup } from '../../config/itsm';
-import { ACTIONS, actionLabels, can, permissionModules, roleLabels, type Action, type PermissionRule, type Role } from '../../auth/roles';
+import { ACTIONS, actionLabels, can, clientScope, permissionModules, roleLabels, type Action, type PermissionRule, type Role } from '../../auth/roles';
 import type { AuditEntry } from '../../audit/audit';
 import type { FinanceStore } from '../../finance/useFinance';
 import { contracts } from '../../external/config';
@@ -40,16 +42,16 @@ export function AdminCenter(props: Props) {
     return (
       <section className="xc" aria-label="Administration">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
-        <p className="restricted">L’administration est réservée aux profils autorisés (démonstration : contrôle simulé, pas une mesure de sécurité).</p>
+        <AccessNotice access={missingRight(role, ['integrations', 'permissions'])} />
       </section>
     );
   return (
     <section className="xc adm" aria-label="Administration">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <small className="crumb">Administration</small>
@@ -415,10 +417,16 @@ function Permissions({ role, rules, onRules }: Props) {
   );
 }
 
-function Crm({ admin, fin, role }: Props) {
-  const editable = can(role, 'clients', 'edit');
-  const editFin = can(role, 'finance', 'edit');
-  const lock = 'Modification réservée aux profils autorisés (référentiel clients)';
+/** Référentiel clients (CRM) — aussi accessible directement depuis le menu (droit « Référentiel clients »). */
+export function Crm({ admin, fin, role }: Pick<Props, 'admin' | 'fin' | 'role'>) {
+  // Les profils qui consultent le CRM modifient les champs métier de leur périmètre
+  // (rattachement budgétaire, forfait) ; ni secrets, ni permissions, ni validations financières.
+  const scope = clientScope(role);
+  const canEdit = (id: string) => can(role, 'clients', 'edit') && (!scope || scope === id);
+  // Champs structurants (nom, pôle, outil ITSM) : administration du référentiel.
+  const canConfigure = can(role, 'clients', 'configure');
+  const lockConf = 'Champ structurant : droit « Administration » sur « Référentiel clients (CRM) » requis';
+  const lock = can(role, 'clients', 'edit') ? 'Hors de votre périmètre client : lecture seule' : 'Lecture seule : droit « Modification » sur « Référentiel clients (CRM) » manquant pour votre profil';
   return (
     <>
       <p className="hint">Référentiel central des clients. Cliquez sur un champ pour le modifier selon vos droits. Le pôle et l’outil ITSM sont des modifications sensibles (confirmation) : elles mettent à jour le référentiel, les filtres et les fiches connecteurs ; les flux de tickets fictifs déjà générés ne sont pas régénérés. Le pôle n’est jamais déduit de l’outil ITSM.</p>
@@ -444,19 +452,20 @@ function Crm({ admin, fin, role }: Props) {
               const c = clientRecord(base.id)!;
               const crm = admin.state.crm[c.id];
               const contract = contracts.find((x) => x.clientId === c.id);
+              const editable = canEdit(c.id);
               const forfait = contract ? (fin.state.prestations.find((p) => p.contractId === contract.id && p.type === 'Forfait' && p.status === 'Prévisionnelle')?.unitPrice ?? contract.monthlyBudget) : null;
               return (
                 <tr key={c.id}>
                   <td>
-                    <InlineEdit value={c.name} field={`Nom du client ${base.name}`} module="Clients (CRM)" canEdit={editable} lockedReason={lock} onSave={(v) => admin.setClientOverride(c.id, { name: v })} />
+                    <InlineEdit value={c.name} field={`Nom du client ${base.name}`} module="Clients (CRM)" canEdit={canConfigure} lockedReason={lockConf} onSave={(v) => admin.setClientOverride(c.id, { name: v })} />
                   </td>
                   <td>
                     <InlineEdit
                       value={c.pole ?? ''}
                       field={`Pôle de ${c.name}`}
                       module="Clients (CRM)"
-                      canEdit={editable}
-                      lockedReason={lock}
+                      canEdit={canConfigure}
+                      lockedReason={lockConf}
                       sensitive
                       options={[{ value: '', label: 'Aucun (pas de N1)' }, { value: 'multi', label: 'Pôle Multi' }, { value: 'dedie', label: 'Pôle Dédié' }]}
                       onSave={(v) => admin.setClientOverride(c.id, { pole: (v || null) as PoleGroup | null })}
@@ -468,8 +477,8 @@ function Crm({ admin, fin, role }: Props) {
                       value={itsmOf(c.id) ?? ''}
                       field={`Outil ITSM de ${c.name}`}
                       module="Clients (CRM)"
-                      canEdit={editable}
-                      lockedReason={lock}
+                      canEdit={canConfigure}
+                      lockedReason={lockConf}
                       sensitive
                       options={[{ value: '', label: 'À confirmer (non renseigné)' }, ...TOOLS.map((t) => ({ value: t, label: t }))]}
                       onSave={(v) => admin.setClientOverride(c.id, { tool: (v || null) as MappedTool | null })}
@@ -480,8 +489,8 @@ function Crm({ admin, fin, role }: Props) {
                       value={clientBudget(c.id)}
                       field={`Budget de rattachement de ${c.name}`}
                       module="Clients (CRM)"
-                      canEdit={editable && can(role, 'finance', 'edit')}
-                      lockedReason="Modification réservée aux profils autorisés (référentiel clients et finances)"
+                      canEdit={editable}
+                      lockedReason={lock}
                       sensitive
                       options={[{ value: 'helpdesk', label: 'Helpdesk N1' }, { value: 'mco', label: 'MCO N2' }]}
                       onSave={(v) => admin.setClientOverride(c.id, { budget: v as 'helpdesk' | 'mco' })}
@@ -492,7 +501,7 @@ function Crm({ admin, fin, role }: Props) {
                   </td>
                   <td>
                     {contract && forfait !== null ? (
-                      <InlineEdit value={forfait} field={`Forfait mensuel ${c.name} (mois à venir)`} module="Données contractuelles" canEdit={editFin} sensitive type="number" min={0} format={(v) => `${Math.round(v).toLocaleString('fr-FR')} €`} onSave={(v) => fin.setContractForfait(contract.id, v, role)} />
+                      <InlineEdit value={forfait} field={`Forfait mensuel ${c.name} (mois à venir)`} module="Données contractuelles" canEdit={editable} lockedReason={lock} sensitive type="number" min={0} format={(v) => `${Math.round(v).toLocaleString('fr-FR')} €`} onSave={(v) => fin.setContractForfait(contract.id, v, role)} />
                     ) : (
                       '—'
                     )}
@@ -515,6 +524,9 @@ function Crm({ admin, fin, role }: Props) {
           </tbody>
         </table>
       </div>
+      <p className="hint">
+        <Pencil size={10} aria-hidden /> champ modifiable · <Lock size={10} aria-hidden /> lecture seule (droit ou périmètre). Les valeurs calculées (résultat, marge, prévisions) ne se saisissent pas : elles sont recalculées. Chaque modification est journalisée (utilisateur, date, module, champ, ancienne et nouvelle valeur).
+      </p>
       <p className="hint">Forfait mensuel : modifie les prestations à venir (prévisionnelles et à valider) du contrat ; le résultat analytique et les prévisions sont recalculés immédiatement.</p>
     </>
   );

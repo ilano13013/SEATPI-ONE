@@ -41,7 +41,7 @@ export function ProductionCockpit({ role, items, onItems, onBack }: { role: Role
     <section className="xc prod" aria-label="Préparation à la production">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <small className="crumb">Administration › Préparation à la production</small>

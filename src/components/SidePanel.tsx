@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react';
 import { Activity, X } from 'lucide-react';
 import type { DemoState, Room, SiteId } from '../types';
-import { can, roleLabels, type Role } from '../auth/roles';
+import { roleLabels, type Role } from '../auth/roles';
+import { roomDataAccess } from '../auth/access';
 import { HelpdeskPanel } from './panels/HelpdeskPanel';
 import { PausePanel } from './panels/PausePanel';
 import { AccueilPanel, DirectionPanel, ParkingPanel, RhPanel, StockPanel } from './panels/OtherPanels';
-import { Restricted } from './ui';
+import { AccessNotice } from './ui';
 import { CsmPanel, ExploitationPanel } from './panels/ServicesPanels';
 import type { ClientView } from '../external/derive';
 import type { ExternalClientId } from '../external/types';
 import type { Trip } from '../external/trips';
-import { DepartmentPanel, moduleLinksFor, type ModuleLink } from './panels/DepartmentPanel';
+import { DepartmentPanel, ModuleLinks, type ModuleLink } from './panels/DepartmentPanel';
 import { polesOf } from '../data/layout';
 import { siteById } from '../data/sites';
 import { personById } from '../org/people';
@@ -33,8 +34,6 @@ interface Props {
   /** Personne de l'encadrement mise en avant (clic dans la 3D). */
   focusPersonId?: string | null;
   onOpenModule?: (m: ModuleLink) => void;
-  /** Modules déjà disponibles dans cette version. */
-  availableModules?: Set<ModuleLink>;
   /** Ouvre le cockpit de la personne de l'encadrement. */
   onOpenPerson?: (personId: string) => void;
   /** Contenu complémentaire du bureau d'une personne (checklists du manager). */
@@ -56,8 +55,9 @@ function siteState(state: DemoState, site: SiteId): DemoState {
 }
 
 export function SidePanel(p: Props) {
-  const { room, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, trips, now, onOpenTicket, onOpenClient, focusPersonId, onOpenModule, onOpenPerson, personExtras, availableModules = new Set() } = p;
-  const allowed = can(role, room.module);
+  const { room, role, selectedPole, onSelectPole, focusAgentId, onFocusAgent, onClose, views, trips, now, onOpenTicket, onOpenClient, focusPersonId, onOpenModule, onOpenPerson, personExtras } = p;
+  const data = roomDataAccess(role, room);
+  const allowed = !data || data.ok;
   const site = isSite(room.location) ? room.location : null;
   const state = site ? siteState(p.state, site) : p.state;
   const props = { state, role };
@@ -79,8 +79,11 @@ export function SidePanel(p: Props) {
         Données fictives — aucune connexion aux systèmes SEATPI. Droits simulés pour le rôle <b>{roleLabels[role]}</b> : la sécurité effective sera
         assurée côté serveur.
       </div>
-      {!allowed ? (
-        <Restricted what={`« ${room.label} »`} />
+      {!allowed && data && !data.ok ? (
+        <>
+          <AccessNotice access={data} />
+          <ModuleLinks room={room} role={role} onOpenModule={onOpenModule} />
+        </>
       ) : (
         // `key` : réinitialise les filtres locaux quand on change de pièce ou de rôle.
         <div key={`${room.id}-${role}`}>
@@ -97,12 +100,8 @@ export function SidePanel(p: Props) {
               {personExtras?.(person.id)}
             </div>
           )}
-          {!generic && moduleLinksFor(room.kind).filter((l) => availableModules.has(l.module)).map((l) => (
-            <button key={l.module} className="action primary" onClick={() => onOpenModule?.(l.module)}>
-              Ouvrir : {l.label}
-            </button>
-          ))}
-          {generic && site && <DepartmentPanel room={room} site={site} onOpenModule={onOpenModule} available={availableModules} />}
+          {!generic && <ModuleLinks room={room} role={role} onOpenModule={onOpenModule} />}
+          {generic && site && <DepartmentPanel room={room} site={site} role={role} onOpenModule={onOpenModule} />}
           {room.kind === 'helpdesk' && site && polesOf(site).length === 0 && (
             <p className="itsm-missing">Aucun pôle client affecté à ce plateau — affectation à configurer. Le Pôle Multi est réparti entre La Ciotat et Montpellier.</p>
           )}

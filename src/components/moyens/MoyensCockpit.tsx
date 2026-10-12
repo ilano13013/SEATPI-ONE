@@ -46,7 +46,7 @@ export function MoyensCockpit({ moyens, fin, role, onOpenBudget, onBack }: Props
     <section className="xc" aria-label="Moyens généraux — déplacements">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <small className="crumb">Moyens généraux › Déplacements professionnels</small>

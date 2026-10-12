@@ -2,6 +2,8 @@
 // congés, objectifs (volume / qualité) et historique du suivi — environnement simulé.
 // SEATPI ONE ne remplace ni l'outil de congés ni l'outil CRA : il n'en fait que le suivi.
 import { useMemo } from 'react';
+import { AccessNotice } from '../ui';
+import { missingRight } from '../../auth/access';
 import { ArrowLeft } from 'lucide-react';
 import type { ManagementStore } from '../../management/useManagement';
 import { DEFAULT_N1_OBJECTIVES } from '../../management/useManagement';
@@ -66,9 +68,9 @@ export function ManagementCockpit({ store, role, persona, onPersona, tab, onTab,
     return (
       <section className="xc mg" aria-label="Cockpit Management">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
-        <p className="restricted">Le suivi managérial n’est pas accessible à votre profil (démonstration — contrôle simulé, pas une mesure de sécurité).</p>
+        <AccessNotice access={missingRight(role, ['management'])} />
       </section>
     );
 
@@ -76,7 +78,7 @@ export function ManagementCockpit({ store, role, persona, onPersona, tab, onTab,
     <section className="xc mg" aria-label="Cockpit Management">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>Management — {me.title}</b>

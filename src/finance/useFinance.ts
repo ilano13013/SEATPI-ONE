@@ -236,7 +236,8 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
 
   /** Paramètre contractuel : forfait mensuel d'un contrat, appliqué aux prestations à venir (non validées). */
   const setContractForfait = useCallback((contractId: string, amount: number, role: Role): FinanceResult => {
-    if (!can(role, 'finance', 'edit')) return denied;
+    // Valeur budgétaire du référentiel clients : modifiable par les profils habilités au CRM.
+    if (!can(role, 'finance', 'edit') && !can(role, 'clients', 'edit')) return denied;
     if (!(amount >= 0)) return { ok: false, message: 'Montant invalide.' };
     const s = ref.current;
     const touched = s.prestations.filter((p) => p.contractId === contractId && p.type === 'Forfait' && (p.status === 'Prévisionnelle' || p.status === 'À valider'));

@@ -5,8 +5,7 @@ import type { ClientView } from '../../external/derive';
 import { contractById } from '../../external/config';
 import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
 import { isOpen } from '../../external/metrics';
-import { ItsmMissing, Modal, PriorityBadge, SlaBadge, StatusBadge, downloadText, fmtDateTime, fmtHours } from './common';
-import type { ActionResult, NewTicketInput } from '../../external/useExternal';
+import { ItsmMissing, PriorityBadge, SlaBadge, StatusBadge, downloadText, fmtDateTime, fmtHours } from './common';
 
 type SortKey = 'id' | 'site' | 'title' | 'category' | 'priority' | 'status' | 'tech' | 'team' | 'createdAt' | 'updatedAt' | 'due' | 'timeSpent' | 'resolvedAt';
 type GroupBy = 'aucun' | 'technicien' | 'priorité' | 'statut';
@@ -14,8 +13,6 @@ type GroupBy = 'aucun' | 'technicien' | 'priorité' | 'statut';
 interface Props {
   view: ClientView;
   individual: boolean;
-  /** Création de ticket (démonstration) si le rôle et l'outil le permettent. */
-  onCreate?: (input: NewTicketInput) => ActionResult;
   filter?: { label: string; ids: string[] };
   onClearFilter: () => void;
   onOpen: (ticketId: string) => void;
@@ -28,51 +25,7 @@ export function TicketTable(props: Props) {
   return <TicketTableInner {...props} />;
 }
 
-function NewTicketForm({ view, onCreate, onClose }: { view: ClientView; onCreate: (i: NewTicketInput) => ActionResult; onClose: () => void }) {
-  const [input, setInput] = useState<NewTicketInput>({ title: '', description: '', category: view.client.categories[0], priority: 'P3', site: view.client.sites[0] });
-  const [result, setResult] = useState<ActionResult | null>(null);
-  const set = (patch: Partial<NewTicketInput>) => setInput((i) => ({ ...i, ...patch }));
-  return (
-    <Modal title={`Nouveau ticket — ${view.client.name} (${view.client.tool})`} onClose={onClose}>
-      <p className="hint">Démonstration : le ticket est créé dans la source simulée, puis synchronisé. Aucun envoi vers {view.client.tool}.</p>
-      <div className="form-grid">
-        <label className="field block">
-          <span>Titre</span>
-          <input value={input.title} onChange={(e) => set({ title: e.target.value })} />
-        </label>
-        <label className="field block">
-          <span>Description</span>
-          <textarea rows={3} value={input.description} onChange={(e) => set({ description: e.target.value })} />
-        </label>
-        <label className="field block">
-          <span>Catégorie</span>
-          <select value={input.category} onChange={(e) => set({ category: e.target.value })}>
-            {view.client.categories.map((c) => <option key={c}>{c}</option>)}
-          </select>
-        </label>
-        <label className="field block">
-          <span>Priorité</span>
-          <select value={input.priority} onChange={(e) => set({ priority: e.target.value as Priority })}>
-            {ALL_PRIORITIES.map((p) => <option key={p}>{p}</option>)}
-          </select>
-        </label>
-        <label className="field block">
-          <span>Site</span>
-          <select value={input.site} onChange={(e) => set({ site: e.target.value })}>
-            {view.client.sites.map((s) => <option key={s}>{s}</option>)}
-          </select>
-        </label>
-      </div>
-      <button className="action primary" onClick={() => setResult(onCreate(input))}>
-        Créer le ticket (démonstration)
-      </button>
-      {result && <p className={`xc-result ${result.ok ? 'ok' : 'bad'}`}>{result.message}</p>}
-    </Modal>
-  );
-}
-
-function TicketTableInner({ view, individual, filter, onClearFilter, onOpen, onCreate }: Props) {
-  const [creating, setCreating] = useState(false);
+function TicketTableInner({ view, individual, filter, onClearFilter, onOpen }: Props) {
   const { tickets, techs, teams, client } = view;
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<'tous' | 'ouverts' | TicketStatus>('tous');
@@ -259,11 +212,6 @@ function TicketTableInner({ view, individual, filter, onClearFilter, onOpen, onC
         <button className="ghost" onClick={exportCsv}>
           <Download size={13} /> CSV
         </button>
-        {onCreate && (
-          <button className="ghost" onClick={() => setCreating(true)}>
-            + Nouveau ticket
-          </button>
-        )}
       </div>
       <p className="hint">
         {rows.length} ticket(s) · cliquez sur une ligne pour le détail et l’historique · colonnes triables
@@ -333,7 +281,6 @@ function TicketTableInner({ view, individual, filter, onClearFilter, onOpen, onC
           </button>
         </div>
       )}
-      {creating && onCreate && <NewTicketForm view={view} onCreate={onCreate} onClose={() => setCreating(false)} />}
     </div>
   );
 }

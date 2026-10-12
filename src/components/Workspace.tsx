@@ -62,7 +62,7 @@ export function Workspace(props: Props) {
       <div className="scenehead">
         <div>
           <b>Entreprise virtuelle</b>
-          <span>{mode3d ? 'Choisissez un site, un étage puis un espace' : 'Vue 2D accessible — mêmes modules que la 3D'}</span>
+          <span>{mode3d ? 'Choisissez un site, un étage puis un espace' : 'Vue 2D accessible — mêmes espaces et modules que la vue 3D'}</span>
         </div>
         {mode3d && (
           <div className="floorbar">

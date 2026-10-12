@@ -74,7 +74,8 @@ describe('App (mode démo)', () => {
     expect(panel().queryByText('Agent A01')).toBeNull();
 
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'rh' } });
-    expect(panel().getByText('Accès restreint')).toBeTruthy();
+    expect(panel().getByText('Accès refusé')).toBeTruthy();
+    expect(panel().getAllByText(/Droit manquant : Lecture sur « Supervision Helpdesk/).length).toBeGreaterThan(0);
   });
 
   it("n'effectue aucun appel réseau", () => {
@@ -108,8 +109,9 @@ describe('App (mode démo)', () => {
   it('masque la supervision externe au rôle Agent', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'agent' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
-    expect(screen.getByText('Accès restreint')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes (accès refusé)' }));
+    expect(screen.getByText('Accès refusé')).toBeTruthy();
+    expect(screen.getByText(/Droit manquant : Lecture sur « Clients externes/)).toBeTruthy();
   });
 
   it('présente les services internes Exploitation et CSM', () => {
@@ -147,7 +149,10 @@ describe('App (mode démo)', () => {
     expect(panel().getByText(/Aucun pôle client affecté/)).toBeTruthy();
     openRoom('Commercial', 'Paris');
     expect(panel().getByRole('heading', { name: 'Commercial' })).toBeTruthy();
-    expect(panel().getByText('Paris')).toBeTruthy();
+    expect(panel().getAllByText('Paris').length).toBeGreaterThan(0);
+    // Fonctionnalité non développée : « Module à venir », jamais « Accès restreint ».
+    expect(panel().getByText('Module à venir')).toBeTruthy();
+    expect(panel().queryByText(/Accès (restreint|refusé)/)).toBeNull();
     // Pas de RH ni de Stock hors de La Ciotat.
     expect(within(screen.getByRole('region', { name: 'Paris' })).queryByRole('button', { name: /Ressources humaines|Stock/ })).toBeNull();
   });
@@ -179,12 +184,8 @@ describe('App (mode démo)', () => {
     expect(rows.every((r) => /GLPI/.test(r.textContent ?? '') || /Aucun ticket/.test(r.textContent ?? ''))).toBe(true);
     const tableCount = hd.getByRole('tab', { name: /Tableau/ }).textContent;
     expect(hd.getByRole('tab', { name: /Kanban/ }).textContent?.replace('Kanban', '')).toBe(tableCount?.replace('Tableau', ''));
-    // Création simulée sur un client sans ITSM : refusée.
-    fireEvent.click(hd.getByRole('button', { name: /Nouveau ticket/ }));
-    const dlg = within(screen.getByRole('dialog'));
-    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'N1:g2s' } });
-    expect(dlg.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
-    expect((dlg.getByRole('button', { name: /Créer dans/ }) as HTMLButtonElement).disabled).toBe(true);
+    // Pas de création de ticket dans ce cockpit de pilotage.
+    expect(hd.queryByRole('button', { name: /Nouveau ticket/ })).toBeNull();
   });
 
   it('budget déplacements : demande au-delà du plafond bloquée et journalisée ; plafond réservé à la direction', () => {
@@ -285,7 +286,7 @@ describe('App (mode démo)', () => {
   it('rouage ⚙️ : Connexions & API — statuts, test indisponible en démonstration, secrets refusés', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Administration' }));
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Administration' }));
     const adm = within(screen.getByRole('region', { name: 'Administration' }));
     // Un connecteur par client (domaine propre), un QlikView commun.
     for (const n of ['PRIMAGAZ', 'SODIAAL', 'IRD', 'THELEM', 'ORTEC', 'INVIVO', 'SNR', 'G2S', 'MONEXT', 'QlikView', 'Genesys Cloud']) expect(adm.getByRole('button', { name: `Fiche ${n}` })).toBeTruthy();
@@ -331,15 +332,15 @@ describe('App (mode démo)', () => {
     // Le plafond déplacements ne se modifie pas en ligne (procédure de révision réservée).
     fireEvent.click(fin.getByRole('tab', { name: 'Budget déplacements' }));
     expect(fin.getByText(/Procédure de révision budgétaire réservée/)).toBeTruthy();
-    // Manager : pas d'accès aux finances.
+    // Manager : pas d'accès aux finances, droit manquant expliqué.
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'teamLeader' } });
-    expect(within(screen.getByRole('region', { name: 'Budget et rentabilité' })).getByText(/Accès réservé/)).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Accès au module' })).getByText(/Droit manquant : Lecture sur « Budget & Rentabilité/)).toBeTruthy();
   });
 
   it('CRM : modification du pôle d’un client (sensible, confirmée) répercutée et historisée', () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Administration' }));
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Administration' }));
     const adm = within(screen.getByRole('region', { name: 'Administration' }));
     fireEvent.click(adm.getByRole('tab', { name: 'Clients (CRM)' }));
     fireEvent.click(adm.getByRole('button', { name: 'Modifier Pôle de G2S' }));
@@ -348,9 +349,16 @@ describe('App (mode démo)', () => {
     expect(adm.getByText(/Modification sensible/)).toBeTruthy();
     fireEvent.click(adm.getByRole('button', { name: /Confirmer/ }));
     expect(adm.getByRole('button', { name: 'Modifier Pôle de G2S' }).textContent).toMatch(/Pôle Dédié/);
-    // Profil Manager : lecture seule.
+    // Profil Manager : champs structurants en lecture seule, champs métier (budget) modifiables.
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'teamLeader' } });
-    expect(within(screen.getByRole('region', { name: 'Administration' })).queryByRole('button', { name: 'Modifier Pôle de G2S' })).toBeNull();
+    const crm = within(screen.getByRole('region', { name: 'Administration' }));
+    expect(crm.queryByRole('button', { name: 'Modifier Pôle de G2S' })).toBeNull();
+    fireEvent.click(crm.getByRole('button', { name: 'Modifier Budget de rattachement de G2S' }));
+    fireEvent.change(crm.getByLabelText('Budget de rattachement de G2S'), { target: { value: 'mco' } });
+    fireEvent.click(crm.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(crm.getByRole('button', { name: /Confirmer/ }));
+    expect(crm.getByRole('button', { name: 'Modifier Budget de rattachement de G2S' }).textContent).toMatch(/MCO N2/);
+    expect(crm.getByRole('status').textContent).toMatch(/Enregistré/);
   });
 
   it('SLA décroché (QlikView) : global par volumes, objectifs non renseignés, puis objectifs de démonstration et écarts', () => {

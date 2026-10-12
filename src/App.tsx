@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import type { Agent, FloorId, RoomId } from './types';
 import { can, type Role } from './auth/roles';
 import { entryFloor, helpdeskPoles, plateauOf, poleByClient, polesOf, roomById, rooms } from './data/layout';
@@ -36,7 +37,8 @@ import { HelpdeskCockpit } from './components/helpdesk/HelpdeskCockpit';
 import { MANAGER_IDS, ManagementCockpit, managerScope, type MgmtTab, type ObjectiveScope } from './components/management/ManagementCockpit';
 import { ChecklistSummary } from './components/management/Checklists';
 import { ExploitationCockpit, McoCockpit } from './components/management/ServiceCockpits';
-import type { ModuleLink } from './components/panels/DepartmentPanel';
+import { MODULE_VIEW, VIEW_LABEL, viewAccess, type ModuleView } from './auth/access';
+import { AccessNotice } from './components/ui';
 import type { ExternalState } from './external/useExternal';
 import { externalClients, externalTeams } from './external/config';
 import type { Technician } from './external/types';
@@ -52,29 +54,10 @@ import { INITIAL_READINESS, ProductionCockpit } from './components/production/Pr
 import type { ReadinessItem } from './production/readiness';
 import { activeData } from './data/provider';
 import { useAdmin } from './admin/useAdmin';
-import { AdminCenter, type AdminTab } from './components/admin/AdminCenter';
+import { AdminCenter, Crm, type AdminTab } from './components/admin/AdminCenter';
 import { AuditContext, useAuditLog } from './audit/audit';
 import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } from './auth/roles';
 import { Toast } from './components/external/common';
-
-/** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'telephonie', 'finance', 'pdg', 'itsm', 'production', 'admin']);
-
-/** Lien d'un espace 3D vers un module applicatif. */
-const MODULE_VIEW: Record<ModuleLink, AppView> = {
-  helpdesk: 'helpdesk',
-  management: 'management',
-  mco: 'mco',
-  exploitation: 'exploitation',
-  finance: 'finance',
-  'finance-mco': 'finance',
-  moyens: 'moyens',
-  deplacements: 'finance',
-  recrutement: 'finance',
-  pdg: 'pdg',
-  production: 'production',
-};
-const AVAILABLE_LINKS = new Set((Object.keys(MODULE_VIEW) as ModuleLink[]).filter((m) => AVAILABLE_VIEWS.has(MODULE_VIEW[m])));
 
 /** Cockpit ouvert par un clic sur une personne de l'encadrement. */
 const PERSON_VIEW: Record<string, AppView> = {
@@ -212,7 +195,7 @@ export function App() {
   /** Ouvre le cockpit d'une personne de l'encadrement (managers : persona du cockpit Management). */
   const openPersonCockpit = useCallback((personId: string) => {
     const v = PERSON_VIEW[personId];
-    if (!v || !AVAILABLE_VIEWS.has(v)) return;
+    if (!v) return;
     if (v === 'management') setPersona(personId);
     setAppView(v);
   }, []);
@@ -454,13 +437,16 @@ export function App() {
   }, [state]);
 
   const room = selected ? roomById(selected) : null;
+  // Même règle d'accès pour la carte, le menu, les raccourcis et les liens directs.
+  const access = appView === 'jumeau' ? null : viewAccess(role, appView);
+  const show = (v: ModuleView) => appView === v && !!access?.ok;
 
   return (
     <AuditContext.Provider value={{ user: `${roleLabels[role]} (démonstration)`, record: audit.record }}>
     <div className="app">
       <Rail
         view={appView}
-        available={AVAILABLE_VIEWS}
+        role={role}
         onCarte={() => {
           setAppView('jumeau');
           setFloor('carte');
@@ -474,7 +460,20 @@ export function App() {
         {activeData.warning && <div className="notice">{activeData.warning}</div>}
         {resetDone && <Toast ok message="Démonstration réinitialisée : toutes les données fictives ont été régénérées (aucun système réel concerné)." onDone={() => setResetDone(false)} />}
         {!webgl && <div className="notice">WebGL n'est pas disponible sur ce poste : la vue 2D donne accès aux mêmes modules.</div>}
-        {appView === 'externes' && (
+        {access && !access.ok && (
+          <section className="xc" aria-label="Accès au module">
+            <div className="xc-head">
+              <button className="ghost" onClick={backToMap}>
+                <ArrowLeft size={14} /> Carte des sites
+              </button>
+              <div>
+                <b>{VIEW_LABEL[appView as ModuleView]}</b>
+              </div>
+            </div>
+            <AccessNotice access={access} />
+          </section>
+        )}
+        {show('externes') && (
           <ExternalCockpit
             store={ext}
             views={views}
@@ -494,8 +493,8 @@ export function App() {
             }}
           />
         )}
-        {appView === 'itsm' && <ItsmRegistry connectors={ext.state.connectors} />}
-        {appView === 'helpdesk' && (
+        {show('itsm') && <ItsmRegistry connectors={ext.state.connectors} />}
+        {show('helpdesk') && (
           <HelpdeskCockpit
             backlogHours={admin.state.dashboard.backlogHours}
             checklists={
@@ -521,11 +520,10 @@ export function App() {
             role={role}
             onMove={(t, to, esc) => (t.scope === 'interne' ? internal.moveTicket(t.id, to, role, esc) : ext.moveTicket(t.id, to, role, esc))}
             onAssign={(t, id) => (t.scope === 'interne' ? internal.assignTicket(t.id, id, role) : ext.assignTicket(t.id, id, role))}
-            onCreate={(level, clientId, input) => (level === 'N1' ? internal.createTicket(clientId, input, role) : ext.createTicket(clientId as ExternalClientId, input, role))}
             onBack={backToMap}
           />
         )}
-        {appView === 'management' && (
+        {show('management') && (
           <ManagementCockpit
             tab={mgmtTab}
             onTab={setMgmtTab}
@@ -539,8 +537,8 @@ export function App() {
             onBack={backToMap}
           />
         )}
-        {appView === 'finance' && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} entity={finEntity} onEntity={setFinEntity} onBack={backToMap} />}
-        {appView === 'moyens' && (
+        {show('finance') && <FinanceCockpit store={fin} role={role} tab={finTab} onTab={setFinTab} entity={finEntity} onEntity={setFinEntity} onBack={backToMap} />}
+        {show('moyens') && (
           <MoyensCockpit
             moyens={moyens}
             fin={fin}
@@ -552,7 +550,7 @@ export function App() {
             }}
           />
         )}
-        {appView === 'telephonie' && (
+        {show('telephonie') && (
           <TelephonyCockpit
             rows={qlikRows}
             now={Date.now()}
@@ -565,7 +563,7 @@ export function App() {
             onBack={backToMap}
           />
         )}
-        {appView === 'pdg' && (
+        {show('pdg') && (
           <PdgCockpit
             sim={state}
             views={Object.values(views)}
@@ -586,7 +584,21 @@ export function App() {
             }}
           />
         )}
-        {appView === 'admin' && (
+        {show('crm') && (
+          <section className="xc adm" aria-label="Clients (CRM)">
+            <div className="xc-head">
+              <button className="ghost" onClick={backToMap}>
+                <ArrowLeft size={14} /> Carte des sites
+              </button>
+              <div>
+                <b>Clients (CRM)</b>
+                <span>Référentiel clients : pôle, outil ITSM, budget de rattachement, contrat · données de démonstration</span>
+              </div>
+            </div>
+            <Crm admin={admin} fin={fin} role={role} />
+          </section>
+        )}
+        {show('admin') && (
           <AdminCenter
             admin={admin}
             fin={fin}
@@ -603,9 +615,9 @@ export function App() {
             onBack={backToMap}
           />
         )}
-        {appView === 'production' && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
-        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} objectives={{ takeCharge: admin.state.sla.n2TakeCharge, resolution: admin.state.sla.n2Resolution }} onOpenBudget={() => { setFinEntity('mco'); setFinTab('global'); setAppView('finance'); }} />}
-        {appView === 'exploitation' && (
+        {show('production') && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
+        {show('mco') && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} objectives={{ takeCharge: admin.state.sla.n2TakeCharge, resolution: admin.state.sla.n2Resolution }} onOpenBudget={() => { setFinEntity('mco'); setFinTab('global'); setAppView('finance'); }} />}
+        {show('exploitation') && (
           <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />
         )}
         {appView === 'jumeau' && <MetricsBar metrics={metrics} clientsCount={state.clients.length} />}
@@ -663,7 +675,6 @@ export function App() {
               />
             ) : null
           }
-          availableModules={AVAILABLE_LINKS}
           onOpenModule={(m) => {
             if (m === 'deplacements' || m === 'recrutement' || m === 'finance' || m === 'finance-mco') setFinTab(m === 'finance' || m === 'finance-mco' ? 'global' : m);
             if (m === 'finance-mco') setFinEntity('mco');

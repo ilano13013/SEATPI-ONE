@@ -43,7 +43,7 @@ export function TelephonyCockpit({ rows, now, objectives, demoObjectives, onOpen
     <section className="xc tel" aria-label="SLA décroché">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <small className="crumb">Téléphonie › Statistiques QlikView</small>

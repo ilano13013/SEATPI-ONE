@@ -1,10 +1,10 @@
 // Cockpit Helpdesk consolidé : équipes internes (N1) et sites clients INVIVO, PRIMAGAZ, MONEXT (N2).
 // Les compteurs, le tableau et le Kanban reposent sur le même jeu filtré.
 import { useMemo, useState, type ReactNode } from 'react';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import type { Agent } from '../../types';
 import type { Priority, Service, Technician, TicketStatus } from '../../external/types';
-import type { ActionResult, NewTicketInput } from '../../external/useExternal';
+import type { ActionResult } from '../../external/useExternal';
 import { ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adapters';
 import { applyFilters, counters, COUNTER_LABELS, EMPTY_FILTERS, managerLabel, staffing, teamObjectives, weeklyEvolution, type CounterKey, type HdFilters, type HdTicket } from '../../helpdesk/consolidation';
 import { ticketTeams } from '../../helpdesk/teams';
@@ -14,7 +14,7 @@ import { externalClients } from '../../external/config';
 import { orgPeople } from '../../org/people';
 import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
-import { Modal, PriorityBadge, SlaBadge, StatusBadge, Toast, fmtDateTime } from '../external/common';
+import { PriorityBadge, SlaBadge, StatusBadge, Toast, fmtDateTime } from '../external/common';
 import { TicketDetail } from '../external/TicketDetail';
 
 type Tab = 'synthese' | 'tickets' | 'kanban' | 'effectifs';
@@ -32,7 +32,6 @@ interface Props {
   role: Role;
   onMove: (t: HdTicket, to: TicketStatus, escalateTo?: Service) => ActionResult;
   onAssign: (t: HdTicket, techId: string) => ActionResult;
-  onCreate: (level: 'N1' | 'N2', clientId: string, input: NewTicketInput) => ActionResult;
   onBack: () => void;
   /** Synthèse des checklists CRA / congés (cockpit de la responsable Helpdesk). */
   checklists?: ReactNode;
@@ -42,11 +41,6 @@ interface Props {
 
 /** Clients du périmètre : clients traités en N1 sur les plateaux + sites clients N2. */
 const SCOPE_CLIENTS = [...new Set([...n1Clients.map((c) => c.clientId), ...externalClients.map((c) => c.id)])];
-/** Cibles de création : un même client peut être traité en N1 (Pôle Multi) et en N2 (INVIVO). */
-const CREATE_TARGETS: { value: string; label: string }[] = [
-  ...n1Clients.map((c) => ({ value: `N1:${c.clientId}`, label: `${clientRecord(c.clientId)?.name ?? c.clientId} — N1 ${POLE_GROUP_LABEL[clientRecord(c.clientId)?.pole ?? 'dedie']} — ${itsmOf(c.clientId) ?? 'ITSM non renseigné'}` })),
-  ...externalClients.map((c) => ({ value: `N2:${c.id}`, label: `${c.name} — N2 chez le client — ${c.tool ?? 'ITSM non renseigné'}` })),
-];
 const TOOLS = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow'] as const;
 const KANBAN: TicketStatus[] = ['Nouveau', 'Affecté', 'En cours', 'En attente', 'Bloqué', 'Escaladé', 'Réouvert', 'Résolu'];
 const PAGE = 40;
@@ -61,10 +55,8 @@ export function HelpdeskCockpit(props: Props) {
   const [people, setPeople] = useState<{ label: string; ids: string[] } | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<ActionResult | null>(null);
   const individual = can(role, 'supervision', 'individual');
-  const editable = can(role, 'supervision', 'edit');
 
   const filtered = useMemo(() => applyFilters(tickets, filters, now), [tickets, filters, now]);
   const shown = useMemo(() => (drill ? filtered.filter((t) => drill.ids.includes(t.id)) : filtered), [filtered, drill]);
@@ -99,15 +91,12 @@ export function HelpdeskCockpit(props: Props) {
     <section className="xc hd" aria-label="Cockpit Helpdesk consolidé">
       <div className="xc-head">
         <button className="ghost" onClick={props.onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>Helpdesk — cockpit consolidé</b>
           <span>Équipes internes N1 (3 sites) + sites clients INVIVO, PRIMAGAZ, MONEXT (N2) · données de démonstration · actualisé {fmtDateTime(now)}</span>
         </div>
-        <button className="action" disabled={!editable} onClick={() => setCreating(true)} title={editable ? undefined : 'Réservé à l’encadrement (maquette)'}>
-          <Plus size={14} /> Nouveau ticket
-        </button>
       </div>
 
       <div className="xc-toolbar hd-filters" role="group" aria-label="Filtres">
@@ -463,62 +452,7 @@ export function HelpdeskCockpit(props: Props) {
           onAssign={(id) => run(props.onAssign(opened, id))}
         />
       )}
-      {creating && <NewTicket onClose={() => setCreating(false)} onCreate={(l, c, i) => {
-        const r = run(props.onCreate(l, c, i));
-        if (r.ok) setCreating(false);
-        return r;
-      }} />}
       {toast && <Toast message={toast.message} ok={toast.ok} onDone={() => setToast(null)} />}
     </section>
-  );
-}
-
-function NewTicket({ onClose, onCreate }: { onClose: () => void; onCreate: (level: 'N1' | 'N2', clientId: string, input: NewTicketInput) => ActionResult }) {
-  const [target, setTarget] = useState('N1:thelem');
-  const [level, clientId] = target.split(':') as ['N1' | 'N2', string];
-  const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<Priority>('P3');
-  const [error, setError] = useState<string | null>(null);
-  const tool = itsmOf(clientId);
-  return (
-    <Modal title="Nouveau ticket (démonstration)" onClose={onClose}>
-      <p className="hint">Le ticket est créé dans la source simulée de l’outil ITSM du client, puis synchronisé. Aucun envoi vers un système réel.</p>
-      <div className="form-grid">
-        <label>
-          Client
-          <select value={target} onChange={(e) => setTarget(e.target.value)}>
-            {CREATE_TARGETS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Titre
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-        <label>
-          Priorité
-          <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-            {ALL_PRIORITIES.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {!tool && <p className="itsm-missing">{ITSM_NOT_SET}</p>}
-      {error && <p className="xc-result bad">{error}</p>}
-      <button
-        className="action"
-        disabled={!tool}
-        onClick={() => {
-          const r = onCreate(level, clientId, { title, description: '', category: '', priority, site: '' });
-          if (!r.ok) setError(r.message);
-        }}
-      >
-        Créer dans {tool ?? '—'} (simulation)
-      </button>
-    </Modal>
   );
 }

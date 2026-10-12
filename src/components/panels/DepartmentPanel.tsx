@@ -1,6 +1,10 @@
 import type { Room, SiteId } from '../../types';
 import { departments, hasDepartment, siteById, type DepartmentId } from '../../data/sites';
 import { peopleIn } from '../../org/people';
+import { Lock } from 'lucide-react';
+import { comingFeature, MODULE_VIEW, moduleLinksFor, viewAccess, type ModuleLink } from '../../auth/access';
+import type { Role } from '../../auth/roles';
+import { AccessNotice } from '../ui';
 
 const KIND_TO_DEPARTMENT: Partial<Record<Room['kind'], DepartmentId>> = {
   helpdesk: 'helpdesk',
@@ -17,30 +21,39 @@ const KIND_TO_DEPARTMENT: Partial<Record<Room['kind'], DepartmentId>> = {
   stock: 'stock',
 };
 
-/** Modules applicatifs accessibles depuis un espace. */
-export type ModuleLink = 'helpdesk' | 'management' | 'finance' | 'finance-mco' | 'moyens' | 'deplacements' | 'recrutement' | 'pdg' | 'mco' | 'exploitation' | 'production';
+export type { ModuleLink };
 
-const LINKS: Partial<Record<Room['kind'], { module: ModuleLink; label: string }[]>> = {
-  helpdesk: [{ module: 'helpdesk', label: 'Cockpit Helpdesk consolidé' }, { module: 'management', label: 'Management : congés, CRA, objectifs' }],
-  mco: [{ module: 'mco', label: 'Cockpit MCO / Support N2' }, { module: 'finance-mco', label: 'Budget & Rentabilité MCO N2' }],
-  exploitation: [{ module: 'exploitation', label: 'Cockpit Exploitation' }],
-  moyens: [{ module: 'moyens', label: 'Moyens généraux : déplacements professionnels' }],
-  finance: [{ module: 'finance', label: 'Budget & Rentabilité du Helpdesk' }, { module: 'deplacements', label: 'Enveloppe déplacements Helpdesk' }],
-  recrutement: [{ module: 'recrutement', label: 'Budget recrutement' }],
-  direction: [{ module: 'pdg', label: 'Cockpit PDG' }],
-  rh: [{ module: 'management', label: 'Congés et CRA' }],
-};
-
-export function moduleLinksFor(kind: Room['kind']) {
-  return LINKS[kind] ?? [];
+/** Liens d'un espace vers ses modules : mêmes règles que le menu (droit manquant expliqué). */
+export function ModuleLinks({ room, role, onOpenModule }: { room: Room; role: Role; onOpenModule?: (m: ModuleLink) => void }) {
+  const links = moduleLinksFor(room.kind);
+  const coming = comingFeature(room);
+  return (
+    <>
+      {links.map((l) => {
+        const access = viewAccess(role, MODULE_VIEW[l.module]);
+        return access.ok ? (
+          <button key={l.module} className="action primary" onClick={() => onOpenModule?.(l.module)}>
+            Ouvrir : {l.label}
+          </button>
+        ) : (
+          <div key={l.module} className="link-refused">
+            <button className="action" disabled aria-describedby={`why-${room.id}-${l.module}`}>
+              <Lock size={12} aria-hidden /> {l.label}
+            </button>
+            <small id={`why-${room.id}-${l.module}`}>{access.message}</small>
+          </div>
+        );
+      })}
+      {coming && !coming.ok && <AccessNotice access={coming} />}
+    </>
+  );
 }
 
 /** Panneau d'un département : rattachement au site, encadrement et accès aux modules. */
-export function DepartmentPanel({ room, site, onOpenModule, available }: { room: Room; site: SiteId; onOpenModule?: (m: ModuleLink) => void; available: Set<ModuleLink> }) {
+export function DepartmentPanel({ room, site, role, onOpenModule }: { room: Room; site: SiteId; role: Role; onOpenModule?: (m: ModuleLink) => void }) {
   const dep = KIND_TO_DEPARTMENT[room.kind];
   const department = dep ? departments.find((d) => d.id === dep) : undefined;
   const people = peopleIn(site, room.kind);
-  const links = moduleLinksFor(room.kind).filter((l) => available.has(l.module));
   return (
     <>
       <div className="kv">
@@ -75,13 +88,9 @@ export function DepartmentPanel({ room, site, onOpenModule, available }: { room:
           ))}
         </>
       )}
-      {links.map((l) => (
-        <button key={l.module} className="action primary" onClick={() => onOpenModule?.(l.module)}>
-          Ouvrir : {l.label}
-        </button>
-      ))}
+      <ModuleLinks room={room} role={role} onOpenModule={onOpenModule} />
       {dep && !hasDepartment(site, dep) && <p className="hint">Ce département n’est pas implanté sur ce site.</p>}
-      <p className="hint">Implantation de démonstration, configurable dans src/data/sites.ts.</p>
+      <p className="hint">Implantation de démonstration, modifiable dans le référentiel des sites.</p>
     </>
   );
 }

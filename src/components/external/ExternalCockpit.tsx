@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
+import { AccessNotice } from '../ui';
+import { missingRight } from '../../auth/access';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import type { ExternalClientId } from '../../external/types';
 import type { ExternalStore } from '../../external/useExternal';
 import { externalClients } from '../../external/config';
 import { globalRow, totalRow, type ClientView, type GlobalRow } from '../../external/derive';
 import { can, type Role } from '../../auth/roles';
-import { Restricted } from '../ui';
+
 import { HealthDot, fmtDateTime, type ClientTab, type ExternalNav } from './common';
 import { GlobalCockpit } from './GlobalCockpit';
 import { ClientDashboard } from './ClientDashboard';
@@ -54,9 +56,9 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
     return (
       <section className="xc">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
-        <Restricted what="la supervision des clients externes" />
+        <AccessNotice access={missingRight(role, ['externes'])} />
       </section>
     );
   }
@@ -72,7 +74,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
     <section className="xc" aria-label="Supervision des clients externes">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>Clients externes — supervision opérationnelle</b>
@@ -111,7 +113,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
             </div>
           )}
           {nav.tab === 'dashboard' && <ClientDashboard view={view} now={state.now} onFilter={filterTo} />}
-          {nav.tab === 'tickets' && <TicketTable key={view.client.id} view={view} individual={individual} onCreate={editable && view.client.tool ? (input) => store.createTicket(view.client.id, input, role) : undefined} filter={nav.filter} onClearFilter={() => go({ filter: undefined })} onOpen={(id) => go({ ticketId: id })} />}
+          {nav.tab === 'tickets' && <TicketTable key={view.client.id} view={view} individual={individual} filter={nav.filter} onClearFilter={() => go({ filter: undefined })} onOpen={(id) => go({ ticketId: id })} />}
           {nav.tab === 'kanban' && (
             <Kanban
               view={view}

@@ -46,7 +46,7 @@ export function PdgCockpit(props: Props) {
     return (
       <section className="xc pdg" aria-label="Cockpit PDG">
         <button className="ghost" onClick={props.onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <p className="restricted">Cockpit réservé à la Direction (accessible en démonstration aux rôles Direction, Finance et Responsable Helpdesk ; contrôle simulé, pas une mesure de sécurité).</p>
       </section>
@@ -101,7 +101,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
     <section className="xc pdg" aria-label="Cockpit PDG">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>Cockpit PDG — SEATPI</b>

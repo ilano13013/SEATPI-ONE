@@ -29,7 +29,7 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudge
     <section className="xc" aria-label="Cockpit MCO N2">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>MCO / Support N2 — équipes chez les clients</b>
@@ -203,7 +203,7 @@ export function ExploitationCockpit({ views, role, now, onBack, onOpenTicket }: 
     <section className="xc" aria-label="Cockpit Exploitation">
       <div className="xc-head">
         <button className="ghost" onClick={onBack}>
-          <ArrowLeft size={14} /> Carte 3D
+          <ArrowLeft size={14} /> Carte des sites
         </button>
         <div>
           <b>Exploitation — service interne</b>
