@@ -75,8 +75,25 @@ export const clientRegistry: ClientRecord[] = [
 const norm = (s: string) => s.trim().toUpperCase();
 
 /** Outil ITSM d'un client (par identifiant ou nom), ou null s'il n'est pas renseigné. */
+/**
+ * Modifications du référentiel faites par l'administrateur depuis l'application (CRM).
+ * Elles priment sur la configuration fournie, sans modification du code source.
+ */
+export interface ClientOverride {
+  name?: string;
+  pole?: PoleGroup | null;
+  tool?: MappedTool | null;
+}
+
+let overrides: Record<string, ClientOverride> = {};
+
+export function setClientOverrides(next: Record<string, ClientOverride>) {
+  overrides = next;
+}
+
 export function itsmOf(idOrName: string): MappedTool | null {
   const rec = clientRegistry.find((c) => c.id === idOrName) ?? clientRegistry.find((c) => norm(c.name) === norm(idOrName));
+  if (rec && overrides[rec.id] && 'tool' in overrides[rec.id]) return overrides[rec.id].tool ?? null;
   const name = norm(rec?.name ?? idOrName);
   for (const [tool, clients] of Object.entries(ITSM_MAPPING) as [MappedTool, string[]][]) {
     if (clients.map(norm).includes(name)) return tool;
@@ -84,7 +101,12 @@ export function itsmOf(idOrName: string): MappedTool | null {
   return null;
 }
 
-export const clientRecord = (id: string) => clientRegistry.find((c) => c.id === id);
+export const clientRecord = (id: string): ClientRecord | undefined => {
+  const rec = clientRegistry.find((c) => c.id === id);
+  if (!rec || !overrides[id]) return rec;
+  const o = overrides[id];
+  return { ...rec, ...(o.name ? { name: o.name } : {}), ...('pole' in o ? { pole: o.pole ?? null } : {}) };
+};
 
 /** Clients d'un groupe de pôles N1 (ordre de la liste fournie pour le Pôle Multi). */
 // EURAPHARMA : affectation existante au Pôle Multi conservée.

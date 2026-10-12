@@ -28,6 +28,7 @@ import { can, type Role } from '../../auth/roles';
 import { Tabs } from '../ui';
 import { Toast, fmtDateTime } from '../external/common';
 import { Gauge, ProfitChart } from './Charts';
+import { InlineEdit } from '../InlineEdit';
 
 export type FinanceTab = 'global' | 'rentabilite' | 'couts' | 'revenus' | 'deplacements' | 'recrutement' | 'previsions' | 'historique';
 
@@ -340,7 +341,8 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
           .filter((a) => a.month === month)
           .map((a) => (
             <li key={a.id}>
-              {a.kind} — {a.label} : <b>{eur(a.amount)}</b>
+              {a.kind} — {a.label} :{' '}
+              <InlineEdit value={a.amount} field={`${a.kind} ${a.month}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} format={(v) => eur(v)} onSave={(v) => store.updateAdjustment(a.id, v, role)} />
             </li>
           ))}
       </ul>
@@ -382,10 +384,10 @@ function Costs({ store, role, run, editable }: { store: FinanceStore; role: Role
                 <td>{c.teamLabel}</td>
                 <td>{c.etp.toLocaleString('fr-FR')}</td>
                 <td>
-                  <input className="fin-num" type="number" aria-label={`Coût ${c.name}`} disabled={!editable} value={c.monthlyCost} onChange={(e) => run(store.setCost(c.personId, { monthlyCost: Number(e.target.value) }, role))} /> €
+                  <InlineEdit value={c.monthlyCost} field={`Coût employeur mensuel ${c.name}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} format={(v) => eur(v)} onSave={(v) => store.setCost(c.personId, { monthlyCost: v }, role)} />
                 </td>
                 <td>
-                  <input className="mg-hour" type="number" min={0} max={100} step={10} aria-label={`Affectation ${c.name}`} disabled={!editable} value={Math.round(c.allocation * 100)} onChange={(e) => run(store.setCost(c.personId, { allocation: Number(e.target.value) / 100 }, role))} /> %
+                  <InlineEdit value={Math.round(c.allocation * 100)} field={`Affectation Helpdesk ${c.name}`} module="Budget & Rentabilité" canEdit={editable} type="number" min={0} max={100} step={5} format={(v) => `${v} %`} onSave={(v) => store.setCost(c.personId, { allocation: v / 100 }, role)} />
                 </td>
                 <td>{Math.round(presenceRatio(c, month) * 100)} %</td>
                 <td>{eur(entryCost(c, month))}</td>
@@ -465,10 +467,10 @@ function Revenues({ store, role, run, editable }: { store: FinanceStore; role: R
                 <td>{p.label}</td>
                 <td>{monthLabel(p.month)}</td>
                 <td>
-                  <input className="mg-hour" type="number" min={0} aria-label={`Quantité ${p.id}`} disabled={!editable || p.status === 'Validée'} value={p.quantity} onChange={(e) => run(store.updatePrestation(p.id, { quantity: Number(e.target.value) }, role))} />
+                  <InlineEdit value={p.quantity} field={`Quantité ${p.id} ${p.clientName}`} module="Budget & Rentabilité" canEdit={editable && p.status !== 'Validée'} lockedReason={p.status === 'Validée' ? 'Prestation validée : non modifiable' : undefined} type="number" min={0} onSave={(v) => store.updatePrestation(p.id, { quantity: v }, role)} />
                 </td>
                 <td>
-                  <input className="fin-num" type="number" min={0} aria-label={`Prix ${p.id}`} disabled={!editable || p.status === 'Validée'} value={p.unitPrice} onChange={(e) => run(store.updatePrestation(p.id, { unitPrice: Number(e.target.value) }, role))} />
+                  <InlineEdit value={p.unitPrice} field={`Prix unitaire ${p.id} ${p.clientName}`} module="Budget & Rentabilité" canEdit={editable && p.status !== 'Validée'} lockedReason={p.status === 'Validée' ? 'Prestation validée : non modifiable' : undefined} type="number" min={0} format={(v) => eur(v)} onSave={(v) => store.updatePrestation(p.id, { unitPrice: v }, role)} />
                 </td>
                 <td>{eur(prestationAmount(p))}</td>
                 <td>
@@ -645,7 +647,12 @@ function Recruitment({ store, role, run, editable }: { store: FinanceStore; role
       {state.recruitment.rule === 'À confirmer' && <p className="itsm-missing">{RULE_TO_CONFIRM} — tant que la règle n’est pas confirmée, les frais de recrutement ne sont pas imputés au résultat du Helpdesk.</p>}
       <p className="fin-warning">Budget séparé. Seuls les frais de recrutement y sont saisis ; les salaires des recrues entrent dans le registre des coûts à leur date d’entrée (aucun double comptage).</p>
       <div className="xc-kpis">
-        <Kpi label="Enveloppe" value={eur(b.envelope)} />
+        <div className="xc-kpi">
+          <small>Enveloppe</small>
+          <strong>
+            <InlineEdit value={b.envelope} field="Enveloppe recrutement" module="Budget & Rentabilité" canEdit={editable} sensitive type="number" min={0} format={(v) => eur(v)} onSave={(v) => store.setRecruitmentEnvelope(v, role)} />
+          </strong>
+        </div>
         <Kpi label="Réalisé" value={eur(b.spent)} />
         <Kpi label="Engagé" value={eur(b.committed)} />
         <Kpi label="Solde" value={eur(b.balance)} cls={b.balance < 0 ? 'bad' : 'ok'} />

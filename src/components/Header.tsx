@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pause, Play, RefreshCw, RotateCcw } from 'lucide-react';
+import { Pause, Play, RefreshCw, RotateCcw, Settings } from 'lucide-react';
 import { activeData } from '../data/provider';
 import { roleLabels, type Role } from '../auth/roles';
 import { formatTime } from '../lib/format';
@@ -14,9 +14,12 @@ interface Props {
   onToggleMode: () => void;
   /** Réinitialise tous les modules de la démonstration. */
   onResetAll: () => void;
+  /** Ouvre l'administration (rouage). */
+  onAdmin: () => void;
+  adminActive: boolean;
 }
 
-export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode, onResetAll }: Props) {
+export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode, onResetAll, onAdmin, adminActive }: Props) {
   const [confirm, setConfirm] = useState(false);
   return (
     <header className="header">
@@ -80,6 +83,9 @@ export function Header({ role, onRole, sim, mode3d, webgl, onToggleMode, onReset
             <RotateCcw size={14} /> RÉINITIALISER LA DÉMONSTRATION
           </button>
         )}
+        <button className={`gear${adminActive ? ' active' : ''}`} onClick={onAdmin} aria-label="Administration" title="Administration : connexions & API, rôles, paramètres">
+          <Settings size={18} />
+        </button>
         <button className="outline" onClick={onToggleMode} disabled={!webgl && !mode3d} title={webgl ? undefined : 'WebGL indisponible : mode 2D uniquement'}>
           {mode3d ? 'Vue 2D' : 'Vue 3D'}
         </button>

@@ -48,10 +48,14 @@ import { MoyensCockpit } from './components/moyens/MoyensCockpit';
 import { INITIAL_READINESS, ProductionCockpit } from './components/production/ProductionCockpit';
 import type { ReadinessItem } from './production/readiness';
 import { activeData } from './data/provider';
+import { useAdmin } from './admin/useAdmin';
+import { AdminCenter, type AdminTab } from './components/admin/AdminCenter';
+import { AuditContext, useAuditLog } from './audit/audit';
+import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } from './auth/roles';
 import { Toast } from './components/external/common';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'finance', 'pdg', 'itsm', 'production']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'finance', 'pdg', 'itsm', 'production', 'admin']);
 
 /** Lien d'un espace 3D vers un module applicatif. */
 const MODULE_VIEW: Record<ModuleLink, AppView> = {
@@ -85,6 +89,12 @@ export function App() {
   const [reducedMotion] = useState(prefersReducedMotion);
   const [mode3d, setMode3d] = useState(webgl);
   const [role, setRole] = useState<Role>('teamLeader');
+  // Règles de permissions modifiables par l'administrateur (appliquées avant le rendu des modules).
+  const [permRules, setPermRules] = useState<PermissionRule[]>(DEFAULT_RULES);
+  setPermissionRules(permRules);
+  const audit = useAuditLog();
+  const admin = useAdmin();
+  const [adminTab, setAdminTab] = useState<AdminTab>('connexions');
   // Arrivée sur la carte des trois sites SEATPI et des sites clients externes.
   const [floor, setFloor] = useState<FloorId>('carte');
   const [selected, setSelected] = useState<RoomId | null>('helpdesk');
@@ -209,6 +219,9 @@ export function App() {
     const freshFin = fin.reset(mgmt.state.collaborators, state.agents, fresh.trips);
     moyens.reset(freshFin.travel);
     setReadiness(INITIAL_READINESS);
+    admin.reset();
+    audit.reset();
+    setPermRules(DEFAULT_RULES);
     setPersona('resp-helpdesk');
     setFinTab('global');
     setFocusPersonId(null);
@@ -436,6 +449,7 @@ export function App() {
   const room = selected ? roomById(selected) : null;
 
   return (
+    <AuditContext.Provider value={{ user: `${roleLabels[role]} (démonstration)`, record: audit.record }}>
     <div className="app">
       <Rail
         view={appView}
@@ -449,7 +463,7 @@ export function App() {
         onOpen={(v) => (v === 'externes' ? openExternal({ scope: 'global', tab: 'dashboard' }) : setAppView(v))}
       />
       <main>
-        <Header role={role} onRole={setRole} sim={sim} mode3d={mode3d} webgl={webgl} onToggleMode={() => setMode3d((m) => !m)} onResetAll={resetAll} />
+        <Header role={role} onRole={setRole} sim={sim} mode3d={mode3d} webgl={webgl} onToggleMode={() => setMode3d((m) => !m)} onResetAll={resetAll} onAdmin={() => setAppView('admin')} adminActive={appView === 'admin'} />
         {activeData.warning && <div className="notice">{activeData.warning}</div>}
         {resetDone && <Toast ok message="Démonstration réinitialisée : toutes les données fictives ont été régénérées (aucun système réel concerné)." onDone={() => setResetDone(false)} />}
         {!webgl && <div className="notice">WebGL n'est pas disponible sur ce poste : la vue 2D donne accès aux mêmes modules.</div>}
@@ -547,6 +561,23 @@ export function App() {
             }}
           />
         )}
+        {appView === 'admin' && (
+          <AdminCenter
+            admin={admin}
+            fin={fin}
+            role={role}
+            tab={adminTab}
+            onTab={setAdminTab}
+            rules={permRules}
+            onRules={(next) => {
+              audit.record({ user: `${roleLabels[role]} (démonstration)`, module: 'Rôles & permissions', field: 'Règles de permissions', oldValue: `${permRules.length} règle(s)`, newValue: `${next.length} règle(s)` });
+              setPermRules(next);
+            }}
+            audit={audit.entries}
+            onOpenProduction={() => setAppView('production')}
+            onBack={backToMap}
+          />
+        )}
         {appView === 'production' && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
         {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} />}
         {appView === 'exploitation' && (
@@ -618,5 +649,6 @@ export function App() {
         />
       )}
     </div>
+    </AuditContext.Provider>
   );
 }

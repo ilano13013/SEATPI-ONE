@@ -206,7 +206,7 @@ describe('App (mode démo)', () => {
 
   it('préparation à la production : NO-GO, Validé exige une preuve, rapport généré', () => {
     render(<App />);
-    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: 'Préparation à la production' }));
     const pr = within(screen.getByRole('region', { name: 'Préparation à la production' }));
     expect(pr.getByText('NO-GO')).toBeTruthy();
@@ -280,5 +280,73 @@ describe('App (mode démo)', () => {
     const hd = within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' }));
     fireEvent.click(within(hd.getByLabelText('Checklists de suivi')).getByRole('button', { name: /Congés/ }));
     expect(within(screen.getByRole('region', { name: 'Cockpit Management' })).getByRole('region', { name: 'Checklist congés' })).toBeTruthy();
+  });
+
+  it('rouage ⚙️ : Connexions & API — statuts, test indisponible en démonstration, secrets refusés', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Administration' }));
+    const adm = within(screen.getByRole('region', { name: 'Administration' }));
+    for (const n of ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow', 'QlikView', 'Genesys Cloud']) expect(adm.getByRole('button', { name: `Fiche ${n}` })).toBeTruthy();
+    fireEvent.click(adm.getByRole('button', { name: 'Fiche ServiceNow' }));
+    const sheet = within(adm.getByRole('article', { name: 'Configuration ServiceNow' }));
+    expect(sheet.getAllByText('Non configuré').length).toBeGreaterThan(0);
+    fireEvent.click(sheet.getByRole('button', { name: /Tester la connexion/ }));
+    expect(screen.getAllByText('Test réel indisponible en démonstration').length).toBeGreaterThan(0);
+    // URL de l'API renseignée → configuration incomplète ; URL non https refusée.
+    fireEvent.click(sheet.getByRole('button', { name: /Modifier ServiceNow \/ Instance principale — URL de l’API/ }));
+    fireEvent.change(sheet.getByRole('textbox', { name: /URL de l’API/ }), { target: { value: 'http://exemple.invalid' } });
+    fireEvent.click(sheet.getByRole('button', { name: 'Enregistrer' }));
+    expect(sheet.getByRole('alert').textContent).toMatch(/https/);
+    fireEvent.change(sheet.getByRole('textbox', { name: /URL de l’API/ }), { target: { value: 'https://instance.exemple.invalid/api' } });
+    fireEvent.click(sheet.getByRole('button', { name: 'Enregistrer' }));
+    expect(sheet.getAllByText('Configuration incomplète').length).toBeGreaterThan(0);
+    // Un secret n'est jamais accepté comme paramètre.
+    fireEvent.change(sheet.getByLabelText('Nom du paramètre'), { target: { value: 'api_key' } });
+    fireEvent.change(sheet.getByLabelText('Valeur du paramètre'), { target: { value: 'abc123' } });
+    fireEvent.click(sheet.getByRole('button', { name: 'Enregistrer le paramètre' }));
+    expect(screen.getByText(/Les secrets ne se saisissent jamais ici/)).toBeTruthy();
+    // Historique des modifications.
+    fireEvent.click(adm.getByRole('tab', { name: 'Historique des modifications' }));
+    expect(within(adm.getByRole('table', { name: 'Historique des modifications' })).getByText('https://instance.exemple.invalid/api')).toBeTruthy();
+  });
+
+  it('modification en direct d’un revenu : recalcul du résultat et historique ; lecture seule sans droit', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    const modules = within(screen.getByRole('navigation', { name: 'Modules' }));
+    fireEvent.click(modules.getByRole('button', { name: /Budget & Rentabilité/ }));
+    const fin = within(screen.getByRole('region', { name: 'Budget et rentabilité' }));
+    const landing = () => within(fin.getByRole('button', { name: /Atterrissage annuel/ })).getAllByText(/€/)[0].textContent;
+    const before = landing();
+    fireEvent.click(fin.getByRole('tab', { name: /Revenus/ }));
+    fireEvent.click(fin.getAllByRole('button', { name: /Modifier Prix unitaire/ })[0]);
+    fireEvent.change(fin.getAllByRole('spinbutton', { name: /Prix unitaire/ })[0], { target: { value: '99999' } });
+    fireEvent.click(fin.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(fin.getByRole('tab', { name: 'Vue globale' }));
+    expect(landing()).not.toBe(before);
+    // Le plafond déplacements ne se modifie pas en ligne (procédure de révision réservée).
+    fireEvent.click(fin.getByRole('tab', { name: 'Budget déplacements' }));
+    expect(fin.getByText(/Procédure de révision budgétaire réservée/)).toBeTruthy();
+    // Manager : pas d'accès aux finances.
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'teamLeader' } });
+    expect(within(screen.getByRole('region', { name: 'Budget et rentabilité' })).getByText(/Accès réservé/)).toBeTruthy();
+  });
+
+  it('CRM : modification du pôle d’un client (sensible, confirmée) répercutée et historisée', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Administration' }));
+    const adm = within(screen.getByRole('region', { name: 'Administration' }));
+    fireEvent.click(adm.getByRole('tab', { name: 'Clients (CRM)' }));
+    fireEvent.click(adm.getByRole('button', { name: 'Modifier Pôle de G2S' }));
+    fireEvent.change(adm.getByLabelText('Pôle de G2S'), { target: { value: 'dedie' } });
+    fireEvent.click(adm.getByRole('button', { name: 'Enregistrer' }));
+    expect(adm.getByText(/Modification sensible/)).toBeTruthy();
+    fireEvent.click(adm.getByRole('button', { name: /Confirmer/ }));
+    expect(adm.getByRole('button', { name: 'Modifier Pôle de G2S' }).textContent).toMatch(/Pôle Dédié/);
+    // Profil Manager : lecture seule.
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'teamLeader' } });
+    expect(within(screen.getByRole('region', { name: 'Administration' })).queryByRole('button', { name: 'Modifier Pôle de G2S' })).toBeNull();
   });
 });

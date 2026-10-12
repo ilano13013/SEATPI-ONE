@@ -1,7 +1,7 @@
 import { Plane, Server, Wrench, Briefcase, CalendarCheck, Headphones, Landmark, Map as MapIcon, PiggyBank, Plug, ShieldCheck, type LucideIcon } from 'lucide-react';
 
 /** Vues principales de l'application, accessibles sans passer par la 3D. */
-export type AppView = 'jumeau' | 'externes' | 'itsm' | 'helpdesk' | 'management' | 'mco' | 'exploitation' | 'moyens' | 'finance' | 'pdg' | 'production';
+export type AppView = 'admin' | 'jumeau' | 'externes' | 'itsm' | 'helpdesk' | 'management' | 'mco' | 'exploitation' | 'moyens' | 'finance' | 'pdg' | 'production';
 
 const MODULES: { view: AppView; label: string; Icon: LucideIcon }[] = [
   { view: 'helpdesk', label: 'Cockpit Helpdesk consolidé', Icon: Headphones },

@@ -105,7 +105,7 @@ const DEFAULTS: Record<Role, Matrix> = {
     dashboard: ['view'],
     moyens: ['view'],
     pdg: ['view'],
-    integrations: ['view', 'configure'],
+    integrations: ['view'],
     exploitation: ['view', 'individual'],
     csm: ['view', 'individual'],
     pause: ['view', 'individual'],

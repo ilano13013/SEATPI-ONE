@@ -209,6 +209,35 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     return { ok: true, message: detail };
   }, []);
 
+  const updateAdjustment = useCallback((id: string, amount: number, role: Role): FinanceResult => {
+    if (!can(role, 'finance', 'edit')) return denied;
+    if (!(amount >= 0)) return { ok: false, message: 'Montant invalide.' };
+    const s = ref.current;
+    const a = s.adjustments.find((x) => x.id === id);
+    if (!a) return { ok: false, message: 'Ajustement introuvable.' };
+    apply(logged({ ...s, adjustments: s.adjustments.map((x) => (x.id === id ? { ...x, amount } : x)) }, role, 'Ajustement de coût modifié', `${a.kind} ${a.month} : ${eur(a.amount)} → ${eur(amount)}`));
+    return { ok: true, message: 'Ajustement mis à jour.' };
+  }, []);
+
+  const setRecruitmentEnvelope = useCallback((amount: number, role: Role): FinanceResult => {
+    if (!can(role, 'finance', 'edit')) return denied;
+    if (!(amount >= 0)) return { ok: false, message: 'Montant invalide.' };
+    const s = ref.current;
+    apply(logged({ ...s, recruitment: { ...s.recruitment, envelope: amount } }, role, 'Enveloppe recrutement', `${eur(s.recruitment.envelope)} → ${eur(amount)}`));
+    return { ok: true, message: 'Enveloppe recrutement mise à jour.' };
+  }, []);
+
+  /** Paramètre contractuel : forfait mensuel d'un contrat, appliqué aux prestations à venir (non validées). */
+  const setContractForfait = useCallback((contractId: string, amount: number, role: Role): FinanceResult => {
+    if (!can(role, 'finance', 'edit')) return denied;
+    if (!(amount >= 0)) return { ok: false, message: 'Montant invalide.' };
+    const s = ref.current;
+    const touched = s.prestations.filter((p) => p.contractId === contractId && p.type === 'Forfait' && (p.status === 'Prévisionnelle' || p.status === 'À valider'));
+    if (!touched.length) return { ok: false, message: 'Aucune prestation à venir pour ce contrat.' };
+    apply(logged({ ...s, prestations: s.prestations.map((p) => (touched.includes(p) ? { ...p, unitPrice: amount } : p)) }, role, 'Forfait contractuel modifié', `${contractId} : ${eur(amount)} / mois sur ${touched.length} mois à venir`));
+    return { ok: true, message: `Forfait appliqué à ${touched.length} mois à venir.` };
+  }, []);
+
   const addPrestation = useCallback((p: Omit<Prestation, 'id' | 'status'>, role: Role): FinanceResult => {
     if (!can(role, 'finance', 'edit')) return denied;
     if (!(p.quantity > 0 && p.unitPrice > 0)) return { ok: false, message: 'Quantité et prix unitaire positifs obligatoires.' };
@@ -290,7 +319,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     return fresh;
   }, []);
 
-  return { state, setCost, addAdjustment, updatePrestation, addPrestation, submitTrip, addExpense, convert, cancel, setCeiling, syncTrips, addRecruitmentLine, setRule, reset };
+  return { state, setCost, addAdjustment, updatePrestation, addPrestation, setContractForfait, updateAdjustment, setRecruitmentEnvelope, submitTrip, addExpense, convert, cancel, setCeiling, syncTrips, addRecruitmentLine, setRule, reset };
 }
 
 export type FinanceStore = ReturnType<typeof useFinance>;

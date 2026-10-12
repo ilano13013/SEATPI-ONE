@@ -112,7 +112,7 @@ export function InlineEdit<T extends string | number>({ value, field, module, ca
           }}
         />
       )}
-      <button type="button" className="ie-ok" aria-label="Enregistrer" onClick={save}>
+      <button type="button" className="ie-ok" aria-label={confirm ? "Confirmer" : "Enregistrer"} onClick={save}>
         <Check size={12} /> {confirm ? 'Confirmer' : ''}
       </button>
       <button type="button" className="ie-cancel" aria-label="Annuler" onClick={() => setEditing(false)}>

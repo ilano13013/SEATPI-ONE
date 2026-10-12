@@ -552,3 +552,23 @@ main > .notice { margin-top: 0; }
 .ck-summary { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
 .ck-bell { color: #d97706; vertical-align: -1px; }
 @media (max-width: 760px) { .ck-cols { grid-template-columns: 1fr; } }
+
+/* Administration */
+.gear { border: 1px solid var(--line); background: white; border-radius: 10px; width: 40px; height: 40px; display: grid; place-items: center; color: #33465f; }
+.gear:hover, .gear.active { background: var(--navy); color: white; border-color: var(--navy); }
+.adm-legend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: #546a84; margin: 10px 0; }
+.adm-card { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; background: white; cursor: pointer; }
+.adm-card.active { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+.adm-card small { display: block; color: #6c7f98; font-size: 11px; }
+.adm-logo { width: 34px; height: 34px; border-radius: 9px; background: #e8f0fe; color: #1e40af; display: grid; place-items: center; font-weight: 800; font-size: 12px; }
+.adm-sheet { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-top: 14px; }
+.adm-sheet header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.adm-sheet header div { flex: 1; }
+.adm-sheet h3 { margin: 0; }
+.adm-instance { border: 1px dashed #d5deea; border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.adm-clients { display: flex; flex-wrap: wrap; gap: 4px; }
+.adm-clients label { border: 1px solid #dce3ee; border-radius: 14px; padding: 2px 8px; font-size: 11px; display: inline-flex; gap: 4px; align-items: center; }
+.adm-clients label.on { background: #e8f0fe; border-color: #9dbbe9; }
+.adm-sheet code { display: inline-block; margin-right: 6px; }
+.adm-matrix td:not(:first-child), .adm-matrix th:not(:first-child) { text-align: center; }
+.adm-obj { display: inline-flex; gap: 6px; align-items: center; }
