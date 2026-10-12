@@ -9,7 +9,8 @@ import { useDemoSimulation } from './services/useDemoSimulation';
 import { hasWebGL, isNarrowScreen, prefersReducedMotion } from './lib/env';
 import { Header } from './components/Header';
 import { MetricsBar } from './components/MetricsBar';
-import { Rail } from './components/Rail';
+import { Rail, type AppView } from './components/Rail';
+import { ItsmRegistry } from './components/itsm/ItsmRegistry';
 import { SidePanel } from './components/SidePanel';
 import { Workspace } from './components/Workspace';
 import { ExternalCockpit } from './components/external/ExternalCockpit';
@@ -25,6 +26,9 @@ import { clientById } from './external/config';
 import { csmTeam, exploitationTeam, serviceSummary } from './external/services';
 import { activeTripOf, isTripActive, type Trip } from './external/trips';
 import type { CsmTripView } from './scene/CsmTravel';
+
+/** Modules disponibles dans cette version (les autres arrivent par phases). */
+const AVAILABLE_VIEWS = new Set<AppView>(['externes', 'itsm']);
 
 export function App() {
   const sim = useDemoSimulation();
@@ -43,8 +47,8 @@ export function App() {
   const [focusAgentId, setFocusAgentId] = useState<string | null>(null);
   const [selectedPole, setSelectedPole] = useState<string | null>(null);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
-  // Vue principale : jumeau numérique 3D ou cockpit des clients externes.
-  const [appView, setAppView] = useState<'jumeau' | 'externes'>('jumeau');
+  // Vue principale : jumeau numérique 3D ou module applicatif.
+  const [appView, setAppView] = useState<AppView>('jumeau');
   const [extNav, setExtNav] = useState<ExternalNav>({ scope: 'global', tab: 'dashboard' });
   const ext = useExternal(sim.running);
   const views = useMemo(() => deriveAll(ext.state), [ext.state]);
@@ -300,17 +304,15 @@ export function App() {
   return (
     <div className="app">
       <Rail
-        selected={appView === 'externes' ? null : selected}
-        externalActive={appView === 'externes'}
-        onSelect={(id) => {
+        view={appView}
+        available={AVAILABLE_VIEWS}
+        onCarte={() => {
           setAppView('jumeau');
-          selectRoom(id);
+          setFloor('carte');
+          setOverview(true);
+          setFocusKey((k) => k + 1);
         }}
-        onOverview={() => {
-          setAppView('jumeau');
-          showOverview();
-        }}
-        onExternal={() => openExternal({ scope: 'global', tab: 'dashboard' })}
+        onOpen={(v) => (v === 'externes' ? openExternal({ scope: 'global', tab: 'dashboard' }) : setAppView(v))}
       />
       <main>
         <Header role={role} onRole={setRole} sim={sim} mode3d={mode3d} webgl={webgl} onToggleMode={() => setMode3d((m) => !m)} />
@@ -335,9 +337,10 @@ export function App() {
             }}
           />
         )}
+        {appView === 'itsm' && <ItsmRegistry connectors={ext.state.connectors} />}
         {appView === 'jumeau' && <MetricsBar metrics={metrics} clientsCount={state.clients.length} />}
         <Workspace
-          hidden={appView === 'externes'}
+          hidden={appView !== 'jumeau'}
           sites={sites}
           services={services}
           onTeamClick={openTeam}

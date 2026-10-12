@@ -4,6 +4,7 @@ import { can, clientScope, type Role } from '../../auth/roles';
 import { formatDuration, formatMinutes, slaTone } from '../../lib/format';
 import { allStatuses, statusColors } from '../../lib/status';
 import { clientSummary } from '../../services/simulation';
+import { POLE_CLIENTS, clientRecord, itsmOf } from '../../config/itsm';
 import { Badge, Chips, Detail, Empty, Row, Tabs } from '../ui';
 
 type Tab = 'files' | 'agents' | 'tickets';
@@ -69,6 +70,7 @@ export function HelpdeskPanel({ state, role, selectedPole, onSelectPole, focusAg
       </label>
       {scope && <p className="hint">Rôle Agent : périmètre limité à votre pôle ({clientName(scope)}).</p>}
       {clientId && <PoleSummary state={state} clientId={clientId} />}
+      <PoleItsm poleIds={clientId ? [clientId] : state.clients.map((c) => c.id)} />
 
       <Tabs
         value={tab}
@@ -190,6 +192,25 @@ export function HelpdeskPanel({ state, role, selectedPole, onSelectPole, focusAg
         </>
       )}
     </>
+  );
+}
+
+/** Outils ITSM des clients traités par les pôles (cartographie de référence). */
+function PoleItsm({ poleIds }: { poleIds: string[] }) {
+  const rows = poleIds.flatMap((pole) => (POLE_CLIENTS[pole] ?? []).map((id) => ({ pole, rec: clientRecord(id)!, tool: itsmOf(id) })));
+  return (
+    <details className="pole-itsm" open={poleIds.length === 1}>
+      <summary>Clients et outils ITSM ({rows.length})</summary>
+      {rows.map(({ rec, tool }) => (
+        <div className="kv" key={rec.id}>
+          <span>
+            {rec.name}
+            {rec.allocationToConfirm && <small> · rattachement à confirmer</small>}
+          </span>
+          {tool ? <span className="badge info">{tool}</span> : <span className="badge nr-badge">ITSM non renseigné</span>}
+        </div>
+      ))}
+    </details>
   );
 }
 

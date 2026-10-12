@@ -1,51 +1,33 @@
-import { Briefcase, Building2, Car, Coffee, DoorOpen, Handshake, Headphones, Package, Server, Users, Wallet, type LucideIcon } from 'lucide-react';
-import type { RoomId } from '../types';
-import { roomById } from '../data/layout';
+import { Briefcase, CalendarCheck, Headphones, Landmark, Map as MapIcon, PiggyBank, Plug, ShieldCheck, type LucideIcon } from 'lucide-react';
 
-const items: [RoomId, LucideIcon][] = [
-  ['helpdesk', Headphones],
-  ['pause', Coffee],
-  ['accueil', DoorOpen],
-  ['rh', Users],
-  ['stock', Package],
-  ['parking', Car],
-  ['direction', Wallet],
-  ['exploitation', Server],
-  ['csm', Handshake],
+/** Vues principales de l'application, accessibles sans passer par la 3D. */
+export type AppView = 'jumeau' | 'externes' | 'itsm' | 'helpdesk' | 'management' | 'finance' | 'pdg' | 'production';
+
+const MODULES: { view: AppView; label: string; Icon: LucideIcon }[] = [
+  { view: 'helpdesk', label: 'Cockpit Helpdesk consolidé', Icon: Headphones },
+  { view: 'externes', label: 'Clients externes', Icon: Briefcase },
+  { view: 'management', label: 'Management : congés, CRA, objectifs', Icon: CalendarCheck },
+  { view: 'finance', label: 'Budget & Rentabilité Helpdesk', Icon: PiggyBank },
+  { view: 'pdg', label: 'Cockpit PDG', Icon: Landmark },
+  { view: 'itsm', label: 'Connecteurs ITSM', Icon: Plug },
+  { view: 'production', label: 'Préparation à la production', Icon: ShieldCheck },
 ];
 
-export function Rail({
-  selected,
-  externalActive,
-  onSelect,
-  onOverview,
-  onExternal,
-}: {
-  selected: RoomId | null;
-  externalActive: boolean;
-  onSelect: (id: RoomId) => void;
-  onOverview: () => void;
-  onExternal: () => void;
-}) {
+export function Rail({ view, available, onOpen, onCarte }: { view: AppView; available: Set<AppView>; onOpen: (v: AppView) => void; onCarte: () => void }) {
   return (
     <nav className="rail" aria-label="Modules">
       <div className="brand" aria-hidden>
         S<span>1</span>
       </div>
-      <button title="Vue d'ensemble" aria-label="Vue d'ensemble" onClick={onOverview}>
-        <Building2 size={20} />
+      <button title="Carte des sites (3D)" aria-label="Carte des sites" aria-current={view === 'jumeau'} className={view === 'jumeau' ? 'active' : ''} onClick={onCarte}>
+        <MapIcon size={20} />
       </button>
-      {items.map(([id, Icon]) => {
-        const label = roomById(id).label;
-        return (
-          <button key={id} title={label} aria-label={label} aria-current={selected === id} className={selected === id ? 'active' : ''} onClick={() => onSelect(id)}>
-            <Icon size={20} />
-          </button>
-        );
-      })}
-      <button title="Clients externes" aria-label="Clients externes" aria-current={externalActive} className={externalActive ? 'active' : ''} onClick={onExternal}>
-        <Briefcase size={20} />
-      </button>
+      <i className="rail-sep" aria-hidden />
+      {MODULES.filter((m) => available.has(m.view)).map(({ view: v, label, Icon }) => (
+        <button key={v} title={label} aria-label={label} aria-current={view === v} className={view === v ? 'active' : ''} onClick={() => onOpen(v)}>
+          <Icon size={20} />
+        </button>
+      ))}
     </nav>
   );
 }

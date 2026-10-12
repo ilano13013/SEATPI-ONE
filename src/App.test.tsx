@@ -147,4 +147,20 @@ describe('App (mode démo)', () => {
     // Pas de RH ni de Stock hors de La Ciotat.
     expect(within(screen.getByRole('region', { name: 'Paris' })).queryByRole('button', { name: /Ressources humaines|Stock/ })).toBeNull();
   });
+
+  it('affiche la cartographie ITSM unique et signale PRIMAGAZ comme non renseigné', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Connecteurs ITSM' }));
+    const reg = within(screen.getByRole('region', { name: 'Connecteurs ITSM' }));
+    expect(reg.getByText('INVIVO, DMB')).toBeTruthy();
+    expect(reg.getByText('THELEM, TRANSGOURMET, MONEXT')).toBeTruthy();
+    expect(reg.getAllByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE').length).toBe(4); // PRIMAGAZ, IRD, ORTEC, SODIAAL
+    // Cockpit PRIMAGAZ : aucun ticket inventé.
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
+    const cockpit = within(screen.getByRole('region', { name: 'Supervision des clients externes' }));
+    fireEvent.click(within(cockpit.getByRole('navigation', { name: 'Clients' })).getByRole('button', { name: /PRIMAGAZ/ }));
+    fireEvent.click(cockpit.getByRole('tab', { name: 'Tickets' }));
+    expect(cockpit.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
+  });
 });

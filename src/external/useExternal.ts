@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ExternalClientId, NormalizedRecord, Service, Technician, Ticket, TicketStatus } from './types';
-import { buildTechnicians, defaultObjectives, externalClients, type ObjectiveConfig, clientById } from './config';
+import type { ExternalClientId, NormalizedRecord, Priority, Service, Technician, Ticket, TicketStatus } from './types';
+import { buildTechnicians, defaultObjectives, externalClients, externalTeams, type ObjectiveConfig, clientById } from './config';
 import { generateSource, evolveSource, applyTransition, applyAssignment } from './source';
 import { emptyRegistry, readSource, syncClient, type ConnectorState, type IdRegistry, type SyncLogEntry } from './sync';
 import { adapters, checkTransition } from './itsm/adapters';
@@ -27,6 +27,14 @@ export interface ExternalState {
   writes: SyncLogEntry[];
   /** Déplacements des managers CSM (en cours et terminés récemment). */
   trips: Trip[];
+}
+
+export interface NewTicketInput {
+  title: string;
+  description: string;
+  category: string;
+  priority: Priority;
+  site: string;
 }
 
 export interface ActionResult {
@@ -64,7 +72,7 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
     if (mode.evolve) source = evolveSource(source, client, next.techs, now, rng);
     next.sources[id] = source;
     // Panne simulée du connecteur Jira (limite d'API) : les données précédentes sont conservées.
-    if (mode.mayFail && client.tool === 'Jira' && rng() < 0.2) {
+    if (mode.mayFail && client.tool === 'ISILOG' && rng() < 0.2) {
       next.connectors[id] = {
         ...prev,
         status: 'erreur',
@@ -80,10 +88,10 @@ function runSync(state: ExternalState, ids: ExternalClientId[], now: number, rng
     next.connectors[id] = {
       clientId: id,
       tool: client.tool,
-      status: res.stats.rejected ? 'dégradé' : 'connecté',
+      status: !client.tool ? 'non configuré' : res.stats.rejected ? 'dégradé' : 'connecté',
       intervalMin: SYNC_INTERVAL_MIN,
       lastAttemptAt: now,
-      lastSuccessAt: now,
+      lastSuccessAt: client.tool ? now : null,
       nextSyncAt: now + SYNC_INTERVAL_MIN * 60_000,
       lastStats: res.stats,
       log: [...res.log.reverse(), ...(prev?.log ?? [])].slice(0, 30),
@@ -130,6 +138,19 @@ export function useExternal(running: boolean, seed = 2026) {
   // Référence synchrone : les écritures doivent renvoyer leur résultat immédiatement.
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  /** Réinitialisation complète des données externes de démonstration. */
+  const reset = useCallback(() => {
+    try {
+      localStorage.removeItem(OBJECTIVES_KEY);
+    } catch {
+      /* ignoré */
+    }
+    const fresh = initialState(seed);
+    rngs.current = fresh.rngs;
+    stateRef.current = fresh.state;
+    setState(fresh.state);
+  }, [seed]);
 
   const syncNow = useCallback((ids: ExternalClientId[] = externalClients.map((c) => c.id)) => {
     setState((s) => runSync(s, ids, Date.now(), rngs.current, { evolve: true, mayFail: true }));
@@ -192,6 +213,47 @@ export function useExternal(running: boolean, seed = 2026) {
     [write],
   );
 
+  /** Création d'un ticket dans la source simulée (démonstration : aucun envoi réel). */
+  const createTicket = useCallback(
+    (clientId: ExternalClientId, input: NewTicketInput, role: Role): ActionResult => {
+      const s = stateRef.current;
+      const client = clientById(clientId);
+      if (!can(role, 'externes', 'edit')) return { ok: false, message: 'Votre rôle ne permet pas de créer des tickets (maquette).' };
+      if (!client.tool) return { ok: false, message: `${client.name} : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. Création impossible.` };
+      if (!input.title.trim()) return { ok: false, message: 'Le titre est obligatoire.' };
+      const now = Date.now();
+      const records = s.sources[clientId];
+      const team = externalTeams.find((t) => t.clientId === clientId)!;
+      const seq = records.length + 5001;
+      const sourceId = client.tool === 'ISILOG' ? `ISL-${40000 + seq}` : client.tool === 'EasyVista' ? `I26_${String(10400 + seq).padStart(6, '0')}` : client.tool === 'GLPI' ? String(48200 + seq) : `DEMO-${seq}`;
+      const at = Math.floor(now / 60_000) * 60_000;
+      const record: NormalizedRecord = {
+        sourceId,
+        site: input.site || client.sites[0],
+        title: input.title.trim(),
+        description: input.description.trim() || input.title.trim(),
+        category: input.category || client.categories[0],
+        priority: input.priority,
+        status: 'Nouveau',
+        assigneeLogin: null,
+        group: team.sourceGroup,
+        createdAt: at,
+        updatedAt: at,
+        timeSpentMin: 0,
+        history: [{ at, kind: 'création', by: 'SEATPI ONE (démonstration)' }],
+        escalations: [],
+      };
+      const synced = runSync({ ...s, sources: { ...s.sources, [clientId]: [...records, record] } }, [clientId], now, rngs.current, { evolve: false, mayFail: false });
+      const entry: SyncLogEntry = { at: now, level: 'info', message: `Création simulée dans ${client.tool} (${sourceId}) — démonstration, aucun envoi réel` };
+      const next = { ...synced, writes: [entry, ...s.writes].slice(0, 50) };
+      stateRef.current = next;
+      setState(next);
+      const created = next.tickets[clientId].find((t) => t.source.id === sourceId);
+      return { ok: true, message: `Ticket ${created?.id ?? sourceId} créé (démonstration)` };
+    },
+    [],
+  );
+
   const setObjective = useCallback((clientId: ExternalClientId, key: keyof ObjectiveConfig, value: number) => {
     setState((s) => {
       const objectives = { ...s.objectives, [clientId]: { ...s.objectives[clientId], [key]: value } };
@@ -212,7 +274,7 @@ export function useExternal(running: boolean, seed = 2026) {
     setState((s) => ({ ...s, alertSettings: { ...s.alertSettings, staleHours } }));
   }, []);
 
-  return { state, syncNow, moveTicket, assignTicket, setObjective, resetObjectives, setStaleHours };
+  return { state, syncNow, moveTicket, assignTicket, createTicket, setObjective, resetObjectives, setStaleHours, reset };
 }
 
 export type ExternalStore = ReturnType<typeof useExternal>;

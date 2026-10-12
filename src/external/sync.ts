@@ -21,11 +21,11 @@ export interface SyncLogEntry {
   message: string;
 }
 
-export type ConnectionStatus = 'connecté' | 'dégradé' | 'erreur';
+export type ConnectionStatus = 'connecté' | 'dégradé' | 'erreur' | 'non configuré';
 
 export interface ConnectorState {
   clientId: ExternalClientId;
-  tool: ItsmTool;
+  tool: ItsmTool | null;
   status: ConnectionStatus;
   intervalMin: number;
   lastAttemptAt: number;
@@ -64,18 +64,19 @@ export function dedupeRaw<R>(records: R[], adapter: ItsmAdapter<R>): { unique: R
 
 /** Lecture simulée de l'API source : flux brut avec ses imperfections réelles. */
 export function readSource(client: ExternalClient, records: NormalizedRecord[], rng: Rng): unknown[] {
+  if (!client.tool) return [];
   const adapter = adapters[client.tool];
   const raw: unknown[] = records.map((r) => adapter.exportRaw(r));
-  if (client.tool === 'Jira' && raw.length > 3) {
+  if ((client.tool === 'ISILOG' || client.tool === 'Jira') && raw.length > 3) {
     // Recouvrement de pagination : les derniers éléments reviennent deux fois.
     raw.push(...raw.slice(-3).map((r) => structuredClone(r)));
     // Statut personnalisé ajouté côté client et pas encore mappé.
-    const odd = structuredClone(raw[0]) as { key: string; fields: { status: { name: string } } };
-    odd.key = 'MNX-9999';
-    odd.fields.status.name = 'Pending vendor';
+    const odd = adapter.exportRaw({ ...records[0], sourceId: `${records[0].sourceId}-X` }) as Record<string, unknown>;
+    if (client.tool === 'ISILOG') odd.state = 'En attente fournisseur';
+    else (odd as { fields: { status: { name: string } } }).fields.status.name = 'Pending vendor';
     raw.push(odd);
   }
-  if (client.tool === 'GLPI' && records.length) {
+  if ((client.tool === 'EasyVista' || client.tool === 'GLPI') && records.length) {
     // Ancienne version d'un ticket renvoyée par l'API (date de modification antérieure).
     const target = records[Math.floor(rng() * records.length)];
     raw.push(adapter.exportRaw({ ...target, updatedAt: target.updatedAt - 3_600_000, status: 'Nouveau' }));
@@ -83,7 +84,16 @@ export function readSource(client: ExternalClient, records: NormalizedRecord[], 
   return raw;
 }
 
-export function toTicket(rec: NormalizedRecord, id: string, client: ExternalClient, techs: Technician[], now: number, warn: (m: string) => void): Ticket {
+export function toTicket(
+  rec: NormalizedRecord,
+  id: string,
+  client: ExternalClient,
+  techs: Technician[],
+  now: number,
+  warn: (m: string) => void,
+  original?: { status: string; priority: string },
+): Ticket {
+  const tool = client.tool!;
   const team = externalTeams.find((t) => t.clientId === client.id && t.sourceGroup === rec.group);
   if (!team) warn(`${rec.sourceId} : groupe source « ${rec.group} » non mappé, rattaché à l'équipe par défaut`);
   const teamId = team?.id ?? externalTeams.find((t) => t.clientId === client.id)!.id;
@@ -96,7 +106,9 @@ export function toTicket(rec: NormalizedRecord, id: string, client: ExternalClie
   const contractId = team ? team.contractId : externalTeams.find((t) => t.id === teamId)!.contractId;
   return {
     id,
-    source: { tool: client.tool, id: rec.sourceId },
+    source: { tool, id: rec.sourceId },
+    sourceStatus: original?.status ?? adapters[tool].statusToRaw[rec.status],
+    sourcePriority: original?.priority ?? adapters[tool].priorityToRaw[rec.priority],
     clientId: client.id,
     site: rec.site,
     contractId,
@@ -129,6 +141,9 @@ export interface SyncResult {
 
 /** Synchronise un client : fonction pure, rejouable et testable. */
 export function syncClient(client: ExternalClient, raw: unknown[], previous: Ticket[], registry: IdRegistry, techs: Technician[], now: number): SyncResult {
+  if (!client.tool) {
+    return { tickets: [], registry, stats: { received: 0, duplicates: 0, rejected: 0, created: 0, updated: 0, unchanged: 0 }, log: [{ at: now, level: 'warn', message: `${client.name} : ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE. Aucune synchronisation.` }] };
+  }
   const adapter = adapters[client.tool];
   const log: SyncLogEntry[] = [];
   const { unique, duplicates } = dedupeRaw(raw, adapter);
@@ -149,7 +164,10 @@ export function syncClient(client: ExternalClient, raw: unknown[], previous: Tic
     }
     let id: string;
     [reg, id] = registerId(reg, client.tool, rec.sourceId);
-    const ticket = toTicket(rec, id, client, techs, now, (m) => log.push({ at: now, level: 'warn', message: m }));
+    const ticket = toTicket(rec, id, client, techs, now, (m) => log.push({ at: now, level: 'warn', message: m }), {
+      status: adapter.sourceStatusOf(r),
+      priority: adapter.sourcePriorityOf(r),
+    });
     const prev = prevById.get(id);
     if (!prev) stats.created++;
     else if (prev.updatedAt !== ticket.updatedAt || prev.status !== ticket.status) stats.updated++;

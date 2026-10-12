@@ -48,7 +48,7 @@ export function SlaBadge({ state, paused }: { state: SlaState; paused?: boolean 
   return <span className={`badge ${tone}`}>{paused && state !== 'dépassé' ? 'suspendu' : state}</span>;
 }
 
-export const healthLabel: Record<Health, string> = { vert: 'Dans les seuils', orange: 'Risque SLA / surcharge', rouge: 'Incident critique' };
+export const healthLabel: Record<Health, string> = { vert: 'Dans les seuils', orange: 'Risque SLA / surcharge', rouge: 'Incident critique', gris: 'ITSM non renseigné' };
 
 export function HealthDot({ health }: { health: Health }) {
   return <i className={`hdot ${health}`} aria-label={healthLabel[health]} title={healthLabel[health]} />;
@@ -78,6 +78,18 @@ export function Modal({ title, onClose, children, wide }: { title: ReactNode; on
         </div>
         <div className="xc-modal-body">{children}</div>
       </div>
+    </div>
+  );
+}
+
+/** Bandeau des clients sans outil ITSM renseigné (aucune donnée de ticket inventée). */
+export function ItsmMissing({ name }: { name: string }) {
+  return (
+    <div className="itsm-missing" role="status">
+      <b>ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE</b>
+      <span>
+        Aucun outil ITSM n’est associé à {name} dans la cartographie de référence. Aucun ticket n’est affiché ni simulé pour ce client tant que l’outil, l’instance et les accès ne sont pas renseignés (voir Administration → Préparation à la production).
+      </span>
     </div>
   );
 }

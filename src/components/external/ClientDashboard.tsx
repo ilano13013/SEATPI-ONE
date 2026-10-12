@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ClientView } from '../../external/derive';
 import { agingBuckets, computeKpis, periods, receivedPerDay, resolvedIn, type PeriodKey } from '../../external/metrics';
 import { CAPACITY_HORIZON_DAYS, EFFORT_H } from '../../external/workload';
-import { HealthDot, LoadBar, healthLabel, fmtDateTime } from './common';
+import { HealthDot, ItsmMissing, LoadBar, healthLabel, fmtDateTime } from './common';
 
 interface Props {
   view: ClientView;
@@ -47,10 +47,11 @@ export function ClientDashboard({ view, now, onFilter }: Props) {
           <span>{view.reasons.slice(0, 3).join(' · ')}</span>
         </div>
         <small>
-          Données synchronisées le {fmtDateTime(view.connector.lastSuccessAt)} ({view.client.tool})
+          {view.client.tool ? `Données synchronisées le ${fmtDateTime(view.connector.lastSuccessAt)} (${view.client.tool})` : 'Aucune source de tickets configurée'}
         </small>
       </div>
 
+      {!view.client.tool && <ItsmMissing name={view.client.name} />}
       <div className="xc-periodbar">
         <span>Période :</span>
         {(['today', 'week', 'prevWeek'] as PeriodKey[]).map((k) => (

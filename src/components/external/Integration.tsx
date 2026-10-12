@@ -4,7 +4,8 @@ import { adapters, ALL_PRIORITIES, ALL_STATUSES } from '../../external/itsm/adap
 import { DEMO_SYNC_SECONDS } from '../../external/useExternal';
 import { formatMinutesOuvrees } from '../../external/metrics';
 import { Detail } from '../ui';
-import { fmtDateTime } from './common';
+import { ItsmMissing, fmtDateTime } from './common';
+import { connectorRegistry } from '../../config/itsm';
 
 interface Props {
   view: ClientView;
@@ -13,9 +14,17 @@ interface Props {
   onSync: () => void;
 }
 
-export function Integration({ view, writes, canSync, onSync }: Props) {
+const NR = <em className="nr">Non renseigné</em>;
+
+export function Integration(props: Props) {
+  if (!props.view.client.tool) return <ItsmMissing name={props.view.client.name} />;
+  return <IntegrationDetail {...props} />;
+}
+
+function IntegrationDetail({ view, writes, canSync, onSync }: Props) {
   const { client, connector } = view;
-  const adapter = adapters[client.tool];
+  const adapter = adapters[client.tool!];
+  const entry = connectorRegistry.find((c) => c.clientId === client.id);
   const transitions = adapter.capabilities.transitions;
   return (
     <div className="xc-integration">
@@ -28,7 +37,12 @@ export function Integration({ view, writes, canSync, onSync }: Props) {
           <Detail
             items={[
               ['Outil', `${adapter.tool} — ${adapter.description}`],
-              ['Mode', adapter.capabilities.mode],
+              ['Mode (démonstration)', adapter.capabilities.mode],
+              ['Instance', entry?.instance ?? NR],
+              ['URL API', entry?.apiUrl ?? NR],
+              ['Mode d’authentification', entry?.authMode ?? NR],
+              ['Statut au registre', `${entry?.status ?? 'Non connecté'} — flux de démonstration simulé`],
+              ['Permission lecture / écriture', `${entry?.readPermission ?? 'À obtenir'} / ${entry?.writePermission ?? 'À obtenir'}`],
               ['État de connexion', <span key="s" className={`badge ${connector.status === 'connecté' ? 'ok' : connector.status === 'dégradé' ? 'warn' : 'bad'}`}>{connector.status}</span>],
               ['Dernière synchronisation réussie', fmtDateTime(connector.lastSuccessAt)],
               ['Dernière tentative', fmtDateTime(connector.lastAttemptAt)],
@@ -44,7 +58,7 @@ export function Integration({ view, writes, canSync, onSync }: Props) {
           </button>
           <h4>Journal</h4>
           <ol className="xc-log">
-            {[...writes.filter((w) => w.message.includes(client.tool)), ...connector.log].slice(0, 15).map((l, i) => (
+            {[...writes.filter((w) => w.message.includes(client.tool!)), ...connector.log].slice(0, 15).map((l, i) => (
               <li key={i} className={l.level}>
                 <time>{fmtDateTime(l.at)}</time> {l.message}
               </li>

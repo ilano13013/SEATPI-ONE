@@ -29,7 +29,8 @@ export function deriveClient(state: ExternalState, id: ExternalClientId): Client
   const teams = teamsOf(id);
   const loads = teamLoads(tickets, teams, techs, client, state.now);
   const alerts = computeAlerts(tickets, client, state.objectives[id], state.alertSettings, loads, state.now);
-  const { health, reasons } = clientHealth(alerts);
+  // Sans outil ITSM, l'état n'est pas mesurable : ni vert ni rouge.
+  const { health, reasons } = client.tool ? clientHealth(alerts) : { health: 'gris' as const, reasons: ['ITSM non renseigné — configuration requise'] };
   return { client, tickets, techs, teams, loads, alerts, health, reasons, objectives: computeObjectives(tickets, client, state.objectives[id], state.now), connector: state.connectors[id] };
 }
 

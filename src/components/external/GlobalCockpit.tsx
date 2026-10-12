@@ -58,7 +58,7 @@ export function GlobalCockpit({ rows, total, views, showFinance, onOpenClient, o
               <HealthDot health={v.health} />
               <b>{v.client.name}</b>
               <small>
-                {v.client.tool} · {v.connector.status} · synchro {fmtDateTime(v.connector.lastSuccessAt)}
+                {v.client.tool ? `${v.client.tool} · ${v.connector.status} · synchro ${fmtDateTime(v.connector.lastSuccessAt)}` : 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE'}
               </small>
             </button>
             <ul>

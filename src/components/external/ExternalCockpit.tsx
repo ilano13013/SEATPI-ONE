@@ -90,7 +90,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
         {viewList.map((v) => (
           <button key={v.client.id} className={nav.scope === v.client.id ? 'active' : ''} aria-current={nav.scope === v.client.id} onClick={() => onNavigate({ scope: v.client.id, tab: 'dashboard' })}>
             <HealthDot health={v.health} /> {v.client.name}
-            <small>{v.client.tool}</small>
+            <small>{v.client.tool ?? 'ITSM non renseigné'}</small>
           </button>
         ))}
       </nav>
@@ -111,7 +111,7 @@ export function ExternalCockpit({ store, views, internalRow, role, nav, onNaviga
             </div>
           )}
           {nav.tab === 'dashboard' && <ClientDashboard view={view} now={state.now} onFilter={filterTo} />}
-          {nav.tab === 'tickets' && <TicketTable key={view.client.id} view={view} individual={individual} filter={nav.filter} onClearFilter={() => go({ filter: undefined })} onOpen={(id) => go({ ticketId: id })} />}
+          {nav.tab === 'tickets' && <TicketTable key={view.client.id} view={view} individual={individual} onCreate={editable && view.client.tool ? (input) => store.createTicket(view.client.id, input, role) : undefined} filter={nav.filter} onClearFilter={() => go({ filter: undefined })} onOpen={(id) => go({ ticketId: id })} />}
           {nav.tab === 'kanban' && (
             <Kanban
               view={view}

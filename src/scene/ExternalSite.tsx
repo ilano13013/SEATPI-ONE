@@ -6,7 +6,7 @@ import type { Agent } from '../types';
 import { Avatar } from './Avatar';
 import { Chair, Desk, Plant, Tree } from './furniture';
 
-export type SiteHealth = 'vert' | 'orange' | 'rouge';
+export type SiteHealth = 'vert' | 'orange' | 'rouge' | 'gris';
 
 export interface SiteTech {
   id: string;
@@ -31,7 +31,7 @@ export interface SiteSceneData {
   teams: SiteTeam[];
 }
 
-const HEALTH_COLOR: Record<SiteHealth, string> = { vert: '#22a06b', orange: '#f59e0b', rouge: '#dc2626' };
+const HEALTH_COLOR: Record<SiteHealth, string> = { vert: '#22a06b', orange: '#f59e0b', rouge: '#dc2626', gris: '#94a3b8' };
 const LEVEL_COLOR = { ok: '#9fb7a0', tension: '#f59e0b', surcharge: '#dc2626' };
 
 /** Voyant d'état sur le toit ; pulsation discrète en cas d'alerte importante. */
@@ -39,11 +39,11 @@ function Beacon({ health, animate }: { health: SiteHealth; animate: boolean }) {
   const ref = useRef<Mesh>(null);
   const halo = useRef<Mesh>(null);
   useFrame(({ clock }) => {
-    const pulse = animate && health !== 'vert' ? (Math.sin(clock.getElapsedTime() * (health === 'rouge' ? 4 : 2.2)) + 1) / 2 : 0;
+    const pulse = animate && (health === 'orange' || health === 'rouge') ? (Math.sin(clock.getElapsedTime() * (health === 'rouge' ? 4 : 2.2)) + 1) / 2 : 0;
     if (ref.current) ref.current.scale.setScalar(1 + pulse * 0.15);
     if (halo.current) {
       halo.current.scale.setScalar(1 + pulse * 0.9);
-      (halo.current.material as { opacity: number }).opacity = health === 'vert' ? 0 : 0.35 * (1 - pulse);
+      (halo.current.material as { opacity: number }).opacity = health === 'orange' || health === 'rouge' ? 0.35 * (1 - pulse) : 0;
     }
   });
   const color = HEALTH_COLOR[health];

@@ -5,7 +5,7 @@ import { adapters, checkTransition } from '../../external/itsm/adapters';
 import { ticketFlags, type AlertSettings } from '../../external/alerts';
 import { isOpen } from '../../external/metrics';
 import type { ActionResult } from '../../external/useExternal';
-import { PriorityBadge, Toast } from './common';
+import { ItsmMissing, PriorityBadge, Toast } from './common';
 
 const MAIN: TicketStatus[] = ['Nouveau', 'Affecté', 'En cours', 'En attente', 'Résolu', 'Clôturé'];
 const EXCEPTIONS: TicketStatus[] = ['Bloqué', 'Escaladé', 'Réouvert'];
@@ -24,11 +24,16 @@ interface Props {
   onFilter: (label: string, ids: string[]) => void;
 }
 
-export function Kanban({ view, now, individual, editable, settings, onStaleHours, onMove, onOpen, onFilter }: Props) {
+export function Kanban(props: Props) {
+  if (!props.view.client.tool) return <ItsmMissing name={props.view.client.name} />;
+  return <KanbanBoard {...props} />;
+}
+
+function KanbanBoard({ view, now, individual, editable, settings, onStaleHours, onMove, onOpen, onFilter }: Props) {
   const [team, setTeam] = useState('toutes');
   const [dragged, setDragged] = useState<Ticket | null>(null);
   const [toast, setToast] = useState<ActionResult | null>(null);
-  const adapter = adapters[view.client.tool];
+  const adapter = adapters[view.client.tool!];
 
   const columns = useMemo(() => {
     const list = view.tickets.filter((t) => (team === 'toutes' || t.teamId === team) && (isOpen(t) || now - t.updatedAt < DONE_DAYS * 86_400_000));

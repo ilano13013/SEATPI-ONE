@@ -61,6 +61,11 @@ export interface ItsmAdapter<R = unknown> {
   capabilities: Capabilities;
   sourceIdOf(raw: R): string;
   updatedAtOf(raw: R): number;
+  /** Statut et priorité d'origine, conservés tels quels dans le référentiel. */
+  sourceStatusOf(raw: R): string;
+  sourcePriorityOf(raw: R): string;
+  /** Champs exposés par le format brut (documentation du connecteur). */
+  fields: string[];
   exportRaw(record: NormalizedRecord): R;
   normalize(raw: R): NormalizedRecord;
 }
@@ -220,10 +225,13 @@ export const glpiAdapter: ItsmAdapter<RawGlpi> = {
     mode: 'lecture-écriture',
     canAssign: true,
     transitions: 'libre',
-    note: 'Clôture uniquement depuis Résolu ; un ticket clos ne peut que être réouvert.',
+    note: 'Hypothèse de démonstration (droits non accordés). Clôture uniquement depuis Résolu ; un ticket clos ne peut qu’être réouvert.',
   },
   sourceIdOf: (r) => String(r.id),
   updatedAtOf: (r) => parseLocalSql(r.date_mod),
+  sourceStatusOf: (r) => (r.pendingreason ? `${r.status}:${r.pendingreason}` : String(r.status)),
+  sourcePriorityOf: (r) => String(r.priority),
+  fields: ['id', 'name', 'content', 'status', 'pendingreason', 'priority', 'date', 'date_mod', 'itilcategory', 'location', 'users_id_assign', 'groups_id_assign', 'actiontime', 'logs', 'transfers'],
   exportRaw(r) {
     const [status, reason] = glpiStatus[r.status].split(':');
     return {
@@ -306,13 +314,16 @@ export const easyVistaAdapter: ItsmAdapter<RawEasyVista> = {
   statusMap: invert(evStatus),
   priorityMap: invert(evPriority),
   capabilities: {
-    mode: 'lecture seule',
-    canAssign: false,
-    transitions: 'aucune',
-    note: 'Accès accordé en lecture seule : les modifications se font dans EasyVista.',
+    mode: 'lecture-écriture',
+    canAssign: true,
+    transitions: 'libre',
+    note: 'Hypothèse de démonstration : droits d’écriture non accordés à ce jour. Clôture uniquement depuis Résolu.',
   },
   sourceIdOf: (r) => r.RFC_NUMBER,
   updatedAtOf: (r) => parseFrDate(r.LAST_UPDATE),
+  sourceStatusOf: (r) => r.STATUS,
+  sourcePriorityOf: (r) => r.URGENCY,
+  fields: ['RFC_NUMBER', 'TITLE', 'COMMENT', 'STATUS', 'URGENCY', 'SUBMIT_DATE', 'LAST_UPDATE', 'CATALOG', 'LOCATION', 'TECHNICIAN_LOGIN', 'GROUP', 'TIME_SPENT_MIN', 'ACTIONS', 'TRANSFERS'],
   exportRaw(r) {
     return {
       RFC_NUMBER: r.sourceId,
@@ -408,10 +419,13 @@ export const jiraAdapter: ItsmAdapter<RawJira> = {
       Clôturé: ['Réouvert'],
       Réouvert: ['Affecté', 'En cours'],
     },
-    note: 'Seules les transitions du workflow Jira sont autorisées.',
+    note: 'Hypothèse de démonstration (droits non accordés). Seules les transitions du workflow Jira sont autorisées.',
   },
   sourceIdOf: (r) => r.key,
   updatedAtOf: (r) => parseIso(r.fields.updated),
+  sourceStatusOf: (r) => r.fields.status.name,
+  sourcePriorityOf: (r) => r.fields.priority.name,
+  fields: ['key', 'summary', 'description', 'status', 'priority', 'created', 'updated', 'components', 'customfield_site', 'assignee', 'customfield_team', 'timespent', 'changelog', 'escalations'],
   exportRaw(r) {
     return {
       key: r.sourceId,
@@ -485,6 +499,9 @@ function flatAdapter(tool: ItsmTool, description: string, statusToRaw: Record<Ti
     capabilities,
     sourceIdOf: (r) => r.ref,
     updatedAtOf: (r) => parseIso(r.modified),
+    sourceStatusOf: (r) => r.state,
+    sourcePriorityOf: (r) => r.priority,
+    fields: ['ref', 'subject', 'details', 'state', 'priority', 'opened', 'modified', 'category', 'location', 'owner', 'queue', 'effortMin', 'journal', 'transfers'],
     exportRaw: (r) => ({
       ref: r.sourceId,
       subject: r.title,
@@ -528,7 +545,7 @@ export const isilogAdapter = flatAdapter(
   'API ISILOG IWS (format générique)',
   { Nouveau: 'Enregistré', Affecté: 'Attribué', 'En cours': 'En traitement', 'En attente': 'En attente utilisateur', Bloqué: 'Bloqué', Escaladé: 'Transféré', Résolu: 'Résolu', Clôturé: 'Clos', Réouvert: 'Rouvert' },
   { P1: 'Urgente', P2: 'Haute', P3: 'Moyenne', P4: 'Basse' },
-  { mode: 'lecture-écriture', canAssign: true, transitions: 'libre', note: 'Clôture uniquement depuis Résolu.' },
+  { mode: 'lecture-écriture', canAssign: true, transitions: 'libre', note: 'Hypothèse de démonstration (droits non accordés). Clôture uniquement depuis Résolu.' },
 );
 
 export const serviceManagerAdapter = flatAdapter(

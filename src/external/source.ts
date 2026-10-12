@@ -52,7 +52,9 @@ function pickPriority(rng: Rng): Priority {
 function sourceIdFor(client: ExternalClient, seq: number): string {
   if (client.tool === 'GLPI') return String(48200 + seq);
   if (client.tool === 'EasyVista') return `I26_${String(10400 + seq).padStart(6, '0')}`;
-  return `MNX-${3100 + seq}`;
+  if (client.tool === 'ISILOG') return `ISL-${40000 + seq}`;
+  if (client.tool === 'Jira') return `${client.name.slice(0, 3).toUpperCase()}-${3100 + seq}`;
+  return `DEMO-${seq}`;
 }
 
 function availableTechs(teamId: string, techs: Technician[], at: number): Technician[] {
@@ -203,6 +205,8 @@ function newTicketBase(client: ExternalClient, seq: number, createdAt: number, r
 
 /** Génère l'historique fictif d'un client sur les 15 derniers jours ouvrés. */
 export function generateSource(client: ExternalClient, techs: Technician[], now: number, rng: Rng): NormalizedRecord[] {
+  // Sans outil ITSM renseigné, aucune source de tickets n'existe (pas de données inventées).
+  if (!client.tool) return [];
   const cal = client.calendar;
   const first = startOfDay(addDays(now, -HISTORY_BUSINESS_DAYS * 1.6));
   const days = nextBusinessDays(first, 60, cal).filter((d) => d <= now).slice(-HISTORY_BUSINESS_DAYS);

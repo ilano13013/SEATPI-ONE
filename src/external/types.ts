@@ -80,7 +80,8 @@ export interface Technician {
 export interface ExternalClient {
   id: ExternalClientId;
   name: string;
-  tool: ItsmTool;
+  /** Outil ITSM issu de la cartographie de référence ; null = non renseigné. */
+  tool: ItsmTool | null;
   accent: string;
   sites: string[];
   categories: string[];
@@ -150,6 +151,9 @@ export interface Ticket {
   /** Identifiant interne unique et stable (SPI-000001). */
   id: string;
   source: { tool: ItsmTool; id: string };
+  /** Statut et priorité d'origine, tels que fournis par l'outil source. */
+  sourceStatus: string;
+  sourcePriority: string;
   clientId: ExternalClientId;
   site: string;
   contractId: string;

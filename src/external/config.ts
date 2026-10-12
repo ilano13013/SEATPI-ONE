@@ -5,6 +5,7 @@
 // l'Exploitation et le CSM sont des services internes SEATPI (voir services.ts).
 import type { BusinessCalendar, Contract, ExternalClient, ExternalClientId, ExternalTeam, Technician } from './types';
 import { addDays, dateKey, nextBusinessDays } from './calendar';
+import { itsmOf } from '../config/itsm';
 
 const HOLIDAYS_FR = [
   '2026-01-01', '2026-04-06', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25', '2026-07-14', '2026-08-15',
@@ -18,7 +19,7 @@ export const externalClients: ExternalClient[] = [
   {
     id: 'invivo',
     name: 'INVIVO',
-    tool: 'GLPI',
+    tool: itsmOf('invivo'),
     accent: '#2f855a',
     sites: ['Siège', 'Site régional Ouest'],
     categories: ['Poste de travail', 'Messagerie', 'Comptes & accès', 'Impression', 'Réseau', 'Applicatif métier'],
@@ -29,7 +30,7 @@ export const externalClients: ExternalClient[] = [
   {
     id: 'primagaz',
     name: 'PRIMAGAZ',
-    tool: 'EasyVista',
+    tool: itsmOf('primagaz'),
     accent: '#c05621',
     sites: ['Siège', 'Centre logistique'],
     categories: ['Poste de travail', 'Messagerie', 'Téléphonie', 'Comptes & accès', 'Applicatif métier', 'Réseau'],
@@ -40,7 +41,7 @@ export const externalClients: ExternalClient[] = [
   {
     id: 'monext',
     name: 'MONEXT',
-    tool: 'Jira',
+    tool: itsmOf('monext'),
     accent: '#2b6cb0',
     sites: ['Siège', 'Centre de services'],
     categories: ['Monétique', 'Applicatif métier', 'Comptes & accès', 'Réseau', 'Poste de travail'],

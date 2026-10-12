@@ -76,7 +76,8 @@ export function computeAlerts(tickets: Ticket[], client: ExternalClient, cfg: Ob
   return alerts;
 }
 
-export type Health = 'vert' | 'orange' | 'rouge';
+/** gris : outil ITSM non renseigné, état opérationnel non mesurable. */
+export type Health = 'vert' | 'orange' | 'rouge' | 'gris';
 
 /** Nombre de tickets hors SLA (ou proches) à partir duquel un site passe à l'orange. */
 export const ORANGE_SLA_COUNT = 3;

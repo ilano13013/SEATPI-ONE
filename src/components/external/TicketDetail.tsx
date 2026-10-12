@@ -62,6 +62,8 @@ export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign
             items={[
               ['Identifiant interne', t.id],
               ['Identifiant source', `${t.source.tool} · ${t.source.id}`],
+              ['Statut source (original)', t.sourceStatus],
+              ['Priorité source (originale)', t.sourcePriority],
               ['Client', client.name],
               ['Site', t.site],
               ['Contrat', `${t.contractId} — ${contractById(t.contractId).label}`],

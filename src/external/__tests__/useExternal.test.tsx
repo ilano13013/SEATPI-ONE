@@ -14,15 +14,32 @@ describe('écritures simulées vers les outils sources', () => {
     expect(result.current.state.tickets.invivo.find((x) => x.id === t.id)!.status).toBe('En cours');
   });
 
-  it('refuse les modifications sur un connecteur en lecture seule (EasyVista)', () => {
+  it('PRIMAGAZ sans ITSM : aucun ticket et création refusée', () => {
     const { result } = renderHook(() => useExternal(false));
-    const t = result.current.state.tickets.primagaz.find((x) => x.status === 'En cours')!;
+    expect(result.current.state.tickets.primagaz).toHaveLength(0);
+    expect(result.current.state.connectors.primagaz.status).toBe('non configuré');
     let r = { ok: true, message: '' };
     act(() => {
-      r = result.current.moveTicket(t.id, 'Résolu', 'responsable');
+      r = result.current.createTicket('primagaz', { title: 'Test', description: '', category: '', priority: 'P3', site: '' }, 'responsable');
     });
     expect(r.ok).toBe(false);
-    expect(r.message).toMatch(/lecture seule/);
+    expect(r.message).toMatch(/ITSM NON RENSEIGNÉ/);
+  });
+
+  it('crée un ticket dans la source simulée et le propage au référentiel', () => {
+    const { result } = renderHook(() => useExternal(false));
+    const before = result.current.state.tickets.monext.length;
+    let r = { ok: false, message: '' };
+    act(() => {
+      r = result.current.createTicket('monext', { title: 'Terminal hors ligne', description: 'Test', category: 'Monétique', priority: 'P2', site: '' }, 'teamLeader');
+    });
+    expect(r.ok).toBe(true);
+    const created = result.current.state.tickets.monext.find((t) => t.title === 'Terminal hors ligne')!;
+    expect(result.current.state.tickets.monext).toHaveLength(before + 1);
+    expect(created.source.tool).toBe('ISILOG');
+    expect(created.status).toBe('Nouveau');
+    expect(created.sourceStatus).toBe('Enregistré');
+    expect(result.current.state.writes[0].message).toMatch(/démonstration, aucun envoi réel/);
   });
 
   it('applique une transition autorisée, conserve l’identifiant et trace l’historique', () => {
@@ -38,10 +55,10 @@ describe('écritures simulées vers les outils sources', () => {
     expect(updated.source).toEqual(t.source);
     expect(updated.history.length).toBe(t.history.length + 1);
     expect(updated.resolvedAt).not.toBeNull();
-    expect(result.current.state.writes[0].message).toMatch(/GLPI/);
+    expect(result.current.state.writes[0].message).toMatch(/EasyVista/);
   });
 
-  it('applique le workflow de la source (Jira)', () => {
+  it('applique les règles de la source (ISILOG : un ticket clôturé ne peut qu’être réouvert)', () => {
     const { result } = renderHook(() => useExternal(false));
     const t = result.current.state.tickets.monext.find((x) => x.status === 'Clôturé')!;
     let r = { ok: true, message: '' };
@@ -49,6 +66,6 @@ describe('écritures simulées vers les outils sources', () => {
       r = result.current.moveTicket(t.id, 'En cours', 'responsable');
     });
     expect(r.ok).toBe(false);
-    expect(r.message).toMatch(/workflow/);
+    expect(r.message).toMatch(/réouvert/);
   });
 });
