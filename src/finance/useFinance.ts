@@ -248,7 +248,7 @@ export function useFinance(collaborators: Collaborator[], agents: Agent[], trips
     const s = ref.current;
     const touched = s.prestations.filter((p) => p.contractId === contractId && p.type === 'Forfait' && (p.status === 'Prévisionnelle' || p.status === 'À valider'));
     if (!touched.length) return { ok: false, message: 'Aucune prestation à venir pour ce contrat.' };
-    apply(logged({ ...s, prestations: s.prestations.map((p) => (touched.includes(p) ? { ...p, unitPrice: amount } : p)) }, role, 'Forfait contractuel modifié', `${contractId} : ${eur(amount)} / mois sur ${touched.length} mois à venir`, entityOfPrestation(touched[0])));
+    apply(logged({ ...s, prestations: s.prestations.map((p) => (touched.includes(p) ? { ...p, unitPrice: amount } : p)) }, role, 'Forfait contractuel modifié', `${touched[0].clientName} (contrat ${contractId}) : ${eur(amount)} / mois sur ${touched.length} mois à venir`, entityOfPrestation(touched[0])));
     return { ok: true, message: `Forfait appliqué à ${touched.length} mois à venir.` };
   }, []);
 

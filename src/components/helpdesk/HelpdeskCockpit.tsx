@@ -568,7 +568,7 @@ export function HelpdeskCockpit(props: Props) {
                     <tr key={id} tabIndex={0} onClick={() => individual && (set({ ...EMPTY_FILTERS, tech: id }), setTab('tickets'))}>
                       <td>{individual ? personName(id) : a ? 'Agent N1' : 'Technicien N2'}</td>
                       <td>{a ? 'N1 (plateau)' : 'N2 (site client)'}</td>
-                      <td>{a ? `Pôle ${a.clientId.toUpperCase()} · ${a.site}` : (clientRecord(t?.clientId ?? '')?.name ?? '')}</td>
+                      <td>{a ? `${poleByClient(a.clientId)?.label ?? clientRecord(a.clientId)?.name ?? 'Plateau'} · ${siteById(a.site).name}` : (clientRecord(t?.clientId ?? '')?.name ?? '')}</td>
                       <td>{a ? a.status : busy.has(id) ? 'Occupé' : 'Disponible'}</td>
                       <td>{open.length}</td>
                     </tr>

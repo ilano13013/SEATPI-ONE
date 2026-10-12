@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { ChevronRight, Maximize2 } from 'lucide-react';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
 import type { SiteSceneData } from '../scene/ExternalSite';
@@ -57,6 +57,8 @@ export function Workspace(props: Props) {
   const plateauSite = selectedRoom?.kind === 'helpdesk' && (selectedRoom.location === 'laciotat' || selectedRoom.location === 'montpellier' || selectedRoom.location === 'paris') ? selectedRoom.location : null;
   const poleActive = (id: string) => !!plateauSite && selectedPole === id;
   const siteFloors = floorsOf(location);
+  // Vue 2D : sélecteur de site (tous les sites par défaut).
+  const [site2d, setSite2d] = useState<Location | 'tous'>('tous');
   return (
     <section className="workspace" aria-label="Entreprise virtuelle" hidden={props.hidden}>
       <div className="scenehead">
@@ -95,7 +97,14 @@ export function Workspace(props: Props) {
         </Suspense>
       ) : (
         <div className="twod">
-          {LOCATIONS.filter((l) => l.id !== 'carte').map((l) => (
+          <div className="segmented" role="radiogroup" aria-label="Site affiché">
+            {[{ id: 'tous' as const, label: 'Tous les sites' }, ...LOCATIONS.filter((l) => l.id !== 'carte')].map((l) => (
+              <button key={l.id} role="radio" aria-checked={site2d === l.id} className={site2d === l.id ? 'active' : ''} onClick={() => setSite2d(l.id)}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+          {LOCATIONS.filter((l) => l.id !== 'carte' && (site2d === 'tous' || site2d === l.id)).map((l) => (
             <section key={l.id} className="twod-site" aria-label={l.label.replace(' ★', '')}>
               <h2>{l.label}</h2>
               {floorsOf(l.id).map((f) => (

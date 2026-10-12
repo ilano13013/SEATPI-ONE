@@ -1,7 +1,7 @@
 import type { ExternalClientId } from '../../external/types';
 import { realConnectionLabel, simulationLabel, simulationState, useConnectionInfo } from '../../admin/connectionStates';
 import type { ClientView, GlobalRow } from '../../external/derive';
-import { HealthDot, LoadBar, eur, fmtDateTime } from './common';
+import { HealthDot, LoadBar, eur, fmtDateTime, healthLabel } from './common';
 
 interface Props {
   rows: GlobalRow[];
@@ -51,14 +51,31 @@ export function GlobalCockpit({ rows, total, views, showFinance, onOpenClient, o
     </tr>
   );
 
+  const priority = views.flatMap((v) => v.alerts.filter((a) => a.severity === 'critical').map((a) => ({ v, a })));
   return (
     <div className="xc-global">
+      <h3>À traiter en priorité ({priority.length})</h3>
+      {priority.length === 0 ? (
+        <p className="hint">Aucune alerte critique sur les sites clients.</p>
+      ) : (
+        <ul className="pdg-risks">
+          {priority.map(({ v, a }) => (
+            <li key={a.id}>
+              <button className="xc-alert critical" onClick={() => onAlert(v.client.id, a.message, a.ticketIds)}>
+                <span aria-hidden>✗ </span>
+                {v.client.name} — {a.message} · voir les {a.ticketIds.length} ticket(s)
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="xc-sites">
         {views.map((v) => (
           <div key={v.client.id} className={`xc-site ${v.health}`}>
             <button className="xc-site-head" onClick={() => onOpenClient(v.client.id)}>
               <HealthDot health={v.health} />
               <b>{v.client.name}</b>
+              <span className="badge muted">{healthLabel[v.health]}</span>
               <small>
                 {v.client.tool ? `${v.client.tool} · ${realConnectionLabel(realOf(v.client.id))} · ${simulationLabel(simulationState(v.connector.status, running), v.connector.status)} · synchro simulée ${fmtDateTime(v.connector.lastSuccessAt)}` : 'ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE'}
               </small>

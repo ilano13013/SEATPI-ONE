@@ -56,20 +56,41 @@ export function HealthDot({ health }: { health: Health }) {
 
 export function Modal({ title, onClose, children, wide }: { title: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  // Focus : placé sur « Fermer » à l'ouverture, maintenu dans la fenêtre (Tab), rendu à l'élément d'origine à la fermeture.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const f = [...dialogRef.current.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((el) => !el.hasAttribute('disabled'));
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      if (opener && document.contains(opener)) opener.focus();
+    };
+  }, []);
   return (
     <div className="xc-overlay" onClick={onClose}>
-      <div className={`xc-modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className={`xc-modal${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} onClick={(e) => e.stopPropagation()}>
         <div className="xc-modal-head">
           <h3>{title}</h3>
           <button ref={closeRef} className="icon" onClick={onClose} aria-label="Fermer">
