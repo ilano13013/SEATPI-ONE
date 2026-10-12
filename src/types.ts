@@ -1,6 +1,6 @@
 // Modèle métier de démonstration (sous-ensemble du §5 du cahier des charges).
 
-export type FloorId = 'rdc' | 'etage1';
+export type FloorId = 'rdc' | 'etage1' | 'sites';
 
 export type RoomId =
   | 'accueil'
@@ -9,9 +9,12 @@ export type RoomId =
   | 'parking'
   | 'helpdesk'
   | 'rh'
-  | 'direction';
+  | 'direction'
+  | 'ext-invivo'
+  | 'ext-primagaz'
+  | 'ext-monext';
 
-export type ModuleId = 'supervision' | 'pause' | 'rh' | 'stock' | 'finance' | 'vehicules' | 'accueil';
+export type ModuleId = 'supervision' | 'pause' | 'rh' | 'stock' | 'finance' | 'vehicules' | 'accueil' | 'externes' | 'integrations';
 
 export interface Floor {
   id: FloorId;
@@ -33,6 +36,12 @@ export interface Room {
   color: string;
   /** Pièce extérieure : pas de cloisons vitrées. */
   outdoor?: boolean;
+  /** Couleur du sol pour les zones extérieures. */
+  ground?: string;
+  /** Position de l'étiquette [hauteur, profondeur] si différente du défaut. */
+  labelAt?: [number, number];
+  /** Site d'un client externe. */
+  externalClientId?: 'invivo' | 'primagaz' | 'monext';
 }
 
 export type AgentStatus =

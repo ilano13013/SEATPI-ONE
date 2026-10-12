@@ -26,3 +26,32 @@ describe('matrice de droits (maquette)', () => {
     expect(clientScope('teamLeader')).toBeNull();
   });
 });
+
+describe('droits du module clients externes', () => {
+  it('l’agent n’accède pas à la supervision externe', () => {
+    expect(can('agent', 'externes')).toBe(false);
+  });
+
+  it('seule la responsable Helpdesk configure les objectifs', () => {
+    const configurers = (Object.keys(roleLabels) as Role[]).filter((r) => can(r, 'externes', 'configure'));
+    expect(configurers).toEqual(['responsable']);
+  });
+
+  it('le Team Leader modifie les tickets sans configurer', () => {
+    expect(can('teamLeader', 'externes', 'edit')).toBe(true);
+    expect(can('teamLeader', 'externes', 'configure')).toBe(false);
+  });
+
+  it('direction, finance et admin n’ont que des vues agrégées', () => {
+    for (const r of ['direction', 'finance', 'admin'] as Role[]) {
+      expect(can(r, 'externes')).toBe(true);
+      expect(can(r, 'externes', 'individual')).toBe(false);
+      expect(can(r, 'externes', 'edit')).toBe(false);
+    }
+  });
+
+  it('l’admin pilote les connecteurs, pas les données RH', () => {
+    expect(can('admin', 'integrations', 'configure')).toBe(true);
+    expect(can('admin', 'rh')).toBe(false);
+  });
+});

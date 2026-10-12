@@ -55,6 +55,27 @@ Activation (une seule fois) : *Settings* → *Pages* → *Build and deployment* 
 - Interfaces `QueueConnector`, `TicketConnector`, `ReportingConnector` et implémentation de démo dans `src/services/connectors.ts`.
 - Genesys Cloud, GLPI et Qlik Sense sont des emplacements réservés qui rejettent tout appel. **Aucun appel réseau métier** n'est effectué (vérifié par les tests).
 
+## Extension V2.3 — supervision des clients externes
+
+Cockpit opérationnel des collaborateurs SEATPI affectés chez **INVIVO** (GLPI), **PRIMAGAZ** (EasyVista, lecture seule) et **MONEXT** (Jira). Accès : bouton « Clients externes » du rail, ou étage **Sites clients** de la carte 3D.
+
+- **Carte 3D** : un bâtiment par client avec voyant d'état (vert : dans les seuils · orange : risque SLA, surcharge ou backlog au-dessus du seuil · rouge : incident critique, ex. P1 hors SLA ou P1/P2 non pris en charge) qui pulse discrètement en cas d'alerte. Clic bâtiment → cockpit du client ; clic équipe → ses tickets ouverts ; clic technicien → sa fiche (selon le rôle).
+- **Vue globale** (responsable Helpdesk) : par client et pour le plateau interne — effectif, ouverts, en cours, résolus, backlog, SLA, objectif hebdo, réalisé, reste à faire, charge, CRA et congés en attente, budget, coût, rentabilité (colonnes financières selon le rôle). Un clic ouvre le détail.
+- **Tableau de bord client** : indicateurs Tickets et Activité par période (aujourd'hui, semaine, semaine précédente), tous cliquables vers la liste des tickets concernés ; reçus par jour, ancienneté, charge des équipes, alertes, définitions explicites.
+- **Tickets** : tableau complet (n° interne et source, client, site, contrat, titre, catégorie, priorité, statut, technicien, groupe, dates, échéance SLA, temps passé, résolution), recherche, filtres avancés, tri, regroupements, export CSV ; fiche détaillée avec SLA, escalades et historique des changements.
+- **Backlog (Kanban)** : Nouveau → Affecté → En cours → En attente → Résolu → Clôturé, plus Bloqué / Escaladé / Réouvert ; déplacement uniquement si le rôle **et** l'outil source l'autorisent (GLPI libre sauf clôture hors Résolu, workflow Jira, EasyVista en lecture seule) ; alertes paramétrables (seuil « sans mise à jour »).
+- **Techniciens** : charge par équipe vs capacité planifiée avec alertes, fiche opérationnelle (planning, charge, tickets, retards, temps passé, compétences, congés, CRA). Ordre alphabétique, aucun classement.
+- **Objectifs configurables** (volume / qualité) : objectif, réalisé, reste à faire, écart, tendance, projection de fin de semaine.
+- **Escalades** : services d'origine et destinataire, date, motif, responsable, statut, historique ; identifiant interne unique `SPI-xxxxxx` ↔ identifiant source.
+- **Intégration ITSM** : adaptateurs GLPI, EasyVista, ISILOG, Service Manager, Jira, générique ; synchronisation planifiée (15 min, accélérée à 45 s en démo), état de connexion, journal, déduplication, correspondance des statuts et priorités, calendriers et matrices SLA contractuels (suspension en attente client, jours fériés).
+- **Rapport hebdomadaire** par client et **consolidé département**, calculé avec les mêmes fonctions que le cockpit ; export Markdown et impression PDF.
+
+Définitions principales : périodes en heure locale `[début, fin[` ; *ouvert* = statut autre que Résolu/Clôturé ; *résolu sur la période* = au moins une résolution dans la période, compté une seule fois par ticket ; SLA en temps ouvré selon le calendrier du client.
+
+Code : `src/external/` (modèle, calendrier, SLA, adaptateurs, source fictive, synchronisation, indicateurs, objectifs, charge, alertes, rapports) et `src/components/external/`. Tests de cohérence dans `src/external/__tests__/`.
+
+⚠️ Données fictives, aucun appel réseau. Les connecteurs réels devront être exécutés par un backend (aucun jeton dans le navigateur) et les droits appliqués côté serveur.
+
 ## Architecture
 
 ```

@@ -13,13 +13,15 @@ interface Props {
   seated?: boolean;
   animate: boolean;
   onClick?: (agent: Agent) => void;
+  /** Remplace la ligne d'état de l'info-bulle. */
+  tooltip?: string;
 }
 
 /**
  * Avatar stylisé. Sa couleur traduit un état de travail : il ne représente
  * pas la position physique réelle d'une personne.
  */
-export function Avatar({ agent, position, rotation = 0, seated = true, animate, onClick }: Props) {
+export function Avatar({ agent, position, rotation = 0, seated = true, animate, onClick, tooltip }: Props) {
   const ref = useRef<Group>(null);
   const [hover, setHover] = useState(false);
   const color = statusColors[agent.status];
@@ -70,9 +72,7 @@ export function Avatar({ agent, position, rotation = 0, seated = true, animate, 
       {hover && (
         <Html position={[0, 0.95, 0]} center className="scene-tip" zIndexRange={[20, 10]}>
           <b>{agent.name}</b>
-          <span>
-            {agent.status} · {formatDuration(agent.statusSinceSec)}
-          </span>
+          <span>{tooltip ?? `${agent.status} · ${formatDuration(agent.statusSinceSec)}`}</span>
         </Html>
       )}
     </group>

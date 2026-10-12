@@ -6,6 +6,7 @@ import type { Agent, DemoState, FloorId, RoomId } from '../types';
 import { poleByClient, roomById, roomsOnFloor } from '../data/layout';
 import { CameraRig, type CameraFocus } from './CameraRig';
 import { RoomMesh } from './RoomMesh';
+import type { SiteSceneData } from './ExternalSite';
 
 export interface SceneProps {
   floor: FloorId;
@@ -20,6 +21,9 @@ export interface SceneProps {
   selectedPole: string | null;
   poleBadges: Partial<Record<string, string>>;
   onSelectPole: (clientId: string) => void;
+  sites: Record<string, SiteSceneData>;
+  onTeamClick: (clientId: string, teamId: string) => void;
+  onTechClick: (clientId: string, techId: string) => void;
   reducedMotion: boolean;
   onSelect: (id: RoomId) => void;
   onAgentClick: (agent: Agent) => void;
@@ -44,7 +48,7 @@ function FloorTransition({ animate, children }: { animate: boolean; children: Re
 }
 
 export default function Scene(props: SceneProps) {
-  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, reducedMotion, onSelect, onAgentClick } = props;
+  const { floor, selected, focusKey, overview, state, badges, selectedPole, poleBadges, onSelectPole, sites, onTeamClick, onTechClick, reducedMotion, onSelect, onAgentClick } = props;
   const [hovered, setHovered] = useState<RoomId | null>(null);
   const [hoveredPole, setHoveredPole] = useState<string | null>(null);
   const animate = !reducedMotion;
@@ -105,8 +109,8 @@ export default function Scene(props: SceneProps) {
       <FloorTransition key={floor} animate={animate}>
         {/* Dalle de l'étage */}
         <mesh position={[0, -0.04, 0]} receiveShadow>
-          <boxGeometry args={[11.4, 0.06, floor === 'rdc' ? 8.4 : 7.9]} />
-          <meshStandardMaterial color={floor === 'rdc' ? '#f4f6f9' : '#eef2f8'} />
+          <boxGeometry args={[floor === 'sites' ? 12 : 11.4, 0.06, floor === 'rdc' ? 8.4 : floor === 'sites' ? 8.6 : 7.9]} />
+          <meshStandardMaterial color={floor === 'rdc' ? '#f4f6f9' : floor === 'sites' ? '#e6efe2' : '#eef2f8'} />
         </mesh>
         {floorRooms.map((room) => (
           <RoomMesh
@@ -126,6 +130,9 @@ export default function Scene(props: SceneProps) {
             hoveredPole={hoveredPole}
             poleBadges={poleBadges}
             onSelectPole={onSelectPole}
+            sites={sites}
+            onTeamClick={onTeamClick}
+            onTechClick={onTechClick}
             onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}

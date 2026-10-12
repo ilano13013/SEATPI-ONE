@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { ChevronRight, Maximize2 } from 'lucide-react';
 import type { Agent, DemoState, FloorId, RoomId } from '../types';
+import type { SiteSceneData } from '../scene/ExternalSite';
 import { floors, helpdeskPoles, rooms, roomsOnFloor } from '../data/layout';
 import { allStatuses, statusColors } from '../lib/status';
 
@@ -17,6 +18,11 @@ interface Props {
   selectedPole: string | null;
   poleBadges: Partial<Record<string, string>>;
   onSelectPole: (clientId: string) => void;
+  sites: Record<string, SiteSceneData>;
+  onTeamClick: (clientId: string, teamId: string) => void;
+  onTechClick: (clientId: string, techId: string) => void;
+  /** Masque l'espace sans démonter la scène 3D. */
+  hidden?: boolean;
   reducedMotion: boolean;
   onFloor: (floor: FloorId) => void;
   onOverview: () => void;
@@ -28,7 +34,7 @@ export function Workspace(props: Props) {
   const { mode3d, floor, selected, badges, selectedPole, poleBadges, onFloor, onOverview, onSelect, onSelectPole } = props;
   const poleActive = (id: string) => selected === 'helpdesk' && selectedPole === id;
   return (
-    <section className="workspace" aria-label="Entreprise virtuelle">
+    <section className="workspace" aria-label="Entreprise virtuelle" hidden={props.hidden}>
       <div className="scenehead">
         <div>
           <b>Entreprise virtuelle</b>

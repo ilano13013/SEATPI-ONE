@@ -59,7 +59,7 @@ export function RoomMesh({ selected, hovered, badge, onSelect, onHover, ...conte
         onPointerOut={() => onHover(false)}
       >
         <RoundedBox args={[w, 0.16, d]} radius={0.06} position={[0, 0.02, 0]} receiveShadow>
-          <meshStandardMaterial color={room.outdoor ? '#7d8794' : room.color} roughness={0.9} />
+          <meshStandardMaterial color={room.outdoor ? (room.ground ?? '#7d8794') : room.color} roughness={0.9} />
         </RoundedBox>
         <group position={[0, 0.1, 0]}>
           {!room.outdoor && (
@@ -72,7 +72,7 @@ export function RoomMesh({ selected, hovered, badge, onSelect, onHover, ...conte
         </group>
         {(outlined || hovered) && <Outline w={w} d={d} color={outlined ? '#2563eb' : '#60a5fa'} />}
       </group>
-      <Html position={[0, WALL_H + 0.45, room.outdoor ? 0 : -d / 2 + 0.2]} center className={`room-label${selected ? ' selected' : ''}`} zIndexRange={[10, 0]}>
+      <Html position={room.labelAt ? [0, room.labelAt[0], room.labelAt[1]] : [0, WALL_H + 0.45, room.outdoor ? 0 : -d / 2 + 0.2]} center className={`room-label${selected ? ' selected' : ''}`} zIndexRange={[10, 0]}>
         <span>{room.label}</span>
         {badge && (hovered || selected) && <em>{badge}</em>}
       </Html>

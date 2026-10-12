@@ -10,14 +10,15 @@ export type Role = 'agent' | 'teamLeader' | 'responsable' | 'rh' | 'finance' | '
 /**
  * - `view` : accès au module ;
  * - `individual` : données nominatives (pseudonymes) plutôt qu'agrégées ;
- * - `edit` : actions de modification (simulées).
+ * - `edit` : actions de modification (simulées) ;
+ * - `configure` : paramétrage (objectifs, connecteurs).
  */
-export type Action = 'view' | 'individual' | 'edit';
+export type Action = 'view' | 'individual' | 'edit' | 'configure';
 
 export const roleLabels: Record<Role, string> = {
   agent: 'Agent',
   teamLeader: 'Team Leader',
-  responsable: 'Responsable',
+  responsable: 'Responsable Helpdesk',
   rh: 'RH',
   finance: 'Finance',
   direction: 'Direction',
@@ -30,13 +31,23 @@ const ALL: Action[] = ['view', 'individual', 'edit'];
 
 const matrix: Matrix = {
   agent: { supervision: ['view', 'individual'], pause: ['view'], stock: ['view'], vehicules: ['view'], accueil: ['view'] },
-  teamLeader: { supervision: ALL, pause: ['view', 'individual'], stock: ['view'], vehicules: ['view'], accueil: ['view'] },
-  responsable: { supervision: ALL, pause: ['view', 'individual'], rh: ['view'], stock: ['view', 'edit'], finance: ['view'], vehicules: ['view', 'edit'], accueil: ['view'] },
+  teamLeader: { supervision: ALL, pause: ['view', 'individual'], stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view', 'individual', 'edit'], integrations: ['view'] },
+  responsable: {
+    supervision: ALL,
+    pause: ['view', 'individual'],
+    rh: ['view'],
+    stock: ['view', 'edit'],
+    finance: ['view'],
+    vehicules: ['view', 'edit'],
+    accueil: ['view'],
+    externes: ['view', 'individual', 'edit', 'configure'],
+    integrations: ['view', 'configure'],
+  },
   rh: { rh: ALL, pause: ['view'], accueil: ['view'] },
-  finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'] },
-  direction: { supervision: ['view'], pause: ['view'], rh: ['view'], stock: ['view'], finance: ['view'], vehicules: ['view'], accueil: ['view'] },
-  // Configuration technique, sans accès automatique aux données RH confidentielles.
-  admin: { supervision: ['view'], stock: ['view', 'edit'], vehicules: ['view', 'edit'], accueil: ['view', 'edit'], pause: ['view'] },
+  finance: { finance: ALL, stock: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'] },
+  direction: { supervision: ['view'], pause: ['view'], rh: ['view'], stock: ['view'], finance: ['view'], vehicules: ['view'], accueil: ['view'], externes: ['view'] },
+  // Configuration technique, sans accès automatique aux données RH confidentielles ni aux données individuelles.
+  admin: { supervision: ['view'], stock: ['view', 'edit'], vehicules: ['view', 'edit'], accueil: ['view', 'edit'], pause: ['view'], externes: ['view'], integrations: ['view', 'configure'] },
 };
 
 export function can(role: Role, module: ModuleId, action: Action = 'view'): boolean {

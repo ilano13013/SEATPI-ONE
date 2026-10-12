@@ -3,6 +3,7 @@ import type { Floor, FloorId, Room, RoomId } from '../types';
 export const floors: Floor[] = [
   { id: 'rdc', label: 'Rez-de-chaussée', short: 'RDC' },
   { id: 'etage1', label: 'Étage 1', short: 'É1' },
+  { id: 'sites', label: 'Sites clients', short: 'Sites' },
 ];
 
 export const rooms: Room[] = [
@@ -12,6 +13,22 @@ export const rooms: Room[] = [
   { id: 'parking', floor: 'rdc', module: 'vehicules', label: 'Parc automobile', description: 'Véhicules disponibles et réservations', x: 0, z: 2.2, width: 10.6, depth: 3.4, color: '#dfe4ea', outdoor: true },
   { id: 'helpdesk', floor: 'etage1', module: 'supervision', label: 'Plateau Helpdesk', description: 'Files clients, agents, SLA et tickets', x: -1.85, z: 0, width: 6.9, depth: 7.2, color: '#d9e9ff' },
   { id: 'rh', floor: 'etage1', module: 'rh', label: 'Ressources humaines', description: 'Congés, planning et formations (données agrégées)', x: 3.6, z: -1.85, width: 3.4, depth: 3.5, color: '#f4e3ff' },
+  ...(['invivo', 'primagaz', 'monext'] as const).map((c, i) => ({
+    id: `ext-${c}` as RoomId,
+    floor: 'sites' as FloorId,
+    module: 'externes' as const,
+    label: c.toUpperCase(),
+    description: 'Site client externe : tickets, techniciens et prestations',
+    x: (i - 1) * 3.75,
+    z: 0,
+    width: 3.5,
+    depth: 7.6,
+    color: '#dfeedd',
+    outdoor: true,
+    ground: '#cfe3c9',
+    labelAt: [3.05, -2.1] as [number, number],
+    externalClientId: c,
+  })),
   { id: 'direction', floor: 'etage1', module: 'finance', label: 'Direction & budgets', description: 'Budgets, finance et reporting', x: 3.6, z: 1.85, width: 3.4, depth: 3.5, color: '#fff0be' },
 ];
 

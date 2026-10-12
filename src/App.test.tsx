@@ -24,7 +24,8 @@ describe('App (mode démo)', () => {
     render(<App />);
     expect(screen.getByText('MODE DÉMO')).toBeTruthy();
     expect(screen.getByText(/WebGL n'est pas disponible/)).toBeTruthy();
-    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(7);
+    // 7 pièces internes + 3 sites clients externes
+    expect(document.querySelectorAll('.twod-grid:not(.poles) button')).toHaveLength(10);
     expect(document.querySelectorAll('.twod-grid.poles button')).toHaveLength(5);
   });
 
@@ -76,5 +77,33 @@ describe('App (mode démo)', () => {
     openRoom('Stock informatique');
     openRoom('Direction');
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('ouvre le cockpit des clients externes et navigue jusqu’aux tickets', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
+    const cockpit = within(screen.getByRole('region', { name: 'Supervision des clients externes' }));
+    // Vue consolidée : les trois clients et la ligne interne.
+    for (const name of ['INVIVO', 'PRIMAGAZ', 'MONEXT', 'Plateau Helpdesk (interne)', 'Total clients externes']) {
+      expect(cockpit.getAllByText(name).length).toBeGreaterThan(0);
+    }
+    fireEvent.click(within(cockpit.getByRole('navigation', { name: 'Clients' })).getByRole('button', { name: /MONEXT/ }));
+    const open = cockpit.getByRole('button', { name: /Tickets ouverts/ });
+    const count = Number(open.querySelector('strong')!.textContent);
+    fireEvent.click(open);
+    expect(cockpit.getByRole('tab', { name: 'Tickets', selected: true })).toBeTruthy();
+    expect(cockpit.getByText(new RegExp(`^${count} ticket\\(s\\)`))).toBeTruthy();
+    // Détail d'un ticket depuis le tableau.
+    fireEvent.click(document.querySelector('.xc-table tbody tr')!);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Historique des changements')).toBeTruthy();
+  });
+
+  it('masque la supervision externe au rôle Agent', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'agent' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Clients externes' }));
+    expect(screen.getByText('Accès restreint')).toBeTruthy();
   });
 });

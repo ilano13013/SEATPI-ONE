@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { useExternal } from '../useExternal';
+
+describe('écritures simulées vers les outils sources', () => {
+  it('refuse les modifications sans droit d’édition', () => {
+    const { result } = renderHook(() => useExternal(false));
+    const t = result.current.state.tickets.invivo.find((x) => x.status === 'En cours')!;
+    let r = { ok: true, message: '' };
+    act(() => {
+      r = result.current.moveTicket(t.id, 'Résolu', 'direction');
+    });
+    expect(r.ok).toBe(false);
+    expect(result.current.state.tickets.invivo.find((x) => x.id === t.id)!.status).toBe('En cours');
+  });
+
+  it('refuse les modifications sur un connecteur en lecture seule (EasyVista)', () => {
+    const { result } = renderHook(() => useExternal(false));
+    const t = result.current.state.tickets.primagaz.find((x) => x.status === 'En cours')!;
+    let r = { ok: true, message: '' };
+    act(() => {
+      r = result.current.moveTicket(t.id, 'Résolu', 'responsable');
+    });
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/lecture seule/);
+  });
+
+  it('applique une transition autorisée, conserve l’identifiant et trace l’historique', () => {
+    const { result } = renderHook(() => useExternal(false));
+    const t = result.current.state.tickets.invivo.find((x) => x.status === 'En cours')!;
+    let r = { ok: false, message: '' };
+    act(() => {
+      r = result.current.moveTicket(t.id, 'Résolu', 'teamLeader');
+    });
+    expect(r.ok).toBe(true);
+    const updated = result.current.state.tickets.invivo.find((x) => x.id === t.id)!;
+    expect(updated.status).toBe('Résolu');
+    expect(updated.source).toEqual(t.source);
+    expect(updated.history.length).toBe(t.history.length + 1);
+    expect(updated.resolvedAt).not.toBeNull();
+    expect(result.current.state.writes[0].message).toMatch(/GLPI/);
+  });
+
+  it('applique le workflow de la source (Jira)', () => {
+    const { result } = renderHook(() => useExternal(false));
+    const t = result.current.state.tickets.monext.find((x) => x.status === 'Clôturé')!;
+    let r = { ok: true, message: '' };
+    act(() => {
+      r = result.current.moveTicket(t.id, 'En cours', 'responsable');
+    });
+    expect(r.ok).toBe(false);
+    expect(r.message).toMatch(/workflow/);
+  });
+});

@@ -1,4 +1,4 @@
-import { Building2, Car, Coffee, DoorOpen, Headphones, Package, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { Briefcase, Building2, Car, Coffee, DoorOpen, Headphones, Package, Users, Wallet, type LucideIcon } from 'lucide-react';
 import type { RoomId } from '../types';
 import { roomById } from '../data/layout';
 
@@ -12,7 +12,19 @@ const items: [RoomId, LucideIcon][] = [
   ['direction', Wallet],
 ];
 
-export function Rail({ selected, onSelect, onOverview }: { selected: RoomId | null; onSelect: (id: RoomId) => void; onOverview: () => void }) {
+export function Rail({
+  selected,
+  externalActive,
+  onSelect,
+  onOverview,
+  onExternal,
+}: {
+  selected: RoomId | null;
+  externalActive: boolean;
+  onSelect: (id: RoomId) => void;
+  onOverview: () => void;
+  onExternal: () => void;
+}) {
   return (
     <nav className="rail" aria-label="Modules">
       <div className="brand" aria-hidden>
@@ -29,6 +41,9 @@ export function Rail({ selected, onSelect, onOverview }: { selected: RoomId | nu
           </button>
         );
       })}
+      <button title="Clients externes" aria-label="Clients externes" aria-current={externalActive} className={externalActive ? 'active' : ''} onClick={onExternal}>
+        <Briefcase size={20} />
+      </button>
     </nav>
   );
 }
