@@ -88,5 +88,10 @@ describe('synchronisation et référentiel interne', () => {
     [r, c] = registerId(r, 'GLPI', '100');
     expect(a).not.toBe(b);
     expect(c).toBe(a);
+    // Même outil, même numéro, clients (instances) différents : identifiants distincts.
+    let d: string;
+    [r, d] = registerId(r, 'ISILOG', '42', 'thelem');
+    const [, e] = registerId(r, 'ISILOG', '42', 'transgourmet');
+    expect(d).not.toBe(e);
   });
 });

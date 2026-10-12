@@ -89,6 +89,8 @@ export interface ExternalClient {
   sla: Record<Priority, SlaTarget>;
   /** Statuts suspendant le décompte du SLA de résolution (en plus de Résolu / Clôturé). */
   slaPauseStatuses: TicketStatus[];
+  /** Volume fictif de tickets par jour ouvré (démonstration). */
+  ratePerDay?: number;
 }
 
 export type EventKind = 'création' | 'statut' | 'affectation' | 'escalade' | 'commentaire';

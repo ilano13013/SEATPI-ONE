@@ -57,6 +57,16 @@ export const contracts: Contract[] = [
   { id: 'CTR-MNX-01', clientId: 'monext', label: 'MCO N2 — applicatif monétique', hourlyRate: 68, costRate: 47, monthlyBudget: 40000 },
 ];
 
+/** Contrats des clients des plateaux internes : références à renseigner (aucune donnée réelle). */
+export const internalContracts: Contract[] = ['thelem', 'dmb', 'transgourmet', 'lbrfr', 'eurapharma', 'ange', 'hstv'].map((id) => ({
+  id: `CTR-INT-${id.toUpperCase()}`,
+  clientId: id as Contract['clientId'],
+  label: 'Contrat de service Helpdesk N1 — référence à renseigner',
+  hourlyRate: 0,
+  costRate: 0,
+  monthlyBudget: 0,
+}));
+
 export const externalTeams: ExternalTeam[] = [
   { id: 'inv-n2', clientId: 'invivo', name: 'MCO N2 INVIVO', service: 'MCO N2', contractId: 'CTR-INV-01', sourceGroup: 'GRP_MCO_N2' },
   { id: 'pri-n2', clientId: 'primagaz', name: 'MCO N2 PRIMAGAZ', service: 'MCO N2', contractId: 'CTR-PRI-01', sourceGroup: 'MCO_N2' },
@@ -138,4 +148,4 @@ export function clientById(id: string): ExternalClient {
 }
 
 export const teamsOf = (clientId: string) => externalTeams.filter((t) => t.clientId === clientId);
-export const contractById = (id: string) => contracts.find((c) => c.id === id)!;
+export const contractById = (id: string) => (contracts.find((c) => c.id === id) ?? internalContracts.find((c) => c.id === id))!;

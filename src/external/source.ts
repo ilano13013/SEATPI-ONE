@@ -4,7 +4,7 @@
 import type { Escalation, ExternalClient, ExternalTeam, NormalizedRecord, Priority, Service, Technician, TicketEvent, TicketStatus } from './types';
 import type { Rng } from '../services/random';
 import { addBusinessMinutes, businessMinutesBetween, dateKey, isBusinessDay, nextBusinessDays, startOfDay, addDays } from './calendar';
-import { externalTeams } from './config';
+import { ticketTeams as externalTeams } from '../helpdesk/teams';
 import { statusIntervals } from './sla';
 
 const MIN = 60_000;
@@ -25,6 +25,11 @@ const TITLES: Record<string, string[]> = {
   Téléphonie: ['Softphone sans tonalité', 'Renvoi d’appel à configurer', 'Casque non reconnu'],
   Monétique: ['Terminal de paiement hors ligne', 'Rejets de transactions', 'Erreur de télécollecte', 'Paramétrage TPE à mettre à jour'],
 };
+
+/** Escalades du Helpdesk N1 (plateaux internes) vers le MCO N2. */
+export const N1_ESCALATIONS: { to: Service; reasons: string[]; weight: number }[] = [
+  { to: 'MCO N2', reasons: ['Compétence N2 requise', 'Incident complexe', 'Intervention sur site nécessaire'], weight: 1 },
+];
 
 /** Destinataires possibles d'une escalade depuis le MCO N2 client, avec leurs motifs. */
 export const ESCALATIONS: { to: Service; reasons: string[]; weight: number }[] = [
@@ -101,7 +106,9 @@ function lifecycle(client: ExternalClient, team: ExternalTeam, tech: Technician,
     t = add(t, 60 + rng() * 540);
     status(d, t, 'Bloqué', 'En cours', who);
   } else if (r < 0.3) {
-    const target = weighted(ESCALATIONS.map((e) => [e, e.weight] as [typeof e, number]), rng);
+    // Le N1 escalade vers le MCO N2 ; le N2 vers l'Exploitation, le CSM ou une équipe externe.
+    const targets = team.service === 'Helpdesk N1' ? N1_ESCALATIONS : ESCALATIONS;
+    const target = weighted(targets.map((e) => [e, e.weight] as [typeof e, number]), rng);
     const to = target.to;
     const at = ROUND(t);
     status(d, at, 'En cours', 'Escaladé', who);
@@ -213,7 +220,7 @@ export function generateSource(client: ExternalClient, techs: Technician[], now:
   const records: NormalizedRecord[] = [];
   let seq = 0;
   for (const day of days) {
-    const count = Math.round(RATE_PER_DAY[client.id] * (0.7 + rng() * 0.6));
+    const count = Math.round((client.ratePerDay ?? RATE_PER_DAY[client.id] ?? 8) * (0.7 + rng() * 0.6));
     const open = new Date(day).setHours(cal.startHour);
     const length = (cal.endHour - cal.startHour) * 60 * MIN;
     const times = Array.from({ length: count }, () => open + rng() * length).sort((a, b) => a - b);
@@ -280,7 +287,7 @@ export function applyTransition(
   const history: TicketEvent[] = [...r.history, { at, kind: 'statut', from: r.status, to, by }];
   let escalations = r.escalations;
   if (to === 'Escaladé' && team) {
-    const dest = escalateTo;
+    const dest: Service = team.service === 'Helpdesk N1' && escalateTo === 'Exploitation' ? 'MCO N2' : escalateTo;
     escalations = [
       ...escalations,
       { id: `ESC-${sourceId}-${escalations.length + 1}`, at, from: team.service, to: dest, reason: 'Escalade demandée depuis SEATPI ONE', owner: OWNER[dest], status: 'En cours', history: [{ at, label: `Escalade ${team.service} → ${dest}` }] },

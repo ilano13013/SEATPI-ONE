@@ -3,7 +3,7 @@
 import type { ExternalClient, ExternalClientId, ItsmTool, NormalizedRecord, Technician, Ticket } from './types';
 import type { Rng } from '../services/random';
 import { adapters, MappingError, type ItsmAdapter } from './itsm/adapters';
-import { externalTeams } from './config';
+import { ticketTeams as externalTeams } from '../helpdesk/teams';
 import { computeSla, firstTakenAt } from './sla';
 
 export interface SyncStats {
@@ -35,16 +35,20 @@ export interface ConnectorState {
   log: SyncLogEntry[];
 }
 
-/** Référentiel des identifiants : `outil:idSource` → identifiant interne. */
+/**
+ * Référentiel des identifiants : `outil:client:idSource` → identifiant interne.
+ * Le client fait partie de la clé : deux clients sur le même outil ont des instances distinctes.
+ */
 export interface IdRegistry {
   next: number;
   map: Record<string, string>;
 }
 
-export const emptyRegistry = (): IdRegistry => ({ next: 1, map: {} });
+/** Référentiel vide ; `start` permet de réserver une plage d'identifiants (plateaux internes : 100001+). */
+export const emptyRegistry = (start = 1): IdRegistry => ({ next: start, map: {} });
 
-export function registerId(registry: IdRegistry, tool: ItsmTool, sourceId: string): [IdRegistry, string] {
-  const key = `${tool}:${sourceId}`;
+export function registerId(registry: IdRegistry, tool: ItsmTool, sourceId: string, clientId = ''): [IdRegistry, string] {
+  const key = `${tool}:${clientId}:${sourceId}`;
   const existing = registry.map[key];
   if (existing) return [registry, existing];
   const id = `SPI-${String(registry.next).padStart(6, '0')}`;
@@ -163,7 +167,7 @@ export function syncClient(client: ExternalClient, raw: unknown[], previous: Tic
       continue;
     }
     let id: string;
-    [reg, id] = registerId(reg, client.tool, rec.sourceId);
+    [reg, id] = registerId(reg, client.tool, rec.sourceId, client.id);
     const ticket = toTicket(rec, id, client, techs, now, (m) => log.push({ at: now, level: 'warn', message: m }), {
       status: adapter.sourceStatusOf(r),
       priority: adapter.sourcePriorityOf(r),
