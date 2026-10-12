@@ -22,7 +22,7 @@ const KIND_TO_DEPARTMENT: Partial<Record<Room['kind'], DepartmentId>> = {
 export type ModuleLink = 'helpdesk' | 'management' | 'finance' | 'deplacements' | 'recrutement' | 'pdg' | 'mco' | 'exploitation' | 'production';
 
 const LINKS: Partial<Record<Room['kind'], { module: ModuleLink; label: string }[]>> = {
-  helpdesk: [{ module: 'helpdesk', label: 'Cockpit Helpdesk consolidé' }],
+  helpdesk: [{ module: 'helpdesk', label: 'Cockpit Helpdesk consolidé' }, { module: 'management', label: 'Management : congés, CRA, objectifs' }],
   mco: [{ module: 'mco', label: 'Cockpit MCO / Support N2' }],
   exploitation: [{ module: 'exploitation', label: 'Cockpit Exploitation' }],
   finance: [{ module: 'finance', label: 'Budget & Rentabilité du Helpdesk' }],

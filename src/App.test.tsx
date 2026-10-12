@@ -163,4 +163,56 @@ describe('App (mode démo)', () => {
     fireEvent.click(cockpit.getByRole('tab', { name: 'Tickets' }));
     expect(cockpit.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
   });
+
+  it('cockpit Helpdesk consolidé : compteur cliquable, filtres partagés tableau / Kanban', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cockpit Helpdesk consolidé' }));
+    const hd = within(screen.getByRole('region', { name: 'Cockpit Helpdesk consolidé' }));
+    const tile = hd.getByRole('button', { name: /Tickets ouverts/ });
+    const count = Number(within(tile).getByText(/^\d+$/).textContent);
+    expect(count).toBeGreaterThan(0);
+    fireEvent.click(tile);
+    expect(hd.getByText(new RegExp(`Tickets ouverts · ${count} ticket`))).toBeTruthy();
+    fireEvent.change(hd.getByLabelText('Outil ITSM'), { target: { value: 'GLPI' } });
+    const rows = hd.getAllByRole('row').slice(1);
+    expect(rows.every((r) => /GLPI/.test(r.textContent ?? '') || /Aucun ticket/.test(r.textContent ?? ''))).toBe(true);
+    const tableCount = hd.getByRole('tab', { name: /Tableau/ }).textContent;
+    expect(hd.getByRole('tab', { name: /Kanban/ }).textContent?.replace('Kanban', '')).toBe(tableCount?.replace('Tableau', ''));
+    // Création simulée sur un client sans ITSM : refusée.
+    fireEvent.click(hd.getByRole('button', { name: /Nouveau ticket/ }));
+    const dlg = within(screen.getByRole('dialog'));
+    fireEvent.change(dlg.getByLabelText('Client'), { target: { value: 'primagaz' } });
+    expect(dlg.getByText('ITSM NON RENSEIGNÉ — CONFIGURATION REQUISE')).toBeTruthy();
+    expect((dlg.getByRole('button', { name: /Créer dans/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('management : refus de congé avec commentaire obligatoire et historique', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management : congés/ }));
+    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: /Congés/ }));
+    const before = mg.getAllByRole('button', { name: 'Refuser' }).length;
+    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
+    expect(screen.getByText(/commentaire est obligatoire/)).toBeTruthy();
+    fireEvent.change(mg.getAllByPlaceholderText(/Commentaire/)[0], { target: { value: 'Charge trop forte' } });
+    fireEvent.click(mg.getAllByRole('button', { name: 'Refuser' })[0]);
+    expect(mg.queryAllByRole('button', { name: 'Refuser' }).length).toBe(before - 1);
+    fireEvent.click(mg.getByRole('tab', { name: 'Historique' }));
+    expect(mg.getAllByText(/Charge trop forte/).length).toBeGreaterThan(0);
+  });
+
+  it('management : CRA — compteurs et validation d’un CRA soumis', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /Management : congés/ }));
+    const mg = within(screen.getByRole('region', { name: 'Cockpit Management' }));
+    fireEvent.click(mg.getByRole('tab', { name: 'CRA' }));
+    const validated = () => Number(within(mg.getByRole('button', { name: /^Validés/ })).getByText(/^\d+$/).textContent);
+    const v0 = validated();
+    fireEvent.click(mg.getByRole('button', { name: /^Soumis/ }));
+    fireEvent.click(mg.getAllByRole('row')[1]);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Valider' }));
+    expect(validated()).toBe(v0 + 1);
+  });
 });

@@ -108,8 +108,7 @@ function openCsmEscalations(s: ExternalState): Set<string> {
   );
 }
 
-function initialState(seed: number): { state: ExternalState; rngs: Record<string, Rng> } {
-  const now = Date.now();
+export function initialExternalState(seed: number, now = Date.now()): { state: ExternalState; rngs: Record<string, Rng> } {
   const techs = buildTechnicians(now);
   const rngs: Record<string, Rng> = { ...Object.fromEntries(externalClients.map((c, i) => [c.id, createRng(seed + i * 101)])), trips: createRng(seed + 7) };
   const sources = Object.fromEntries(externalClients.map((c) => [c.id, generateSource(c, techs, now, rngs[c.id])])) as ExternalState['sources'];
@@ -131,8 +130,8 @@ function initialState(seed: number): { state: ExternalState; rngs: Record<string
 }
 
 export function useExternal(running: boolean, seed = 2026) {
-  const init = useRef<ReturnType<typeof initialState>>();
-  if (!init.current) init.current = initialState(seed);
+  const init = useRef<ReturnType<typeof initialExternalState>>();
+  if (!init.current) init.current = initialExternalState(seed);
   const rngs = useRef(init.current.rngs);
   const [state, setState] = useState<ExternalState>(init.current.state);
   // Référence synchrone : les écritures doivent renvoyer leur résultat immédiatement.
@@ -146,7 +145,7 @@ export function useExternal(running: boolean, seed = 2026) {
     } catch {
       /* ignoré */
     }
-    const fresh = initialState(seed);
+    const fresh = initialExternalState(seed);
     rngs.current = fresh.rngs;
     stateRef.current = fresh.state;
     setState(fresh.state);

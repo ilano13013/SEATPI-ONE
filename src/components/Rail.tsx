@@ -1,12 +1,14 @@
-import { Briefcase, CalendarCheck, Headphones, Landmark, Map as MapIcon, PiggyBank, Plug, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { Server, Wrench, Briefcase, CalendarCheck, Headphones, Landmark, Map as MapIcon, PiggyBank, Plug, ShieldCheck, type LucideIcon } from 'lucide-react';
 
 /** Vues principales de l'application, accessibles sans passer par la 3D. */
-export type AppView = 'jumeau' | 'externes' | 'itsm' | 'helpdesk' | 'management' | 'finance' | 'pdg' | 'production';
+export type AppView = 'jumeau' | 'externes' | 'itsm' | 'helpdesk' | 'management' | 'mco' | 'exploitation' | 'finance' | 'pdg' | 'production';
 
 const MODULES: { view: AppView; label: string; Icon: LucideIcon }[] = [
   { view: 'helpdesk', label: 'Cockpit Helpdesk consolidé', Icon: Headphones },
   { view: 'externes', label: 'Clients externes', Icon: Briefcase },
   { view: 'management', label: 'Management : congés, CRA, objectifs', Icon: CalendarCheck },
+  { view: 'mco', label: 'Cockpit MCO / Support N2', Icon: Wrench },
+  { view: 'exploitation', label: 'Cockpit Exploitation', Icon: Server },
   { view: 'finance', label: 'Budget & Rentabilité Helpdesk', Icon: PiggyBank },
   { view: 'pdg', label: 'Cockpit PDG', Icon: Landmark },
   { view: 'itsm', label: 'Connecteurs ITSM', Icon: Plug },

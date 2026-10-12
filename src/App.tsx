@@ -26,9 +26,47 @@ import { clientById } from './external/config';
 import { csmTeam, exploitationTeam, serviceSummary } from './external/services';
 import { activeTripOf, isTripActive, type Trip } from './external/trips';
 import type { CsmTripView } from './scene/CsmTravel';
+import { useInternalTickets } from './helpdesk/useInternalTickets';
+import { internalTeams } from './helpdesk/teams';
+import { internalClientById } from './helpdesk/internalClients';
+import { consolidate, type HdTicket } from './helpdesk/consolidation';
+import { useManagement, DEFAULT_N1_OBJECTIVES } from './management/useManagement';
+import { declaredHours } from './management/rules';
+import { HelpdeskCockpit } from './components/helpdesk/HelpdeskCockpit';
+import { ManagementCockpit, type ObjectiveScope } from './components/management/ManagementCockpit';
+import { ExploitationCockpit, McoCockpit } from './components/management/ServiceCockpits';
+import type { ModuleLink } from './components/panels/DepartmentPanel';
+import type { ExternalState } from './external/useExternal';
+import { externalClients, externalTeams } from './external/config';
+import type { Technician } from './external/types';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['externes', 'itsm']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'itsm']);
+
+/** Lien d'un espace 3D vers un module applicatif. */
+const MODULE_VIEW: Record<ModuleLink, AppView> = {
+  helpdesk: 'helpdesk',
+  management: 'management',
+  mco: 'mco',
+  exploitation: 'exploitation',
+  finance: 'finance',
+  deplacements: 'finance',
+  recrutement: 'finance',
+  pdg: 'pdg',
+  production: 'production',
+};
+const AVAILABLE_LINKS = new Set((Object.keys(MODULE_VIEW) as ModuleLink[]).filter((m) => AVAILABLE_VIEWS.has(MODULE_VIEW[m])));
+
+/** Cockpit ouvert par un clic sur une personne de l'encadrement. */
+const PERSON_VIEW: Record<string, AppView> = {
+  'resp-helpdesk': 'helpdesk',
+  'mgr-hd-lc': 'management',
+  'mgr-hd-mtp': 'management',
+  'mgr-hd-par': 'management',
+  'mgr-mco': 'mco',
+  'mgr-exp': 'exploitation',
+  pdg: 'pdg',
+};
 
 export function App() {
   const sim = useDemoSimulation();
@@ -51,7 +89,50 @@ export function App() {
   const [appView, setAppView] = useState<AppView>('jumeau');
   const [extNav, setExtNav] = useState<ExternalNav>({ scope: 'global', tab: 'dashboard' });
   const ext = useExternal(sim.running);
-  const views = useMemo(() => deriveAll(ext.state), [ext.state]);
+  const internal = useInternalTickets(sim.running);
+  const mgmt = useManagement(state.agents, ext.state.techs);
+  const [persona, setPersona] = useState('resp-helpdesk');
+
+  // Les décisions du management (congés, CRA) se répercutent sur les techniciens N2 des sites clients.
+  const extState = useMemo<ExternalState>(() => {
+    // Dernier CRA hebdomadaire de chaque technicien (semaine échue la plus récente).
+    const week = mgmt.state.cra.reduce((w, c) => (c.weekStart > w ? c.weekStart : w), '');
+    const techs: Technician[] = ext.state.techs.map((t) => {
+      const sheet = mgmt.state.cra.find((c) => c.personId === t.id && c.weekStart === week);
+      return {
+        ...t,
+        leaveDates: mgmt.leaveDatesOf.get(t.id) ?? [],
+        pendingLeaveRequests: mgmt.state.leaves.filter((l) => l.personId === t.id && l.status === 'Soumise').length,
+        cra: sheet ? { status: sheet.status === 'Validé' ? 'Validé' : sheet.status === 'Soumis' ? 'Soumis' : 'À saisir', hours: declaredHours(sheet) } : t.cra,
+      };
+    });
+    return { ...ext.state, techs };
+  }, [ext.state, mgmt.state, mgmt.leaveDatesOf]);
+  const views = useMemo(() => deriveAll(extState), [extState]);
+
+  // Référentiel Helpdesk consolidé (interne N1 + clients N2).
+  const hdTickets = useMemo<HdTicket[]>(
+    () => consolidate(Object.values(internal.state.tickets).flat(), Object.values(ext.state.tickets).flat(), mgmt.state.collaborators, [...internal.state.techs, ...ext.state.techs]),
+    [internal.state.tickets, internal.state.techs, ext.state.tickets, ext.state.techs, mgmt.state.collaborators],
+  );
+  const hdTargets = useMemo(() => {
+    const t: Record<string, number> = {};
+    for (const team of internalTeams) t[team.id] = (mgmt.state.internalObjectives[team.clientId] ?? DEFAULT_N1_OBJECTIVES).ticketsToResolve;
+    for (const team of externalTeams) if (clientById(team.clientId).tool) t[team.id] = ext.state.objectives[team.clientId].ticketsToResolve;
+    return t;
+  }, [mgmt.state.internalObjectives, ext.state.objectives]);
+  const objectiveScopes = useMemo<ObjectiveScope[]>(
+    () => [
+      ...internalTeams.map((team) => ({
+        client: internalClientById(team.clientId)!,
+        tickets: internal.state.tickets[team.clientId] ?? [],
+        cfg: mgmt.state.internalObjectives[team.clientId] ?? DEFAULT_N1_OBJECTIVES,
+        internal: true,
+      })),
+      ...externalClients.filter((c) => c.tool).map((c) => ({ client: c, tickets: ext.state.tickets[c.id] ?? [], cfg: ext.state.objectives[c.id], internal: false })),
+    ],
+    [internal.state.tickets, ext.state.tickets, ext.state.objectives, mgmt.state.internalObjectives],
+  );
 
   const openExternal = useCallback((nav: ExternalNav) => {
     setExtNav(nav);
@@ -91,6 +172,20 @@ export function App() {
 
   // Un déplacement CSM ouvre la vue globale, qui détaille tous les déplacements.
   const openTrip = useCallback((_trip: Trip) => openExternal({ scope: 'global', tab: 'dashboard' }), [openExternal]);
+
+  /** Ouvre le cockpit d'une personne de l'encadrement (managers : persona du cockpit Management). */
+  const openPersonCockpit = useCallback((personId: string) => {
+    const v = PERSON_VIEW[personId];
+    if (!v || !AVAILABLE_VIEWS.has(v)) return;
+    if (v === 'management') setPersona(personId);
+    setAppView(v);
+  }, []);
+
+  const backToMap = useCallback(() => {
+    setAppView('jumeau');
+    setOverview(true);
+    setFocusKey((k) => k + 1);
+  }, []);
 
   /** Clic sur une personne de l'encadrement : ouvre l'espace où elle travaille. */
   const openPerson = useCallback(
@@ -158,7 +253,7 @@ export function App() {
       accueil: `${state.reception.length} évènements aujourd'hui`,
       stock: `${lowStock} alerte${lowStock > 1 ? 's' : ''} de stock`,
       parking: `${available} véhicule${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}`,
-      rh: `${state.hr.pendingLeaves} congés à valider`,
+      rh: `${mgmt.state.leaves.filter((l) => l.status === 'Soumise').length} congés à valider`,
       direction: `${Math.round((spent / allocated) * 100)} % du budget consommé`,
       exploitation: `${serviceSummary(Object.values(views), 'Exploitation', ext.state.now).open.length} escalade(s) en cours`,
       csm: `${serviceSummary(Object.values(views), 'CSM', ext.state.now).open.length} escalade(s) contractuelle(s)`,
@@ -186,7 +281,7 @@ export function App() {
         }),
       ),
     };
-  }, [state, metrics, views, ext.state.now]);
+  }, [state, metrics, views, ext.state.now, mgmt.state.leaves]);
 
   // Données 3D des sites clients : état opérationnel, équipes et techniciens.
   const sites = useMemo<Record<string, SiteSceneData>>(() => {
@@ -285,10 +380,10 @@ export function App() {
       remaining: null,
       loadRatio: null,
       craPending: null,
-      leavePending: state.hr.pendingLeaves,
+      leavePending: mgmt.state.leaves.filter((l) => l.status === 'Soumise' && state.agents.some((a) => a.id === l.personId)).length,
       finance: null,
     }),
-    [state, metrics],
+    [state, metrics, mgmt.state.leaves],
   );
 
   const poleBadges = useMemo(() => {
@@ -338,6 +433,38 @@ export function App() {
           />
         )}
         {appView === 'itsm' && <ItsmRegistry connectors={ext.state.connectors} />}
+        {appView === 'helpdesk' && (
+          <HelpdeskCockpit
+            tickets={hdTickets}
+            agents={state.agents}
+            techsN2={extState.techs}
+            techsN1={internal.state.techs}
+            leaveDates={mgmt.leaveDatesOf}
+            targets={hdTargets}
+            now={Math.max(ext.state.now, internal.state.now)}
+            role={role}
+            onMove={(t, to, esc) => (t.scope === 'interne' ? internal.moveTicket(t.id, to, role, esc) : ext.moveTicket(t.id, to, role, esc))}
+            onAssign={(t, id) => (t.scope === 'interne' ? internal.assignTicket(t.id, id, role) : ext.assignTicket(t.id, id, role))}
+            onCreate={(clientId, input) => (internalClientById(clientId) ? internal.createTicket(clientId, input, role) : ext.createTicket(clientId as ExternalClientId, input, role))}
+            onBack={backToMap}
+          />
+        )}
+        {appView === 'management' && (
+          <ManagementCockpit
+            store={mgmt}
+            role={role}
+            persona={persona}
+            onPersona={setPersona}
+            objectiveScopes={objectiveScopes}
+            onExternalObjective={(id, key, v) => ext.setObjective(id as ExternalClientId, key, v)}
+            now={ext.state.now}
+            onBack={backToMap}
+          />
+        )}
+        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} />}
+        {appView === 'exploitation' && (
+          <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />
+        )}
         {appView === 'jumeau' && <MetricsBar metrics={metrics} clientsCount={state.clients.length} />}
         <Workspace
           hidden={appView !== 'jumeau'}
@@ -379,6 +506,9 @@ export function App() {
           views={Object.values(views)}
           trips={ext.state.trips}
           focusPersonId={focusPersonId}
+          onOpenPerson={openPersonCockpit}
+          availableModules={AVAILABLE_LINKS}
+          onOpenModule={(m) => setAppView(MODULE_VIEW[m])}
           now={ext.state.now}
           onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })}
           onOpenClient={(clientId) => openExternal({ scope: clientId, tab: 'dashboard' })}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { Service, Technician, Ticket, TicketStatus } from '../../external/types';
 import { adapters, ALL_STATUSES, checkTransition } from '../../external/itsm/adapters';
-import { clientById, contractById, externalTeams } from '../../external/config';
+import { clientById, contractById } from '../../external/config';
+import { internalClientById } from '../../helpdesk/internalClients';
+import { ticketTeams } from '../../helpdesk/teams';
 import { formatMinutesOuvrees } from '../../external/metrics';
 import { can, type Role } from '../../auth/roles';
 import type { ActionResult } from '../../external/useExternal';
@@ -23,8 +25,8 @@ export function TicketDetail({ ticket: t, techs, role, onClose, onMove, onAssign
   const [result, setResult] = useState<ActionResult | null>(null);
   const [escalateTo, setEscalateTo] = useState<Service>('Exploitation');
   const adapter = adapters[t.source.tool];
-  const client = clientById(t.clientId);
-  const team = externalTeams.find((x) => x.id === t.teamId);
+  const client = internalClientById(t.clientId) ?? clientById(t.clientId);
+  const team = ticketTeams.find((x) => x.id === t.teamId);
   const individual = can(role, 'externes', 'individual');
   const editable = can(role, 'externes', 'edit');
   const techName = (login: string | null | undefined) => {

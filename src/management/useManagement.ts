@@ -4,7 +4,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Agent } from '../types';
 import type { Technician } from '../external/types';
-import { addDays, dateKey, startOfWeek } from '../external/calendar';
+import { addDays, dateKey, isBusinessDay, startOfWeek } from '../external/calendar';
 import { createRng, type Rng } from '../services/random';
 import { can, type Role } from '../auth/roles';
 import { buildCollaborators, type Collaborator } from '../org/collaborators';
@@ -25,6 +25,7 @@ import {
   type LeaveRequest,
   type LeaveRules,
   type LeaveType,
+  WORK_CALENDAR,
 } from './rules';
 
 export interface ManagementState {
@@ -107,7 +108,8 @@ function seedLeaves(collabs: Collaborator[], techs: Technician[], now: number, r
 
 function seedCra(collabs: Collaborator[], leaves: LeaveRequest[], now: number, rng: Rng): CraSheet[] {
   const sheets: CraSheet[] = [];
-  const weeks = [dateKey(addDays(startOfWeek(now), -7)), weekKey(now)];
+  // CRA hebdomadaires remis en fin de semaine : les deux dernières semaines échues.
+  const weeks = [dateKey(addDays(startOfWeek(now), -14)), dateKey(addDays(startOfWeek(now), -7))];
   const people = collabs.filter((c) => c.population === 'Agent N1' || c.population === 'Technicien N2');
   for (const [wi, week] of weeks.entries()) {
     for (const c of people) {
@@ -115,17 +117,18 @@ function seedCra(collabs: Collaborator[], leaves: LeaveRequest[], now: number, r
       const [y, m, d] = week.split('-').map(Number);
       const start = new Date(y, m - 1, d).getTime();
       const off = new Set(leaves.filter((l) => l.personId === c.id && l.status === 'Validée').flatMap((l) => leaveDays(l.start, l.end)));
-      const daysElapsed = wi === 0 ? 5 : Math.min(5, Math.max(0, Math.floor((now - start) / 86_400_000)));
-      const perDay = c.contractHoursWeek / 5;
-      const hoursFor = (i: number) => (i < daysElapsed && !off.has(dateKey(addDays(start, i))) ? perDay : 0);
-      const main = Array.from({ length: 5 }, (_, i) => hoursFor(i));
       const r = rng();
-      // Un écart volontaire (heures manquantes) sur quelques feuilles.
-      if (r < 0.12) main[1] = Math.max(0, main[1] - 2);
+      const status: CraSheet['status'] = wi === 0 ? (r < 0.8 ? 'Validé' : r < 0.9 ? 'Soumis' : 'À corriger') : r < 0.38 ? 'Soumis' : r < 0.58 ? 'Validé' : r < 0.72 ? 'Brouillon' : r < 0.88 ? 'À saisir' : 'À corriger';
+      // Un brouillon n'est saisi que sur les premiers jours.
+      const daysFilled = status === 'Brouillon' ? 3 : 5;
+      const perDay = c.contractHoursWeek / 5;
+      const hoursFor = (i: number) => (i < daysFilled && isBusinessDay(addDays(start, i), WORK_CALENDAR) && !off.has(dateKey(addDays(start, i))) ? perDay : 0);
+      const main = Array.from({ length: 5 }, (_, i) => hoursFor(i));
+      // Écart volontaire (heures manquantes) sur les CRA à corriger et quelques autres.
+      if (status === 'À corriger' || rng() < 0.08) main[1] = Math.max(0, main[1] - 2);
       const lines: CraLine[] = acts.length > 3 && rng() < 0.35
         ? [{ activity: acts[0], hours: main.map((h) => Math.max(0, h - 1)) }, { activity: acts[1] === 'Formation' ? 'Formation' : acts[1], hours: main.map((h) => (h ? 1 : 0)) }]
         : [{ activity: acts[0], hours: main }];
-      const status: CraSheet['status'] = wi === 0 ? (r < 0.72 ? 'Validé' : r < 0.86 ? 'Soumis' : r < 0.93 ? 'À corriger' : 'À saisir') : r < 0.45 ? 'Brouillon' : r < 0.75 ? 'À saisir' : 'Soumis';
       const at = start + 4 * 86_400_000 + 17 * 3_600_000;
       sheets.push({
         id: `CRA-${week}-${c.id}`,
