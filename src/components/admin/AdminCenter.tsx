@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ArrowLeft, Plug, Plus, ShieldCheck } from 'lucide-react';
 import type { AdminStore, ClientStatus } from '../../admin/useAdmin';
 import { AUTH_TYPES, CONFIG_STATUSES, configStatus, DEMO_TEST_MESSAGE, ITSM_TOOLS, missingFields, readinessLinksOf, toolOfConnector, type ConnectorKind } from '../../admin/connections';
-import { clientRecord, clientRegistry, itsmOf, POLE_GROUP_LABEL, type MappedTool, type PoleGroup } from '../../config/itsm';
+import { clientBudget, clientRecord, clientRegistry, itsmOf, POLE_GROUP_LABEL, type MappedTool, type PoleGroup } from '../../config/itsm';
 import { ACTIONS, actionLabels, can, permissionModules, roleLabels, type Action, type PermissionRule, type Role } from '../../auth/roles';
 import type { AuditEntry } from '../../audit/audit';
 import type { FinanceStore } from '../../finance/useFinance';
@@ -430,8 +430,9 @@ function Crm({ admin, fin, role }: Props) {
               <th>Pôle (N1)</th>
               <th>N2 chez le client</th>
               <th>Outil ITSM</th>
+              <th>Budget (revenus)</th>
               <th>Contrat</th>
-              <th>Forfait mensuel N2</th>
+              <th>Forfait mensuel (contrat N2)</th>
               <th>Secteur</th>
               <th>Référent</th>
               <th>Statut</th>
@@ -472,6 +473,18 @@ function Crm({ admin, fin, role }: Props) {
                       sensitive
                       options={[{ value: '', label: 'À confirmer (non renseigné)' }, ...TOOLS.map((t) => ({ value: t, label: t }))]}
                       onSave={(v) => admin.setClientOverride(c.id, { tool: (v || null) as MappedTool | null })}
+                    />
+                  </td>
+                  <td>
+                    <InlineEdit
+                      value={clientBudget(c.id)}
+                      field={`Budget de rattachement de ${c.name}`}
+                      module="Clients (CRM)"
+                      canEdit={editable && can(role, 'finance', 'edit')}
+                      lockedReason="Modification réservée aux profils autorisés (référentiel clients et finances)"
+                      sensitive
+                      options={[{ value: 'helpdesk', label: 'Helpdesk N1' }, { value: 'mco', label: 'MCO N2' }]}
+                      onSave={(v) => admin.setClientOverride(c.id, { budget: v as 'helpdesk' | 'mco' })}
                     />
                   </td>
                   <td>

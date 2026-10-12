@@ -83,7 +83,12 @@ export interface ClientOverride {
   name?: string;
   pole?: PoleGroup | null;
   tool?: MappedTool | null;
+  /** Budget qui porte les revenus du client. */
+  budget?: ClientBudget;
 }
+
+/** Budget de rattachement des revenus d'un client : pour le moment, tous les clients relèvent du Helpdesk N1. */
+export type ClientBudget = 'helpdesk' | 'mco';
 
 let overrides: Record<string, ClientOverride> = {};
 
@@ -100,6 +105,9 @@ export function itsmOf(idOrName: string): MappedTool | null {
   }
   return null;
 }
+
+/** Budget qui porte les revenus du client (Helpdesk N1 par défaut, modifiable dans le CRM). */
+export const clientBudget = (id: string): ClientBudget => overrides[id]?.budget ?? 'helpdesk';
 
 export const clientRecord = (id: string): ClientRecord | undefined => {
   const rec = clientRegistry.find((c) => c.id === id);

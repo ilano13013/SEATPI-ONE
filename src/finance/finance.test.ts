@@ -1,3 +1,4 @@
+import { setClientOverrides } from '../config/itsm';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../data/demoData';
 import { buildTechnicians } from '../external/config';
@@ -143,8 +144,21 @@ describe('budgets distincts Helpdesk N1 / MCO N2', () => {
     expect(hd.adjustments.length + mco.adjustments.length).toBe(f.adjustments.length);
     expect(mco.costs.every((c) => c.population === 'Technicien N2' || c.personId === 'mgr-mco')).toBe(true);
     expect(hd.costs.some((c) => c.population === 'Technicien N2')).toBe(false);
-    expect(new Set(mco.prestations.map((p) => p.contractId))).toEqual(new Set(['CTR-INV-01', 'CTR-PRI-01', 'CTR-MNX-01']));
-    expect(hd.prestations.every((p) => p.contractId.startsWith('CTR-INT-'))).toBe(true);
+    // Pour le moment, tous les clients (y compris les contrats N2) relèvent du budget Helpdesk N1.
+    expect(mco.prestations).toHaveLength(0);
+    expect(hd.prestations.length).toBe(f.prestations.length);
+    expect(hd.prestations.some((p) => p.contractId === 'CTR-PRI-01')).toBe(true);
     expect(hd.costs.some((c) => c.personId === 'resp-helpdesk')).toBe(true);
+  });
+
+  it('le rattachement d’un client au budget MCO déplace ses revenus (modifiable sans code)', () => {
+    setClientOverrides({ primagaz: { budget: 'mco' } });
+    try {
+      const mco = forEntity(f, 'mco');
+      expect(new Set(mco.prestations.map((p) => p.clientId))).toEqual(new Set(['primagaz']));
+      expect(forEntity(f, 'helpdesk').prestations.some((p) => p.clientId === 'primagaz')).toBe(false);
+    } finally {
+      setClientOverrides({});
+    }
   });
 });

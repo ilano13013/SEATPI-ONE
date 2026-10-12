@@ -7,7 +7,7 @@
 //   ce n'est PAS le résultat comptable de l'entreprise ;
 // - enveloppes déplacements et recrutement : suivies à part, hors rentabilité (sauf règle de recrutement confirmée).
 import type { Collaborator, Population } from '../org/collaborators';
-import { POLE_CLIENTS } from '../config/itsm';
+import { POLE_CLIENTS, clientBudget } from '../config/itsm';
 
 export type Month = string; // AAAA-MM
 
@@ -24,15 +24,17 @@ const pct = (num: number, den: number) => (den ? Math.round((num / den) * 1000) 
 
 /**
  * Deux entités budgétaires séparées, jamais additionnées :
- * - Helpdesk N1 : agents des plateaux, encadrement Helpdesk, prestations N1 (contrats CTR-INT-…) ;
- * - MCO N2 : techniciens chez les clients, manager MCO, contrats N2 (INVIVO, PRIMAGAZ, MONEXT).
+ * - Helpdesk N1 : agents des plateaux, encadrement Helpdesk et, pour le moment, les revenus de TOUS les clients ;
+ * - MCO N2 : techniciens chez les clients et manager MCO (coûts) ; aucun client rattaché pour le moment.
+ * Le rattachement des revenus d'un client se règle dans Administration → Clients (CRM).
  */
 export type Entity = 'helpdesk' | 'mco';
 export const ENTITIES: Entity[] = ['helpdesk', 'mco'];
 export const ENTITY_LABEL: Record<Entity, string> = { helpdesk: 'Helpdesk N1', mco: 'MCO N2' };
 
 export const entityOfCost = (e: Pick<CostEntry, 'population' | 'personId'>): Entity => (e.population === 'Technicien N2' || e.personId === 'mgr-mco' ? 'mco' : 'helpdesk');
-export const entityOfPrestation = (p: Pick<Prestation, 'contractId'>): Entity => (p.contractId.startsWith('CTR-INT-') ? 'helpdesk' : 'mco');
+/** Les revenus suivent le budget de rattachement du client (pour le moment : tous au Helpdesk N1). */
+export const entityOfPrestation = (p: Pick<Prestation, 'clientId'>): Entity => clientBudget(p.clientId);
 
 export interface EntityData {
   costs: CostEntry[];

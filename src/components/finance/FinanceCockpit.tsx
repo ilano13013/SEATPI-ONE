@@ -101,14 +101,14 @@ export function FinanceCockpit({ store: fullStore, role, tab: rawTab, onTab, ent
       <div className="xc-scopes" role="radiogroup" aria-label="Budget">
         {ENTITIES.map((e) => (
           <button key={e} role="radio" aria-checked={entity === e} className={entity === e ? 'active' : ''} onClick={() => onEntity(e)}>
-            Budget {ENTITY_LABEL[e]} <small>{e === 'helpdesk' ? 'plateaux, encadrement Helpdesk, prestations N1' : 'techniciens chez les clients, manager MCO, contrats N2'}</small>
+            Budget {ENTITY_LABEL[e]} <small>{e === 'helpdesk' ? 'plateaux, encadrement Helpdesk, revenus des clients' : 'techniciens chez les clients, manager MCO'}</small>
           </button>
         ))}
       </div>
       <p className="fin-warning">
         {isHelpdesk
-          ? 'Budget du Helpdesk N1 : agents des plateaux (Pôle Multi, Pôle Dédié), encadrement Helpdesk et prestations N1. Le MCO N2 a son propre budget, jamais additionné à celui-ci.'
-          : 'Budget du MCO N2 : techniciens affectés chez INVIVO, PRIMAGAZ et MONEXT, manager MCO et contrats N2. Il est distinct du budget Helpdesk N1 et ne lui est jamais additionné.'}{' '}
+          ? 'Budget du Helpdesk N1 : agents des plateaux (Pôle Multi, Pôle Dédié), encadrement Helpdesk et, pour le moment, les revenus de tous les clients (y compris les contrats N2 INVIVO, PRIMAGAZ, MONEXT). Le MCO N2 a son propre budget, jamais additionné à celui-ci.'
+          : 'Budget du MCO N2 : coûts des techniciens affectés chez INVIVO, PRIMAGAZ et MONEXT et du manager MCO. Pour le moment, aucun client n’est rattaché à ce budget : tous les revenus clients sont portés par le Helpdesk N1 (rattachement modifiable dans Administration → Clients). Budget distinct, jamais additionné au Helpdesk N1.'}{' '}
         Résultat analytique (revenus des prestations − coûts opérationnels), distinct du résultat comptable de l’entreprise.
         {isHelpdesk ? ' Les enveloppes déplacements et recrutement du Helpdesk sont suivies séparément et ne sont pas additionnées au résultat.' : ' Aucune enveloppe déplacements ni recrutement n’est rattachée au MCO dans la démonstration.'}
       </p>

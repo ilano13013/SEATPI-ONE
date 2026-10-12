@@ -61,7 +61,7 @@ export const TRIP_COST: Record<string, number> = { Train: 240, 'Véhicule de ser
 export const tripCost = (t: Trip) => TRIP_COST[t.transport] ?? 120;
 
 /** Prix fictif de référence d'un ETP N1 facturé (démonstration). */
-const N1_REFERENCE = 3900;
+const N1_REFERENCE = 3300;
 
 /** Mode de facturation de démonstration des clients internes (à remplacer par les contrats réels). */
 const INTERNAL_BILLING: Record<string, PrestationType> = { thelem: 'ETP', ird: 'Forfait', ortec: 'Forfait', sodiaal: 'Forfait', invivo: 'Acte', dmb: 'Acte', transgourmet: 'Acte', lbrfr: 'Horaire', eurapharma: 'Forfait', ange: 'ETP', hstv: 'Acte', snr: 'Acte', nocibe: 'Horaire', teract: 'Acte', g2s: 'Forfait' };

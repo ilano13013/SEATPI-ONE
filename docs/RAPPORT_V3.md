@@ -32,7 +32,11 @@ L'application reste en **mode démonstration** : données fictives générées d
 
 ## 1 ter. Budgets séparés Helpdesk N1 / MCO N2
 
-Le module Budget & Rentabilité porte deux entités budgétaires distinctes : **Helpdesk N1** (agents des plateaux, responsable et managers Helpdesk, prestations des contrats N1 `CTR-INT-…`, enveloppes déplacements et recrutement) et **MCO N2** (techniciens chez les clients, manager MCO, contrats N2 INVIVO, PRIMAGAZ, MONEXT). Primes, heures supplémentaires et remplacements sont rattachés à une entité. Le cockpit PDG affiche les deux résultats côte à côte, sans les additionner (`src/finance/budget.ts` : `forEntity`, `entityOfCost`, `entityOfPrestation`).
+Le module Budget & Rentabilité porte deux entités budgétaires distinctes, jamais additionnées :
+- **Helpdesk N1** : agents des plateaux, responsable et managers Helpdesk, enveloppes déplacements et recrutement et, **pour le moment, les revenus de tous les clients** (contrats N1 `CTR-INT-…` et contrats N2 INVIVO, PRIMAGAZ, MONEXT) ;
+- **MCO N2** : coûts des techniciens chez les clients et du manager MCO ; aucun client rattaché pour le moment.
+
+Le budget de rattachement des revenus de chaque client se modifie dans Administration → Clients (CRM), colonne « Budget (revenus) » (modification sensible, historisée). Primes, heures supplémentaires et remplacements sont rattachés à une entité. Le cockpit PDG affiche les deux budgets côte à côte, sans les additionner (`src/finance/budget.ts` : `forEntity`, `entityOfCost`, `entityOfPrestation` ; `clientBudget` dans `src/config/itsm.ts`).
 
 ## 2. Propagation entre modules (démonstration)
 

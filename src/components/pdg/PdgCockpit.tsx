@@ -91,7 +91,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
     ...(conflicts.length ? [{ level: 'warn' as const, label: `${conflicts.length} demande(s) de congé en attente avec effectif réduit (checklist congés)`, view: 'management' as AppView }] : []),
     ...(cra.missing + cra.toFix ? [{ level: 'warn' as const, label: `${cra.missing} CRA manquant(s) et ${cra.toFix} à corriger (dernière semaine échue)`, view: 'management' as AppView }] : []),
     ...(toValidate.length ? [{ level: 'warn' as const, label: `${toValidate.length} prestation(s) à valider (${eur(toValidate.reduce((n, p) => n + prestationAmount(p), 0))})`, view: 'finance' as AppView, sub: 'revenus' }] : []),
-    ...ENTITIES.filter((e) => byEntity[e].closed.result < 0).map((e) => ({ level: 'bad' as const, label: `Résultat analytique ${ENTITY_LABEL[e]} négatif sur les mois clos`, view: 'finance' as AppView, sub: `rentabilite@${e}` })),
+    ...ENTITIES.filter((e) => byEntity[e].closed.revenue > 0 && byEntity[e].closed.result < 0).map((e) => ({ level: 'bad' as const, label: `Résultat analytique ${ENTITY_LABEL[e]} négatif sur les mois clos`, view: 'finance' as AppView, sub: `rentabilite@${e}` })),
   ];
 
   const byPop = (site: string | null) => mgmt.collaborators.filter((c) => c.site === site);
@@ -125,6 +125,7 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
         return (
           <div key={e}>
             <h3>Budget {ENTITY_LABEL[e]} — entité financière distincte</h3>
+            {t.landing.revenue === 0 && <p className="hint">Aucun client rattaché à ce budget pour le moment : il ne porte que des coûts (revenus clients portés par le Helpdesk N1).</p>}
             <div className="xc-kpis">
               <button className="xc-kpi" onClick={() => onOpen('finance', `rentabilite@${e}`)}>
                 <small>Résultat analytique (mois clos)</small>

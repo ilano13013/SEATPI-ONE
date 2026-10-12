@@ -153,7 +153,7 @@ export function useAdmin() {
     return { ok: true, message: 'Fiche client mise à jour.' };
   }, []);
 
-  const setClientOverride = useCallback((id: string, patch: { name?: string; pole?: PoleGroup | null; tool?: MappedTool | null }): AdminResult => {
+  const setClientOverride = useCallback((id: string, patch: { name?: string; pole?: PoleGroup | null; tool?: MappedTool | null; budget?: 'helpdesk' | 'mco' }): AdminResult => {
     if (patch.name !== undefined && !patch.name.trim()) return { ok: false, message: 'Le nom ne peut pas être vide.' };
     const s = ref.current;
     apply({ ...s, overrides: { ...s.overrides, [id]: { ...s.overrides[id], ...patch } } });
