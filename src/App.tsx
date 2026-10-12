@@ -44,6 +44,8 @@ import { useFinance } from './finance/useFinance';
 import { FinanceCockpit, type FinanceTab } from './components/finance/FinanceCockpit';
 import { PdgCockpit } from './components/pdg/PdgCockpit';
 import { useMoyens } from './moyens/useMoyens';
+import { demoExtraction } from './telephony/qlik';
+import { TelephonyCockpit } from './components/telephony/TelephonyCockpit';
 import { MoyensCockpit } from './components/moyens/MoyensCockpit';
 import { INITIAL_READINESS, ProductionCockpit } from './components/production/ProductionCockpit';
 import type { ReadinessItem } from './production/readiness';
@@ -55,7 +57,7 @@ import { DEFAULT_RULES, roleLabels, setPermissionRules, type PermissionRule } fr
 import { Toast } from './components/external/common';
 
 /** Modules disponibles dans cette version (les autres arrivent par phases). */
-const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'finance', 'pdg', 'itsm', 'production', 'admin']);
+const AVAILABLE_VIEWS = new Set<AppView>(['helpdesk', 'externes', 'management', 'mco', 'exploitation', 'moyens', 'telephonie', 'finance', 'pdg', 'itsm', 'production', 'admin']);
 
 /** Lien d'un espace 3D vers un module applicatif. */
 const MODULE_VIEW: Record<ModuleLink, AppView> = {
@@ -116,6 +118,8 @@ export function App() {
   const fin = useFinance(mgmt.state.collaborators, state.agents, ext.state.trips);
   const [finTab, setFinTab] = useState<FinanceTab>('global');
   const moyens = useMoyens(fin.state.travel);
+  // Extraction fictive de la feuille QlikView « Qlik SLA décrocher » (aucune connexion réelle).
+  const [qlikRows] = useState(() => demoExtraction(Date.now()));
   const { syncTrips } = fin;
   // Chaque déplacement CSM planifié est soumis à l'enveloppe déplacements (blocage si plafond atteint).
   useEffect(() => syncTrips(ext.state.trips), [ext.state.trips, syncTrips]);
@@ -490,6 +494,7 @@ export function App() {
         {appView === 'itsm' && <ItsmRegistry connectors={ext.state.connectors} />}
         {appView === 'helpdesk' && (
           <HelpdeskCockpit
+            backlogHours={admin.state.dashboard.backlogHours}
             checklists={
               can(role, 'management') ? (
                 <ChecklistSummary
@@ -544,6 +549,19 @@ export function App() {
             }}
           />
         )}
+        {appView === 'telephonie' && (
+          <TelephonyCockpit
+            rows={qlikRows}
+            now={Date.now()}
+            objectives={admin.state.sla.answerObjective}
+            demoObjectives={admin.state.sla.demoObjectives}
+            onOpenSettings={() => {
+              setAdminTab('parametres');
+              setAppView('admin');
+            }}
+            onBack={backToMap}
+          />
+        )}
         {appView === 'pdg' && (
           <PdgCockpit
             sim={state}
@@ -579,7 +597,7 @@ export function App() {
           />
         )}
         {appView === 'production' && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}
-        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} />}
+        {appView === 'mco' && <McoCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpen={openExternal} objectives={{ takeCharge: admin.state.sla.n2TakeCharge, resolution: admin.state.sla.n2Resolution }} />}
         {appView === 'exploitation' && (
           <ExploitationCockpit views={Object.values(views)} role={role} now={ext.state.now} onBack={backToMap} onOpenTicket={(clientId, ticketId) => openExternal({ scope: clientId, tab: 'escalations', ticketId })} />
         )}

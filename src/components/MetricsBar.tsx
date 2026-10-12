@@ -16,9 +16,9 @@ export function MetricsBar({ metrics, clientsCount }: { metrics: Metrics; client
         <em>{clientsCount} clients suivis</em>
       </div>
       <div>
-        <small>SLA global</small>
+        <small>SLA décroché du jour (simulation)</small>
         <strong className={`tone-${tone}`}>{metrics.slaGlobal.toLocaleString('fr-FR')} %</strong>
-        <em>Objectif pondéré : {metrics.slaTarget.toLocaleString('fr-FR')} %</em>
+        <em>Pondéré par les volumes · repère de démonstration {metrics.slaTarget.toLocaleString("fr-FR")} %</em>
       </div>
       <div>
         <small>Agents en pause / repas</small>

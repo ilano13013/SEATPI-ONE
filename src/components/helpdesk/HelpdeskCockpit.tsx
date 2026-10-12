@@ -36,6 +36,8 @@ interface Props {
   onBack: () => void;
   /** Synthèse des checklists CRA / congés (cockpit de la responsable Helpdesk). */
   checklists?: ReactNode;
+  /** Seuil du backlog (heures), paramétrable dans l'administration. */
+  backlogHours?: number;
 }
 
 /** Clients du périmètre : clients traités en N1 sur les plateaux + sites clients N2. */
@@ -66,7 +68,7 @@ export function HelpdeskCockpit(props: Props) {
 
   const filtered = useMemo(() => applyFilters(tickets, filters, now), [tickets, filters, now]);
   const shown = useMemo(() => (drill ? filtered.filter((t) => drill.ids.includes(t.id)) : filtered), [filtered, drill]);
-  const k = useMemo(() => counters(filtered, now), [filtered, now]);
+  const k = useMemo(() => counters(filtered, now, props.backlogHours), [filtered, now, props.backlogHours]);
   const busy = useMemo(() => new Set(tickets.filter((t) => t.scope === 'externe' && t.status === 'En cours' && t.assigneeId).map((t) => t.assigneeId!)), [tickets]);
   const staff = useMemo(() => staffing(agents, techsN2, leaveDates, today(now), busy), [agents, techsN2, leaveDates, now, busy]);
   const objectives = useMemo(() => teamObjectives(tickets, targets, now), [tickets, targets, now]);

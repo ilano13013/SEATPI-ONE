@@ -5,7 +5,9 @@ import type { ClientView } from '../../external/derive';
 import type { ExternalClientId } from '../../external/types';
 import type { ExternalNav } from '../external/common';
 import { HealthDot, LoadBar, fmtDateTime } from '../external/common';
-import { isOpen, periods, slaRate } from '../../external/metrics';
+import { formatMinutesOuvrees, isOpen, periods, slaRate } from '../../external/metrics';
+import { n2SlaSplit } from '../../external/n2sla';
+import { useState } from 'react';
 import { isOnLeave } from '../../external/workload';
 import { exploitationTeam, serviceSummary, supervisionChecks } from '../../external/services';
 import { ExploitationPanel } from '../panels/ServicesPanels';
@@ -19,8 +21,10 @@ interface Common {
   onBack: () => void;
 }
 
-export function McoCockpit({ views, now, onBack, onOpen }: Common & { onOpen: (nav: ExternalNav) => void }) {
+export function McoCockpit({ views, now, onBack, onOpen, objectives }: Common & { onOpen: (nav: ExternalNav) => void; objectives: { takeCharge: Record<string, number | null>; resolution: Record<string, number | null> } }) {
   const week = periods(now).week;
+  const [periodKey, setPeriodKey] = useState<'week' | 'prevWeek'>('week');
+  const period = periods(now)[periodKey];
   return (
     <section className="xc" aria-label="Cockpit MCO N2">
       <div className="xc-head">
@@ -41,7 +45,7 @@ export function McoCockpit({ views, now, onBack, onOpen }: Common & { onOpen: (n
               <th>Techniciens présents</th>
               <th>Tickets ouverts</th>
               <th>Hors SLA</th>
-              <th>SLA semaine</th>
+              <th>SLA résolution (semaine)</th>
               <th>Escalades Exploitation / CSM en cours</th>
               <th>Charge</th>
             </tr>
@@ -83,7 +87,107 @@ export function McoCockpit({ views, now, onBack, onOpen }: Common & { onOpen: (n
           </tbody>
         </table>
       </div>
-      <p className="hint">Cliquez sur un compteur pour ouvrir la liste des tickets du client. Pour PRIMAGAZ, aucun indicateur n’est calculé tant que l’outil ITSM n’est pas renseigné.</p>
+      <p className="hint">Cliquez sur un compteur pour ouvrir la liste des tickets du client.</p>
+
+      <h3>SLA des tickets N2 — deux indicateurs distincts</h3>
+      <p className="hint">
+        Calculés à partir des délais contractuels de chaque client (matrice par priorité, temps ouvré) et des horodatages de l’ITSM. Objectifs contractuels saisis dans Administration → Paramètres SLA (non renseignés = aucun écart calculé). Sans rapport avec le SLA décroché téléphonique.
+      </p>
+      <div className="xc-periodbar">
+        Période :
+        <button className={periodKey === 'week' ? 'active' : ''} onClick={() => setPeriodKey('week')}>
+          Semaine en cours
+        </button>
+        <button className={periodKey === 'prevWeek' ? 'active' : ''} onClick={() => setPeriodKey('prevWeek')}>
+          Semaine précédente
+        </button>
+      </div>
+      {(['takeCharge', 'resolution'] as const).map((kind) => (
+        <div key={kind} className="xc-tablewrap n2-sla" aria-label={kind === 'takeCharge' ? 'SLA de prise en charge' : 'SLA de résolution'} role="region">
+          <table className="xc-table compact">
+            <caption>{kind === 'takeCharge' ? 'SLA de prise en charge' : 'SLA de résolution'}</caption>
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Objectif contractuel</th>
+                <th>Résultat</th>
+                <th>Écart</th>
+                <th>Prochaine échéance</th>
+                <th>Conformes</th>
+                <th>Hors SLA</th>
+                <th>Risques de dépassement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {views.map((v) => {
+                if (!v.client.tool)
+                  return (
+                    <tr key={v.client.id}>
+                      <td>{v.client.name}</td>
+                      <td colSpan={7}>
+                        <em className="nr">{ITSM_NOT_SET}</em>
+                      </td>
+                    </tr>
+                  );
+                const part = n2SlaSplit(v.tickets, period, now)[kind];
+                const obj = (kind === 'takeCharge' ? objectives.takeCharge : objectives.resolution)[v.client.id] ?? null;
+                const gap = obj !== null && part.rate !== null ? Math.round((part.rate - obj) * 10) / 10 : null;
+                const go = (label: string, ids: string[]) => onOpen({ scope: v.client.id as ExternalClientId, tab: 'tickets', filter: { label: `${kind === 'takeCharge' ? 'Prise en charge' : 'Résolution'} — ${label}`, ids } });
+                return (
+                  <tr key={v.client.id}>
+                    <td>{v.client.name}</td>
+                    <td>{obj === null ? <em className="nr">Non renseigné</em> : `${obj} %`}</td>
+                    <td>{part.rate === null ? '—' : `${part.rate.toLocaleString('fr-FR')} %`}</td>
+                    <td className={gap !== null && gap < 0 ? 'xc-warn' : ''}>{gap === null ? '—' : `${gap > 0 ? '+' : ''}${gap.toLocaleString('fr-FR')} pt`}</td>
+                    <td>{part.nextDue ? fmtDateTime(part.nextDue) : '—'}</td>
+                    <td>
+                      <button className="link" onClick={() => go('conformes', part.compliant)}>
+                        {part.compliant.length}
+                      </button>
+                    </td>
+                    <td>
+                      <button className="link" onClick={() => go('hors SLA', part.breached)}>
+                        {part.breached.length}
+                      </button>
+                    </td>
+                    <td>
+                      <button className="link" onClick={() => go('risques de dépassement', part.atRisk)}>
+                        {part.atRisk.length}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      <h4>Délais contractuels par priorité (démonstration, à confirmer par contrat)</h4>
+      <table className="xc-table compact">
+        <thead>
+          <tr>
+            <th>Client</th>
+            {(['P1', 'P2', 'P3', 'P4'] as const).map((p) => (
+              <th key={p}>{p} : prise en charge / résolution</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {views.map((v) => (
+            <tr key={v.client.id}>
+              <td>
+                {v.client.name} <small className="hint">({v.client.calendar.label})</small>
+              </td>
+              {(['P1', 'P2', 'P3', 'P4'] as const).map((p) => (
+                <td key={p}>
+                  {formatMinutesOuvrees(v.client.sla[p].takeChargeMin)} / {formatMinutesOuvrees(v.client.sla[p].resolutionMin)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
     </section>
   );
 }

@@ -349,4 +349,28 @@ describe('App (mode démo)', () => {
     fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'teamLeader' } });
     expect(within(screen.getByRole('region', { name: 'Administration' })).queryByRole('button', { name: 'Modifier Pôle de G2S' })).toBeNull();
   });
+
+  it('SLA décroché (QlikView) : global par volumes, objectifs non renseignés, puis objectifs de démonstration et écarts', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'admin' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /SLA décroché/ }));
+    const tel = within(screen.getByRole('region', { name: 'SLA décroché' }));
+    expect(within(tel.getByLabelText('SLA décroché global')).getByText(/%$/)).toBeTruthy();
+    expect(tel.getAllByText('Non renseigné').length).toBeGreaterThan(0);
+    expect(tel.getAllByText('Calcul indisponible').length).toBeGreaterThan(0); // Pôle Multi (file partagée)
+    fireEvent.click(tel.getAllByRole('button', { name: 'Non renseigné' })[0]);
+    const adm = within(screen.getByRole('region', { name: 'Administration' }));
+    fireEvent.click(adm.getByRole('button', { name: /Charger des objectifs de démonstration/ }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /SLA décroché/ }));
+    expect(within(screen.getByRole('region', { name: 'SLA décroché' })).getByText(/valeurs de DÉMONSTRATION/)).toBeTruthy();
+  });
+
+  it('cockpit MCO : SLA de prise en charge et SLA de résolution distincts', () => {
+    render(<App />);
+    fireEvent.change(screen.getByLabelText('Rôle simulé'), { target: { value: 'responsable' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Modules' })).getByRole('button', { name: /MCO/ }));
+    const mco = within(screen.getByRole('region', { name: 'Cockpit MCO N2' }));
+    expect(mco.getByRole('region', { name: 'SLA de prise en charge' })).toBeTruthy();
+    expect(mco.getByRole('region', { name: 'SLA de résolution' })).toBeTruthy();
+  });
 });

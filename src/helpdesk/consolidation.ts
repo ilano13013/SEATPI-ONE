@@ -96,7 +96,7 @@ export const COUNTER_LABELS: Record<CounterKey, string> = {
   bloques: 'Bloqués',
   resolus: 'Résolus (semaine)',
   reouverts: 'Réouverts (semaine)',
-  backlog: 'Backlog (> 2 j ouvrés)',
+  backlog: 'Backlog (ancienneté > seuil)',
   horsSla: 'Hors SLA',
   procheSla: 'Proches SLA',
   sansAffectation: 'Sans affectation',
@@ -106,7 +106,7 @@ export const COUNTER_LABELS: Record<CounterKey, string> = {
 /** Ancienneté au-delà de laquelle un ticket ouvert compte dans le backlog (heures calendaires). */
 export const BACKLOG_AGE_H = 48;
 
-export function counters(list: HdTicket[], now: number): Record<CounterKey, string[]> {
+export function counters(list: HdTicket[], now: number, backlogHours = BACKLOG_AGE_H): Record<CounterKey, string[]> {
   const week = periods(now).week;
   const open = list.filter(isOpen);
   const ids = (l: Ticket[]) => l.map((t) => t.id);
@@ -117,7 +117,7 @@ export function counters(list: HdTicket[], now: number): Record<CounterKey, stri
     bloques: ids(open.filter((t) => t.status === 'Bloqué')),
     resolus: ids(list.filter((t) => resolvedIn(t, week))),
     reouverts: ids(list.filter((t) => reopenedIn(t, week))),
-    backlog: ids(open.filter((t) => now - t.createdAt > BACKLOG_AGE_H * 3_600_000)),
+    backlog: ids(open.filter((t) => now - t.createdAt > backlogHours * 3_600_000)),
     horsSla: ids(open.filter((t) => t.sla.state === 'dépassé')),
     procheSla: ids(open.filter((t) => t.sla.state === 'à risque')),
     sansAffectation: ids(open.filter((t) => !t.assigneeId)),

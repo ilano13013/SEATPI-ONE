@@ -572,3 +572,6 @@ main > .notice { margin-top: 0; }
 .adm-sheet code { display: inline-block; margin-right: 6px; }
 .adm-matrix td:not(:first-child), .adm-matrix th:not(:first-child) { text-align: center; }
 .adm-obj { display: inline-flex; gap: 6px; align-items: center; }
+.hd-evo .na { background: repeating-linear-gradient(45deg, #e5e7eb, #e5e7eb 3px, #f8fafc 3px, #f8fafc 6px); }
+.n2-sla caption { text-align: left; font-weight: 800; font-size: 13px; padding: 8px 10px; }
+.n2-sla { margin-bottom: 12px; }
