@@ -284,7 +284,7 @@ function MonthTable({ rows, projected }: { rows: ReturnType<typeof monthResult>[
                 <td>{r.revenue.pending ? eur(r.revenue.pending) : '—'}</td>
                 <td>{r.revenue.forecast ? eur(r.revenue.forecast) : '—'}</td>
                 <td>{eur(r.cost)}</td>
-                <td className={settled && result < 0 ? 'xc-warn' : ''}>{settled ? `${eur(result)}${!r.closed ? ' (prévision)' : ''}` : <em className="nr">Non arrêté</em>}</td>
+                <td className={settled && result < 0 ? 'xc-warn' : ''}>{settled ? `${eur(result)}${!r.closed ? ' (prévision)' : ''}` : <em className="unsettled">Non arrêté</em>}</td>
                 <td>{settled ? pctTxt(projected ? r.projectedMargin : r.margin) : '—'}</td>
               </tr>
             );

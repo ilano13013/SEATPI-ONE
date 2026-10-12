@@ -76,7 +76,7 @@ h1 span { color: var(--brand); }
 
 /* Espace 3D / 2D */
 .workspace { height: min(680px, calc(100vh - 300px)); min-height: 460px; border: 1px solid #e2e9f2; border-radius: 17px; overflow: hidden; background: #eaf0f8; position: relative; isolation: isolate; }
-.scenehead { position: absolute; top: 16px; left: 18px; right: 18px; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; flex-wrap: wrap; }
+.scenehead { position: absolute; top: 16px; left: 18px; right: 18px; z-index: 30; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; flex-wrap: wrap; }
 .scenehead > div:first-child { display: flex; flex-direction: column; gap: 5px; }
 .scenehead b { font-size: 16px; }
 .scenehead span { font-size: 11px; color: #71829b; }
@@ -89,7 +89,7 @@ h1 span { color: var(--brand); }
 .legend { position: absolute; left: 15px; bottom: 56px; z-index: 2; display: flex; flex-wrap: wrap; gap: 4px 10px; max-width: 60%; background: #ffffffd9; border: 1px solid #dce6f2; border-radius: 10px; padding: 7px 10px; font-size: 10px; color: #546a84; pointer-events: none; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 8px; height: 8px; border-radius: 50%; }
-.scenefooter { position: absolute; bottom: 15px; left: 15px; right: 15px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+.scenefooter { position: absolute; bottom: 15px; left: 15px; right: 15px; z-index: 30; display: flex; flex-wrap: wrap; gap: 6px; }
 .scenefooter button { border: 1px solid #dce6f2; background: #ffffffed; color: #546a84; border-radius: 20px; padding: 7px 10px; font-size: 10px; font-weight: 700; }
 .scenefooter button.pole { border-style: dashed; }
 .scenefooter button.active { background: #2e72e6; color: white; border-color: #2e72e6; }
@@ -627,3 +627,5 @@ details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }
 .xc-toolbar input[type='search'] { border: 1px solid #c9d6e6; border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 12px; min-width: 160px; }
 :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
 .risk-meta { display: block; font-size: 11px; color: #475569; margin: 2px 0 8px 4px; line-height: 1.45; }
+.xc-table td.wrap { white-space: normal; min-width: 220px; }
+.unsettled { color: #475569; font-style: italic; }

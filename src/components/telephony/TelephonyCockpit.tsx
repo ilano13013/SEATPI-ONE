@@ -237,7 +237,7 @@ export function TelephonyCockpit({ rows, now, objectives, demoObjectives, onOpen
                     {h.agg.answeredInTarget.toLocaleString('fr-FR')}
                     {h.agg.missing.length > 0 && <small className="nr"> (files complètes uniquement)</small>}
                   </td>
-                  <td>{h.agg.rate === null ? <em className="nr">{h.agg.unavailable}</em> : pct(h.agg.rate)}</td>
+                  <td className="wrap">{h.agg.rate === null ? <em className="nr">{h.agg.unavailable}</em> : pct(h.agg.rate)}</td>
                   <td>{delta === null ? '—' : `${delta > 0 ? '+' : ''}${delta.toLocaleString('fr-FR')} pt`}</td>
                 </tr>
               );
