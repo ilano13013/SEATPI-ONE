@@ -203,6 +203,8 @@ export function McoCockpit({ views, now, onBack, onOpen, objectives, onOpenBudge
   );
 }
 
+export const CHECKS_DETAIL_NOTE = 'Détail des contrôles en échec : indisponible dans cette démonstration (outil de supervision non connecté) — compteurs fictifs.';
+
 export function ExploitationCockpit({ views, role, now, onBack, onOpenTicket }: Common & { onOpenTicket: (clientId: ExternalClientId, ticketId: string) => void }) {
   const s = serviceSummary(views, 'Exploitation', now);
   return (
@@ -218,7 +220,7 @@ export function ExploitationCockpit({ views, role, now, onBack, onOpenTicket }: 
           </span>
         </div>
       </div>
-      <h3>Contrôles quotidiens (démonstration)</h3>
+      <h3>Contrôles du jour (démonstration)</h3>
       <div className="xc-kpis">
         {supervisionChecks.map((c) => (
           <div key={c.label} className={`xc-kpi ${c.ok === c.total ? 'ok' : 'warn'}`}>
@@ -226,10 +228,12 @@ export function ExploitationCockpit({ views, role, now, onBack, onOpenTicket }: 
             <strong>
               {c.ok}/{c.total}
             </strong>
+            <em>{c.ok === c.total ? 'tous conformes' : `${c.total - c.ok} en échec`}</em>
           </div>
         ))}
       </div>
-      <ExploitationPanel views={views} trips={[]} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={() => undefined} />
+      <p className="hint">{CHECKS_DETAIL_NOTE}</p>
+      <ExploitationPanel views={views} trips={[]} role={role} now={now} onOpenTicket={onOpenTicket} onOpenClient={() => undefined} showChecks={false} />
     </section>
   );
 }

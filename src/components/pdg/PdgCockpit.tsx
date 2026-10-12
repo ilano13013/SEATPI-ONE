@@ -39,7 +39,17 @@ interface Risk {
   label: string;
   view: AppView;
   sub?: string;
+  /** Responsable, échéance : renseignés seulement s'ils existent (jamais inventés). */
+  owner?: string;
+  due?: string;
 }
+
+const NEXT_ACTION: Partial<Record<AppView, string>> = {
+  helpdesk: 'Analyser les tickets dans le cockpit Helpdesk',
+  itsm: 'Compléter la configuration des connecteurs',
+  finance: 'Traiter dans Budget & Rentabilité',
+  management: 'Suivre dans les checklists du Management',
+};
 
 export function PdgCockpit(props: Props) {
   if (!can(props.role, 'finance'))
@@ -114,8 +124,12 @@ function PdgView({ sim, views, tickets, mgmt, fin, now, onOpen, onBack }: Props)
         {risks.map((r, i) => (
           <li key={i}>
             <button className={`xc-alert ${r.level === 'bad' ? 'critical' : 'warn'}`} onClick={() => onOpen(r.view, r.sub)}>
+              <span aria-hidden>{r.level === 'bad' ? '✗ ' : '! '}</span>
               {r.label}
             </button>
+            <small className="risk-meta">
+              Responsable : {r.owner ?? <em className="nr">À renseigner</em>} · Échéance : {r.due ?? <em className="nr">À renseigner</em>} · Prochaine action : {NEXT_ACTION[r.view] ?? <em className="nr">À renseigner</em>}
+            </small>
           </li>
         ))}
       </ul>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ITSM_MAPPING, ITSM_NOT_SET, clientRegistry, connectorRegistry, itsmOf, type MappedTool } from '../../config/itsm';
 import { realConnectionLabel, simulationLabel, simulationState, useConnectionInfo } from '../../admin/connectionStates';
 import { adapters } from '../../external/itsm/adapters';
@@ -9,8 +10,17 @@ import { fmtDateTime } from '../external/common';
 const NR = <em className="nr">Non renseigné</em>;
 
 /** Registre ITSM : cartographie de référence, clients et connecteurs. */
-export function ItsmRegistry({ connectors }: { connectors: Record<string, ConnectorState> }) {
+export function ItsmRegistry({ connectors, onOpenConfig }: { connectors: Record<string, ConnectorState>; onOpenConfig?: (clientId: string) => void }) {
   const { running, realOf } = useConnectionInfo();
+  const [fClient, setFClient] = useState('');
+  const [fTool, setFTool] = useState('');
+  const [fState, setFState] = useState('');
+  const stateOf = (clientId: string) => {
+    const external = externalClients.find((c) => c.id === clientId);
+    const demo = external ? connectors[external.id] : undefined;
+    return demo ? simulationState(demo.status, running) : 'non disponible';
+  };
+  const registry = connectorRegistry.filter((e) => (!fClient || e.clientId === fClient) && (!fTool || e.tool === fTool) && (!fState || stateOf(e.clientId) === fState));
   return (
     <section className="xc module" aria-label="Connecteurs ITSM">
       <div className="xc-head">
@@ -78,8 +88,34 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
       </div>
 
       <h3>Registre des connecteurs</h3>
+      <div className="xc-toolbar" role="group" aria-label="Filtres du registre">
+        <select aria-label="Client du connecteur" value={fClient} onChange={(e) => setFClient(e.target.value)}>
+          <option value="">Tous les clients</option>
+          {[...new Set(connectorRegistry.map((e) => e.clientId))].map((id) => (
+            <option key={id} value={id}>
+              {clientRegistry.find((c) => c.id === id)?.name ?? id}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Outil du connecteur" value={fTool} onChange={(e) => setFTool(e.target.value)}>
+          <option value="">Tous les outils</option>
+          {[...new Set(connectorRegistry.map((e) => e.tool))].map((t) => (
+            <option key={t}>{t}</option>
+          ))}
+        </select>
+        <select aria-label="État de la simulation" value={fState} onChange={(e) => setFState(e.target.value)}>
+          <option value="">Tous les états</option>
+          {['active', 'suspendue', 'en erreur', 'non disponible'].map((t) => (
+            <option key={t} value={t}>
+              Simulation : {t}
+            </option>
+          ))}
+        </select>
+        <span className="hint">{registry.length} connecteur(s)</span>
+      </div>
       <div className="connector-grid">
-        {connectorRegistry.map((entry) => {
+        {registry.length === 0 && <p className="hint">Aucun connecteur pour ces critères.</p>}
+        {registry.map((entry) => {
           const adapter = adapters[entry.tool];
           const client = clientRegistry.find((c) => c.id === entry.clientId);
           const external = externalClients.find((c) => c.id === entry.clientId);
@@ -93,6 +129,13 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
                 <span className="badge muted">{realConnectionLabel(realOf(entry.clientId))}</span>
                 {demo && <span className={`badge ${simulationState(demo.status, running) === 'active' ? 'info' : 'warn'}`}>{simulationLabel(simulationState(demo.status, running), demo.status)}</span>}
               </header>
+              {onOpenConfig && (
+                <button className="link" onClick={() => onOpenConfig(entry.clientId)}>
+                  Ouvrir la fiche de configuration
+                </button>
+              )}
+              <details>
+                <summary>Détails du connecteur</summary>
               <dl className="detail">
                 <div>
                   <dt>Instance</dt>
@@ -125,6 +168,7 @@ export function ItsmRegistry({ connectors }: { connectors: Record<string, Connec
                   <dd>{external ? `${external.calendar.label} · P1 ${formatMinutesOuvrees(external.sla.P1.resolutionMin)} (démo)` : NR}</dd>
                 </div>
               </dl>
+              </details>
               <details>
                 <summary>Champs disponibles ({adapter.fields.length})</summary>
                 <p className="hint">{adapter.fields.join(', ')}</p>

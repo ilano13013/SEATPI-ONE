@@ -99,6 +99,7 @@ export function App() {
     }
     setRoleState(r);
   };
+  const [focusConnector, setFocusConnector] = useState<string | null>(null);
   const [hdNav, setHdNav] = useState<{ tab: HdTab; filters: HdFilters; ticketId: string | null }>(route0.hd);
   // Règles de permissions modifiables par l'administrateur (appliquées avant le rendu des modules).
   const [permRules, setPermRules] = useState<PermissionRule[]>(DEFAULT_RULES);
@@ -584,7 +585,20 @@ export function App() {
             }}
           />
         )}
-        {show('itsm') && <ItsmRegistry connectors={ext.state.connectors} />}
+        {show('itsm') && (
+          <ItsmRegistry
+            connectors={ext.state.connectors}
+            onOpenConfig={
+              viewAccess(role, 'admin').ok
+                ? (clientId) => {
+                    setFocusConnector(admin.state.connectors.find((c) => c.scope === 'client' && c.clientId === clientId)?.id ?? null);
+                    setAdminTab('connexions');
+                    setAppView('admin');
+                  }
+                : undefined
+            }
+          />
+        )}
         {show('helpdesk') && (
           <HelpdeskCockpit
             nav={hdNav}
@@ -707,6 +721,7 @@ export function App() {
             audit={audit.entries}
             onOpenProduction={() => setAppView('production')}
             onBack={backToMap}
+            focusConnector={focusConnector}
           />
         )}
         {show('production') && <ProductionCockpit role={role} items={readiness} onItems={setReadiness} onBack={backToMap} />}

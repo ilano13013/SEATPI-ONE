@@ -21,7 +21,7 @@ interface Props {
   site?: SiteId | null;
 }
 
-export function ExploitationPanel({ views, role, now, onOpenTicket, site }: Props) {
+export function ExploitationPanel({ views, role, now, onOpenTicket, site, showChecks = true }: Props & { showChecks?: boolean }) {
   const team = site ? exploitationTeam.filter((m) => m.site === site) : exploitationTeam;
   const s = serviceSummary(views, 'Exploitation', now);
   const individual = can(role, 'exploitation', 'individual');
@@ -73,6 +73,8 @@ export function ExploitationPanel({ views, role, now, onOpenTicket, site }: Prop
           </div>
         ))}
       </div>
+      {showChecks && (
+        <>
       <h3>Contrôles du jour</h3>
       <div className="list">
         {supervisionChecks.map((c) => (
@@ -84,6 +86,9 @@ export function ExploitationPanel({ views, role, now, onOpenTicket, site }: Prop
           </div>
         ))}
       </div>
+      <p className="hint">Détail des contrôles en échec : indisponible dans cette démonstration (outil de supervision non connecté).</p>
+        </>
+      )}
       {individual && (
         <>
           <h3>Équipe{site ? ` — ${siteById(site).name}` : ''}</h3>
@@ -152,6 +157,11 @@ export function CsmPanel({ views, trips, role, now, onOpenTicket, onOpenClient, 
               <span>Objectifs à risque</span>
               <b>{atRisk}</b>
             </div>
+            {atRisk > 0 && (
+              <small className="risk-meta">
+                Responsable : {individual ? c.csm.name : 'CSM du compte'} · Échéance : comité du {fmtDateTime(c.committee)} · Prochaine action : <em className="nr">À renseigner</em>
+              </small>
+            )}
             {c.openEscalations.map((r) => (
               <button key={r.escalation.id + r.ticket.id} className="kv as-button" onClick={() => onOpenTicket(c.view.client.id, r.ticket.id)}>
                 <span>

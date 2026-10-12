@@ -626,3 +626,4 @@ details.defs ul { margin: 6px 0 0; padding-left: 18px; line-height: 1.55; }
 .fs-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .xc-toolbar input[type='search'] { border: 1px solid #c9d6e6; border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 12px; min-width: 160px; }
 :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.risk-meta { display: block; font-size: 11px; color: #475569; margin: 2px 0 8px 4px; line-height: 1.45; }

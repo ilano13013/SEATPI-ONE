@@ -29,6 +29,8 @@ interface Props {
   audit: AuditEntry[];
   onOpenProduction: () => void;
   onBack: () => void;
+  /** Connecteur à ouvrir directement (lien depuis le registre ITSM). */
+  focusConnector?: string | null;
 }
 
 const TOOLS: MappedTool[] = ['EasyVista', 'Jira', 'GLPI', 'ISILOG', 'Zendesk', 'ServiceNow'];
@@ -84,8 +86,8 @@ export function AdminCenter(props: Props) {
   );
 }
 
-function Connections({ admin, role, onOpenProduction }: Props) {
-  const [open, setOpen] = useState<string | null>(null);
+function Connections({ admin, role, onOpenProduction, focusConnector }: Props) {
+  const [open, setOpen] = useState<string | null>(focusConnector ?? null);
   const [toast, setToast] = useState<SaveResult | null>(null);
   const [newName, setNewName] = useState('');
   const [newKind, setNewKind] = useState<ConnectorKind>('ITSM');
