@@ -93,6 +93,9 @@ const KIND: Record<Exclude<RoomKind, 'external' | 'building'>, KindMeta> = {
 
 type Slot = { kind: Exclude<RoomKind, 'external' | 'building'>; x: number; z: number; w: number; d: number; id?: string; label?: string; outdoor?: boolean };
 
+/** Plateau Helpdesk de La Ciotat (étage entier) et bande d'encadrement à droite. */
+export const LC_PLATEAU = { w: 11.2, d: 7.6, mgmt: 1.6 };
+
 // Gabarits de disposition sur un plateau de 11,4 × 7,9.
 const grid2x2 = (kinds: Slot['kind'][]): Slot[] =>
   kinds.map((kind, i) => ({ kind, x: i % 2 === 0 ? -2.85 : 2.85, z: i < 2 ? -1.85 : 1.85, w: 5.5, d: 3.5 }));
@@ -134,10 +137,12 @@ export const sitePlans: Record<SiteId, FloorPlan[]> = {
         { kind: 'parking', id: 'parking', x: 0, z: 2.2, w: 10.6, d: 3.4, outdoor: true },
       ],
     },
-    { id: 'etage1', label: 'Étage 1', short: 'É1', slots: [{ ...plateau(['rh', 'direction'])[0], id: 'helpdesk' }, { ...plateau(['rh', 'direction'])[1], id: 'rh' }, { ...plateau(['rh', 'direction'])[2], id: 'direction' }] },
+    // Plateau Helpdesk du site principal : tout l'étage (pôles + bande d'encadrement), pour la lisibilité.
+    { id: 'etage1', label: 'Étage 1', short: 'É1', slots: [{ kind: 'helpdesk', id: 'helpdesk', x: 0, z: 0, w: LC_PLATEAU.w, d: LC_PLATEAU.d }] },
     { id: 'etage2', label: 'Étage 2', short: 'É2', slots: halves(['exploitation', 'csm']).map((s) => ({ ...s, id: s.kind })) },
     { id: 'lc-e3', label: 'Étage 3', short: 'É3', slots: grid2x2(['mco', 'formation', 'finance', 'commercial']) },
-    { id: 'lc-e4', label: 'Étage 4', short: 'É4', slots: twoAndWide(['recrutement', 'reunion'], 'moyens') },
+    // Direction générale et RH rejoignent le dernier étage (libère le plateau Helpdesk).
+    { id: 'lc-e4', label: 'Étage 4', short: 'É4', slots: grid3x2(['direction', 'rh', 'recrutement', 'reunion', 'moyens']).map((s) => (s.kind === 'direction' || s.kind === 'rh' ? { ...s, id: s.kind } : s)) },
   ],
   montpellier: siteTemplate('mtp'),
   paris: siteTemplate('par'),

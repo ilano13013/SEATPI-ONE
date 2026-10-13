@@ -1,5 +1,6 @@
 import type { Floor, FloorId, Location, Room, RoomId, SiteId } from '../types';
 import type { PoleGroup } from '../config/itsm';
+import { LC_PLATEAU } from './sites';
 import { buildSiteFloorsAndRooms, internalSites, sitePlans } from './sites';
 
 const site = buildSiteFloorsAndRooms();
@@ -122,16 +123,24 @@ export interface HelpdeskPole {
 const ROW_DEPTH = 3.6;
 const BACK_W = 6.9 / 4;
 const FRONT_W = 6.9 / 2;
+// La Ciotat : plateau sur tout l'étage ; pôles sur la partie gauche, encadrement à droite.
+const LC_POLES_W = LC_PLATEAU.w - LC_PLATEAU.mgmt;
+const LC_X0 = -LC_PLATEAU.mgmt / 2;
+const LC_ROW = LC_PLATEAU.d / 2;
+const LC_BACK = LC_POLES_W / 4;
+const LC_FRONT = LC_POLES_W / 2;
+const BACK_COLS = [-0.6, 0.6];
+const FRONT_COLS = [-1.5, 0, 1.5];
 
 export const helpdeskPoles: HelpdeskPole[] = ([
   // Rangée du fond : équipes du Pôle Dédié.
-  { clientId: 'thelem', group: 'dedie', site: 'laciotat', label: 'Dédié · Thelem', x: -1.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#bcd4fa', columns: [-0.42, 0.42] },
-  { clientId: 'ird', group: 'dedie', site: 'laciotat', label: 'Dédié · IRD', x: -0.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#c4ead9', columns: [-0.42, 0.42] },
-  { clientId: 'ortec', group: 'dedie', site: 'laciotat', label: 'Dédié · Ortec', x: 0.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#f8d5b8', columns: [-0.42, 0.42] },
-  { clientId: 'primagaz', group: 'dedie', site: 'laciotat', label: 'Dédié · PRIMAGAZ', x: 1.5 * BACK_W, z: -ROW_DEPTH / 2, width: BACK_W, depth: ROW_DEPTH, color: '#fbd0d9', columns: [-0.42, 0.42] },
+  { clientId: 'thelem', group: 'dedie', site: 'laciotat', label: 'Dédié · Thelem', x: LC_X0 - 1.5 * LC_BACK, z: -LC_ROW / 2, width: LC_BACK, depth: LC_ROW, color: '#bcd4fa', columns: BACK_COLS },
+  { clientId: 'ird', group: 'dedie', site: 'laciotat', label: 'Dédié · IRD', x: LC_X0 - 0.5 * LC_BACK, z: -LC_ROW / 2, width: LC_BACK, depth: LC_ROW, color: '#c4ead9', columns: BACK_COLS },
+  { clientId: 'ortec', group: 'dedie', site: 'laciotat', label: 'Dédié · Ortec', x: LC_X0 + 0.5 * LC_BACK, z: -LC_ROW / 2, width: LC_BACK, depth: LC_ROW, color: '#f8d5b8', columns: BACK_COLS },
+  { clientId: 'primagaz', group: 'dedie', site: 'laciotat', label: 'Dédié · PRIMAGAZ', x: LC_X0 + 1.5 * LC_BACK, z: -LC_ROW / 2, width: LC_BACK, depth: LC_ROW, color: '#fbd0d9', columns: BACK_COLS },
   // Rangée de devant : Pôle Multi et équipe SODIAAL du Pôle Dédié.
-  { clientId: 'multi', group: 'multi', site: 'laciotat', label: 'Pôle Multi', x: -FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#ddcdf7', columns: [-1.1, 0, 1.1] },
-  { clientId: 'sodiaal', group: 'dedie', site: 'laciotat', label: 'Dédié · Sodiaal', x: FRONT_W / 2, z: ROW_DEPTH / 2, width: FRONT_W, depth: ROW_DEPTH, color: '#f3e6a6', columns: [-1.1, 0, 1.1] },
+  { clientId: 'multi', group: 'multi', site: 'laciotat', label: 'Pôle Multi', x: LC_X0 - LC_FRONT / 2, z: LC_ROW / 2, width: LC_FRONT, depth: LC_ROW, color: '#ddcdf7', columns: FRONT_COLS },
+  { clientId: 'sodiaal', group: 'dedie', site: 'laciotat', label: 'Dédié · Sodiaal', x: LC_X0 + LC_FRONT / 2, z: LC_ROW / 2, width: LC_FRONT, depth: LC_ROW, color: '#f3e6a6', columns: FRONT_COLS },
   // Le même Pôle Multi est implanté à Montpellier et à Paris (aucun agent affecté à Paris pour le moment).
   { clientId: 'multi', group: 'multi', site: 'montpellier', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },
   { clientId: 'multi', group: 'multi', site: 'paris', label: 'Pôle Multi', x: 0, z: 0, width: 2 * FRONT_W, depth: 7.2, color: '#ddcdf7', columns: [-1.1, 0, 1.1], rows: [-2.5, -0.7, 1.1] },

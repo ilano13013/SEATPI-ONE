@@ -69,7 +69,8 @@ function Pole({ pole, agents, animate, onAgentClick, selected, hovered, badge, o
           </group>
         );
       })}
-      <Html position={[0, 1.05, -0.1]} center className={`pole-label${selected ? ' selected' : ''}`} zIndexRange={[12, 0]}>
+      {/* Étiquette posée au sol, au bord avant du pôle : ne recouvre ni les postes ni l’étiquette du plateau. */}
+      <Html position={[0, 0.12, d / 2 - 0.25]} center className={`pole-label${selected ? " selected" : ""}`} zIndexRange={[12, 0]}>
         <span>{pole.label}</span>
         {badge && active && <em>{badge}</em>}
       </Html>

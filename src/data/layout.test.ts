@@ -1,7 +1,8 @@
 import { POLE_ZONES } from '../config/itsm';
+import { LC_PLATEAU } from './sites';
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from './demoData';
-import { floors, helpdeskPoles, plateauOf, poleByClient, poleDesks, polesOf, rooms, roomsOnFloor } from './layout';
+import { floors, helpdeskPoles, plateauOf, poleByClient, poleDesks, polesOf, roomById, rooms, roomsOnFloor } from './layout';
 import { departments, internalSites } from './sites';
 
 describe('plan du bâtiment', () => {
@@ -54,13 +55,23 @@ describe('pôles des plateaux Helpdesk', () => {
     expect(st.queues.filter((q) => q.site === 'paris')).toHaveLength(0);
   });
 
-  it('chaque plateau est entièrement couvert par ses pôles, sans chevauchement', () => {
+  it('le plateau de La Ciotat occupe tout l’étage 1 ; RH et Direction générale à l’étage 4', () => {
+    expect(roomsOnFloor('etage1').map((r) => r.id)).toEqual(['helpdesk']);
+    expect(plateauOf('laciotat').width).toBeGreaterThan(10);
+    expect(roomById('rh').floor).toBe('lc-e4');
+    expect(roomById('direction').floor).toBe('lc-e4');
+  });
+
+  it('chaque plateau est couvert par ses pôles (et la bande d’encadrement à La Ciotat), sans chevauchement', () => {
     for (const site of internalSites) {
       const room = plateauOf(site.id);
       const poles = polesOf(site.id);
       expect(poles.length, site.name).toBeGreaterThan(0);
       const area = poles.reduce((s, p) => s + p.width * p.depth, 0);
-      expect(area).toBeCloseTo(room.width * room.depth);
+      const mgmt = site.id === 'laciotat' ? LC_PLATEAU.mgmt * room.depth : 0;
+      expect(area + mgmt).toBeCloseTo(room.width * room.depth);
+      // Les pôles ne débordent jamais sur la bande d'encadrement.
+      if (mgmt) for (const p of poles) expect(p.x + p.width / 2).toBeLessThanOrEqual(room.width / 2 - LC_PLATEAU.mgmt + 1e-9);
       for (const p of poles) {
         expect(Math.abs(p.x) + p.width / 2).toBeLessThanOrEqual(room.width / 2 + 1e-9);
         expect(Math.abs(p.z) + p.depth / 2).toBeLessThanOrEqual(room.depth / 2 + 1e-9);

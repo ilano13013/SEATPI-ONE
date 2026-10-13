@@ -6,6 +6,7 @@ import { ExternalSite, type SiteSceneData } from './ExternalSite';
 import { CsmRoom, ExploitationRoom, type ServicesSceneData } from './ServiceRooms';
 import { ClientMiniSite, DeptRoom, Person, SiteBuilding } from './DeptRooms';
 import { peopleIn } from '../org/people';
+import { LC_PLATEAU } from '../data/sites';
 import { siteById, sitePlans } from '../data/sites';
 import { Cabinet, Car, Chair, CoffeeMachine, Counter, Desk, Plant, RoundTable, Shelf, Sofa, Tree, WallScreen } from './furniture';
 
@@ -49,8 +50,10 @@ export function RoomContents(props: RoomContentProps) {
   const site = room.location === 'laciotat' || room.location === 'montpellier' || room.location === 'paris' ? room.location : null;
   const people = site ? peopleIn(site, room.kind) : [];
   // Encadrement présent dans l'espace, placé à l'avant de la pièce.
+  // Plateau de La Ciotat : bande d'encadrement dédiée à droite, hors des pôles.
+  const mgmtStrip = room.kind === 'helpdesk' && site === 'laciotat';
   const persons = people.map((p, i) => (
-    <Person key={p.id} person={p} position={[room.width / 2 - 0.6 - i * 0.75, 0, room.depth / 2 - 0.95]} onClick={onPersonClick} />
+    <Person key={p.id} person={p} position={mgmtStrip ? [room.width / 2 - LC_PLATEAU.mgmt / 2, 0, -1.2 + i * 2.2] : [room.width / 2 - 0.6 - i * 0.75, 0, room.depth / 2 - 0.95]} onClick={onPersonClick} />
   ));
   return (
     <>
