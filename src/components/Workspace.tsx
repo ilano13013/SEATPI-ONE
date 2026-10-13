@@ -59,6 +59,8 @@ export function Workspace(props: Props) {
   const siteFloors = floorsOf(location);
   // Vue 2D : sélecteur de site (tous les sites par défaut).
   const [site2d, setSite2d] = useState<Location | 'tous'>('tous');
+  // Bulle d'un déplacement CSM : affichée uniquement au clic (voiture ou encart).
+  const [openTripId, setOpenTripId] = useState<string | null>(null);
   return (
     <section className="workspace" aria-label="Entreprise virtuelle" hidden={props.hidden}>
       <div className="scenehead">
@@ -89,11 +91,12 @@ export function Workspace(props: Props) {
             </button>
           </div>
         )}
+        {mode3d && floor === 'sites' && <CsmTripsOverlay trips={props.csmTrips.map((v) => v.trip)} individual={props.tripsIndividual} onSelect={props.onTripClick} openTripId={openTripId} onOpenTrip={setOpenTripId} />}
       </div>
 
       {mode3d ? (
         <Suspense fallback={<div className="loading">Chargement de la scène 3D…</div>}>
-          <Scene {...props} />
+          <Scene {...props} openTripId={openTripId} onOpenTrip={setOpenTripId} />
         </Suspense>
       ) : (
         <div className="twod">
@@ -144,7 +147,6 @@ export function Workspace(props: Props) {
         </div>
       )}
 
-      {mode3d && floor === 'sites' && <CsmTripsOverlay trips={props.csmTrips.map((v) => v.trip)} individual={props.tripsIndividual} onSelect={props.onTripClick} />}
       {mode3d && floor === 'carte' && (
         <div className="map-note">Implantation des départements : configuration de démonstration, à confirmer. RH et Stock uniquement à La Ciotat.</div>
       )}

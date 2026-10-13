@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Car, ChevronDown, ChevronUp } from 'lucide-react';
 import { tripStatus, type Trip, type TripPhase } from '../../external/trips';
 import { csmTeam } from '../../external/services';
 import { clientById } from '../../external/config';
@@ -103,35 +104,56 @@ export function CsmTripsTable({ trips, individual, onOpenClient }: { trips: Trip
   );
 }
 
-/** Encart lisible affiché par-dessus la carte des sites clients. */
-export function CsmTripsOverlay({ trips, individual, onSelect }: { trips: Trip[]; individual: boolean; onSelect: (trip: Trip) => void }) {
+/**
+ * Encart des déplacements CSM sur la carte des sites clients : replié par défaut (simple bouton
+ * avec le nombre de déplacements), déplié au clic. Un déplacement choisi affiche sa bulle au-dessus
+ * de la voiture ; « Détail » ouvre la vue complète.
+ */
+export function CsmTripsOverlay({ trips, individual, onSelect, openTripId, onOpenTrip }: { trips: Trip[]; individual: boolean; onSelect: (trip: Trip) => void; openTripId: string | null; onOpenTrip: (id: string | null) => void }) {
   const now = useNow(5_000);
+  const [open, setOpen] = useState(false);
   const active = trips.filter((t) => tripStatus(t, now).phase !== 'Terminé');
   return (
-    <div className="csm-overlay" aria-label="Déplacements CSM en cours">
-      <b>Déplacements CSM en cours ({active.length})</b>
-      {active.length === 0 && <small>Aucun manager CSM en déplacement.</small>}
-      {active.map((t) => {
-        const s = tripStatus(t, now);
-        return (
-          <button key={t.id} onClick={() => onSelect(t)}>
-            <i style={{ background: clientById(t.clientId).accent }} />
-            <span>
-              <strong>
-                {memberName(t.memberId, individual)} → {clientById(t.clientId).name}
-              </strong>
-              <small>
-                {t.purpose} · {t.transport}
-              </small>
-            </span>
-            <span className={`badge ${PHASE_TONE[s.phase]}`}>
-              {s.phase}
-              <br />
-              {tripTiming(t, now)}
-            </span>
-          </button>
-        );
-      })}
+    <div className={`csm-overlay${open ? ' open' : ''}`}>
+      <button className="csm-toggle" aria-expanded={open} aria-controls="csm-trip-list" onClick={() => setOpen((o) => !o)}>
+        <Car size={15} aria-hidden />
+        <b>Déplacements CSM</b>
+        <span className="csm-count">{active.length}</span>
+        {open ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
+      </button>
+      {open && (
+        <div id="csm-trip-list" className="csm-list" role="list" aria-label="Déplacements CSM en cours">
+          {active.length === 0 && <small>Aucun manager CSM en déplacement.</small>}
+          {active.map((t) => {
+            const s = tripStatus(t, now);
+            const selected = openTripId === t.id;
+            return (
+              <div key={t.id} role="listitem" className={`csm-item${selected ? ' selected' : ''}`}>
+                <button className="csm-item-main" aria-pressed={selected} onClick={() => (onOpenTrip(selected ? null : t.id), setOpen(false))} title="Afficher sur la carte">
+                  <i style={{ background: clientById(t.clientId).accent }} />
+                  <span>
+                    <strong>
+                      {memberName(t.memberId, individual)} → {clientById(t.clientId).name}
+                    </strong>
+                    <small>
+                      {t.purpose} · {t.transport}
+                    </small>
+                  </span>
+                  <span className={`badge ${PHASE_TONE[s.phase]}`}>
+                    {s.phase}
+                    <br />
+                    {tripTiming(t, now)}
+                  </span>
+                </button>
+                <button className="link" onClick={() => onSelect(t)}>
+                  Détail
+                </button>
+              </div>
+            );
+          })}
+          <small className="csm-hint">Cliquez sur une voiture ou sur un déplacement pour afficher sa bulle sur la carte.</small>
+        </div>
+      )}
     </div>
   );
 }

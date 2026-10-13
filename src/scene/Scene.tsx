@@ -31,6 +31,9 @@ export interface SceneProps {
   /** Déplacements des managers CSM affichés sur la carte des sites. */
   csmTrips: CsmTripView[];
   onTripClick: (trip: Trip) => void;
+  /** Déplacement CSM dont la bulle est affichée (aucune par défaut). */
+  openTripId: string | null;
+  onOpenTrip: (id: string | null) => void;
   reducedMotion: boolean;
   onPersonClick: (personId: string) => void;
   onSelect: (id: RoomId) => void;
@@ -157,7 +160,7 @@ export default function Scene(props: SceneProps) {
             onHoverPole={(id, h) => setHoveredPole((cur) => (h ? id : cur === id ? null : cur))}
           />
         ))}
-        {floor === 'sites' && <CsmTravel trips={csmTrips} siteXs={floorRooms.map((r) => r.x)} onSelect={onTripClick} />}
+        {floor === 'sites' && <CsmTravel trips={csmTrips} siteXs={floorRooms.map((r) => r.x)} onSelect={onTripClick} openTripId={props.openTripId} onOpenTrip={props.onOpenTrip} />}
       </FloorTransition>
 
       <OrbitControls

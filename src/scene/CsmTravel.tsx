@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import type { Group } from 'three';
+import type { Group, Mesh } from 'three';
 import { tripStatus, type Trip } from '../external/trips';
 import { Car } from './furniture';
 
@@ -102,11 +102,12 @@ function Route({ path }: { path: Pt[] }) {
   );
 }
 
-function CsmCar({ view, lane, onSelect }: { view: CsmTripView; lane: number; onSelect: () => void }) {
+function CsmCar({ view, lane, open, onToggle, onSelect }: { view: CsmTripView; lane: number; open: boolean; onToggle: () => void; onSelect: () => void }) {
   const ref = useRef<Group>(null);
+  const ring = useRef<Mesh>(null);
   const path = useMemo(() => pathTo(view.x, lane), [view.x, lane]);
   const [label, setLabel] = useState('');
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const now = Date.now();
     const s = tripStatus(view.trip, now);
     const g = ref.current;
@@ -116,6 +117,9 @@ function CsmCar({ view, lane, onSelect }: { view: CsmTripView; lane: number; onS
     const { p, angle } = pointAt(path, t);
     g.position.set(p[0], 0, p[1]);
     g.rotation.y = s.phase === 'Retour' ? angle + Math.PI : angle;
+    // Repère au sol discret et pulsé : la voiture reste visible sans bulle permanente.
+    if (ring.current) ring.current.scale.setScalar(open ? 1.15 : 1 + 0.12 * Math.sin(clock.elapsedTime * 3));
+    if (!open) return;
     const hm = (x: number) => new Date(x).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const text =
       s.phase === 'En route'
@@ -127,22 +131,47 @@ function CsmCar({ view, lane, onSelect }: { view: CsmTripView; lane: number; onS
   });
   return (
     <group ref={ref}>
-      <group scale={0.55}>
+      <group
+        scale={0.55}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+        }}
+      >
         <Car color={CSM_COLOR} />
       </group>
-      <Html position={[0, 0.75, 0]} center zIndexRange={[16, 0]}>
-        <button className="csm-chip" onClick={onSelect}>
-          <b>
-            {view.memberLabel} → {view.clientName}
-          </b>
-          <span>{label}</span>
-        </button>
-      </Html>
+      <mesh ref={ring} position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.32, 0.4, 32]} />
+        <meshBasicMaterial color={CSM_COLOR} transparent opacity={open ? 0.9 : 0.55} />
+      </mesh>
+      {open && (
+        <Html position={[0, 0.75, 0]} center zIndexRange={[16, 0]}>
+          <div className="csm-chip" role="dialog" aria-label={`Déplacement ${view.memberLabel} vers ${view.clientName}`}>
+            <button className="csm-chip-close" aria-label="Fermer la bulle" onClick={onToggle}>
+              ×
+            </button>
+            <b>
+              {view.memberLabel} → {view.clientName}
+            </b>
+            <span>{label}</span>
+            <button className="csm-chip-more" onClick={onSelect}>
+              Voir le détail
+            </button>
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
 
-export function CsmTravel({ trips, siteXs, onSelect }: { trips: CsmTripView[]; siteXs: number[]; onSelect: (trip: Trip) => void }) {
+export function CsmTravel({ trips, siteXs, onSelect, openTripId, onOpenTrip }: { trips: CsmTripView[]; siteXs: number[]; onSelect: (trip: Trip) => void; openTripId: string | null; onOpenTrip: (id: string | null) => void }) {
   return (
     <>
       <Headquarters />
@@ -150,7 +179,7 @@ export function CsmTravel({ trips, siteXs, onSelect }: { trips: CsmTripView[]; s
       {trips.map((v, i) => (
         <group key={v.trip.id}>
           <Route path={pathTo(v.x, i % 3)} />
-          <CsmCar view={v} lane={i % 3} onSelect={() => onSelect(v.trip)} />
+          <CsmCar view={v} lane={i % 3} open={openTripId === v.trip.id} onToggle={() => onOpenTrip(openTripId === v.trip.id ? null : v.trip.id)} onSelect={() => onSelect(v.trip)} />
         </group>
       ))}
     </>
