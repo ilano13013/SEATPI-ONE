@@ -14,7 +14,6 @@ const clients = [
 
 const queues: Queue[] = [
   { id: 'q-thelem-n1', clientId: 'thelem', site: 'laciotat', name: 'Helpdesk N1', waiting: 3, longestWaitSec: 142, handledToday: 186, abandonedToday: 7, sla: 92, slaTarget: 95 },
-  { id: 'q-thelem-n2', clientId: 'thelem', site: 'laciotat', name: 'Helpdesk N2', waiting: 1, longestWaitSec: 48, handledToday: 64, abandonedToday: 2, sla: 95, slaTarget: 95 },
   { id: 'q-ird-n1', clientId: 'ird', site: 'laciotat', name: 'Support N1', waiting: 1, longestWaitSec: 35, handledToday: 121, abandonedToday: 3, sla: 96, slaTarget: 95 },
   { id: 'q-ortec-n1', clientId: 'ortec', site: 'laciotat', name: 'Support N1', waiting: 2, longestWaitSec: 210, handledToday: 98, abandonedToday: 6, sla: 89, slaTarget: 92 },
   { id: 'q-ortec-n2', clientId: 'ortec', site: 'laciotat', name: 'Support N2', waiting: 0, longestWaitSec: 0, handledToday: 23, abandonedToday: 0, sla: 97, slaTarget: 90 },

@@ -57,7 +57,7 @@ describe('computeMetrics', () => {
     const m = computeMetrics(createInitialState(0));
     // Aucun agent N1 à Paris (pas de pôle client affecté).
     expect(m.agentsConnected).toBe(27); // 28 agents affectés à La Ciotat et Montpellier (aucun à Paris), dont un hors ligne
-    expect(m.waitingTotal).toBe(11);
+    expect(m.waitingTotal).toBe(10);
     expect(m.onBreak).toBe(4);
     expect(m.openTickets).toBe(7);
     expect(m.slaGlobal).toBeGreaterThan(90);
@@ -68,12 +68,13 @@ describe('computeMetrics', () => {
 describe('clientSummary', () => {
   it('résume un pôle client', () => {
     const s = clientSummary(createInitialState(0), 'thelem');
-    expect(s.waiting).toBe(4);
+    expect(s.waiting).toBe(3);
     expect(s.agentsConnected).toBe(4);
     expect(s.onBreak).toBe(1);
     expect(s.openTickets).toBe(2);
-    // SLA pondéré : (92 × 186 + 95 × 64) / 250
-    expect(s.sla).toBe(92.8);
+    // Thelem : une seule file (N1) — pas de technicien N2 Thelem.
+    expect(s.queues).toBe(1);
+    expect(s.sla).toBe(92);
     expect(s.slaTarget).toBe(95);
   });
 });

@@ -71,7 +71,9 @@ describe('App (mode démo)', () => {
 
   it('filtre les files du plateau Helpdesk par pôle client', () => {
     render(<App />);
-    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(7);
+    // Thelem : file N1 uniquement (pas de technicien N2 Thelem).
+    expect(panel().queryByRole('button', { name: /^Thelem · Helpdesk N2/ })).toBeNull();
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(6);
     fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'ortec' } });
     const rows = panel().getAllByRole('button', { name: /^Ortec ·/ });
     expect(rows).toHaveLength(2);
@@ -89,7 +91,7 @@ describe('App (mode démo)', () => {
     expect(panel().getByText('Agents connectés')).toBeTruthy();
     // Revenir au plateau entier
     fireEvent.change(panel().getByLabelText('Pôle client'), { target: { value: 'all' } });
-    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(7);
+    expect(panel().getAllByRole('button', { name: /^(Thelem|IRD|Ortec|Multi|Sodiaal) ·/ })).toHaveLength(6);
   });
 
   it('adapte les vues au rôle simulé', () => {

@@ -45,7 +45,6 @@ export interface QlikRow {
 /** Files suivies (identiques aux files du plateau). */
 export const QLIK_QUEUES: QlikQueue[] = [
   { id: 'q-thelem-n1', name: 'Thelem · Helpdesk N1', zone: 'thelem', clientId: 'thelem', site: 'laciotat' },
-  { id: 'q-thelem-n2', name: 'Thelem · Helpdesk N2', zone: 'thelem', clientId: 'thelem', site: 'laciotat' },
   { id: 'q-ird-n1', name: 'IRD · Support N1', zone: 'ird', clientId: 'ird', site: 'laciotat' },
   { id: 'q-ortec-n1', name: 'Ortec · Support N1', zone: 'ortec', clientId: 'ortec', site: 'laciotat' },
   { id: 'q-ortec-n2', name: 'Ortec · Support N2', zone: 'ortec', clientId: 'ortec', site: 'laciotat' },
